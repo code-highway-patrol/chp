@@ -2,7 +2,7 @@ const express = require('express');
 const path = require('path');
 const fs = require('fs');
 
-const lawsRouter = require('./routes/laws.cjs');
+const lawsRouter = require('./routes/laws-api.cjs');
 const reportsRouter = require('./routes/reports.cjs');
 const scanRouter = require('./routes/scan.cjs');
 

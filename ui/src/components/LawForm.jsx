@@ -7,6 +7,8 @@ function LawForm({ law, onSubmit }) {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
     name: law?.name || '',
+    description: law?.description || '',
+    pattern: law?.pattern || '',
     severity: law?.severity || 'error',
     hooks: law?.hooks || [],
     enabled: law?.enabled !== undefined ? law.enabled : true
@@ -50,11 +52,36 @@ function LawForm({ law, onSubmit }) {
       </div>
 
       <div className="form-group">
+        <label>Description</label>
+        <textarea
+          name="description"
+          value={formData.description}
+          onChange={handleChange}
+          placeholder="What does this law enforce?"
+          rows={3}
+        />
+      </div>
+
+      <div className="form-group">
+        <label>Violation Pattern (regex)</label>
+        <input
+          type="text"
+          name="pattern"
+          value={formData.pattern}
+          onChange={handleChange}
+          placeholder="e.g., console\\.log"
+        />
+        <small style={{ color: '#666', fontSize: '0.75rem' }}>
+          Regex pattern that triggers a violation
+        </small>
+      </div>
+
+      <div className="form-group">
         <label>Severity</label>
         <select name="severity" value={formData.severity} onChange={handleChange}>
-          <option value="error">Error</option>
-          <option value="warn">Warning</option>
-          <option value="info">Info</option>
+          <option value="error">Error (blocks commit)</option>
+          <option value="warn">Warning (logs but allows)</option>
+          <option value="info">Info (just reports)</option>
         </select>
       </div>
 

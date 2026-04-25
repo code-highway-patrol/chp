@@ -9,12 +9,15 @@
     "chp": "./bin/chp",
     "chp-analyze": "./scripts/analyze.js",
     "chp-check": "./scripts/check.js",
-    "chp-validate": "./scripts/validate.js"
+    "chp-validate": "./scripts/validate.js",
+    "chp-serve": "./lib/mcp-server.cjs"
   },
   "scripts": {
     "analyze": "node scripts/analyze.js",
     "check": "node scripts/check.js",
     "validate": "node scripts/validate.js",
+    "serve": "node lib/mcp-server.js",
+    "ui": "node server/index.cjs",
     "test": "node scripts/test.js",
     "lint": "node scripts/lint.js"
   },
@@ -26,17 +29,19 @@
     "standards",
     "best-practices",
     "security",
-    "code-review"
+    "code-review",
+    "claude-code",
+    "mcp"
   ],
   "author": "justi",
   "license": "MIT",
-  "homepage": "https://github.com/yourusername/chp#readme",
+  "homepage": "https://github.com/code-highway-patrol/chp#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/yourusername/chp.git"
+    "url": "git+https://github.com/code-highway-patrol/chp.git"
   },
   "bugs": {
-    "url": "https://github.com/yourusername/chp/issues"
+    "url": "https://github.com/code-highway-patrol/chp/issues"
   },
   "engines": {
     "node": ">=18.0.0"

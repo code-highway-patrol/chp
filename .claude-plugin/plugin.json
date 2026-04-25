@@ -1,13 +1,13 @@
 {
   "name": "chp",
   "displayName": "CHP - Code Health Protocol",
-  "description": "Code quality enforcement with traffic laws and automated violation detection",
+  "description": "Highway Patrol for your code - enforcing traffic laws, catching speeders, and keeping your codebase safe",
   "version": "1.0.0",
   "author": {
     "name": "CHP Contributors"
   },
-  "homepage": "https://github.com/yourusername/chp",
-  "repository": "https://github.com/yourusername/chp",
+  "homepage": "https://github.com/code-highway-patrol/chp",
+  "repository": "https://github.com/code-highway-patrol/chp",
   "license": "MIT",
   "keywords": [
     "code-quality",
@@ -15,8 +15,24 @@
     "enforcement",
     "traffic-laws",
     "pre-commit",
-    "hooks"
+    "hooks",
+    "static-analysis",
+    "claude-code"
   ],
+  "capabilities": {
+    "skills": true,
+    "agents": true,
+    "hooks": true,
+    "commands": true,
+    "mcp": true
+  },
   "skills": "./skills/",
-  "commands": "./commands/"
+  "commands": "./commands/",
+  "hooks": "./hooks/",
+  "agents": "./agents/",
+  "mcp": {
+    "command": "node",
+    "args": ["lib/mcp-server.cjs"],
+    "env": {}
+  }
 }
