@@ -20,9 +20,7 @@
   "skills": [
     "./skills/audit",
     "./skills/investigate",
-    "./skills/onboard",
-    "./skills/plan-check",
-    "./skills/refine-laws",
+    "./skills/status",
     "./skills/write-laws"
   ]
 }

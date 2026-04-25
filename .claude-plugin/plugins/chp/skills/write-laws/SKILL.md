@@ -1,11 +1,11 @@
 ---
 name: write-laws
-description: Create and manage CHP enforcement laws using the chp-law CLI
+description: Create, manage, and tune CHP enforcement laws
 ---
 
-# Using CHP Laws
+# CHP Law Management
 
-The CHP (Code Health Protocol) law enforcement system provides two layers of rule enforcement:
+Create new laws and refine existing ones. CHP provides two layers of enforcement:
 
 1. **Suggestive Layer** - Context documents that guide you to follow rules
 2. **Verification Layer** - Programmatic checks that catch violations
@@ -114,7 +114,82 @@ A law file contains the following fields:
 
 ### Implementing the Verification
 
-Edit the `verify.sh` script to detect violations:
+> **MANDATORY: You MUST follow the Research-First Protocol below before writing any verify.sh.**
+> Skipping research is a violation of this skill. There are NO exceptions.
+
+#### Research-First Protocol
+
+Before writing a single line of verify.sh, you MUST complete these steps in order:
+
+**Step 1: Check existing patterns.**
+
+Search `docs/chp/LAW-PATTERNS.md` for a matching pattern. Read the relevant section fully. If a template exists, use it as your starting point — do not reinvent from scratch.
+
+**Step 2: Search for prior art.**
+
+Run these searches before implementing:
+```bash
+# Check if a similar law already exists
+bash commands/chp-law list
+
+# Search existing verify.sh scripts for similar patterns
+grep -r "similar_keyword" docs/chp/laws/*/verify.sh
+```
+
+If you find a similar law, read its verify.sh and adapt it rather than writing from zero.
+
+**Step 3: Research the detection method.**
+
+If the law requires patterns you're not confident about (regex for secrets, character encoding ranges, AST queries, tool flags):
+
+```bash
+# Search for detection approaches online or in docs
+grep -r "pattern_or_keyword" node_modules/.eslintplugin/ 2>/dev/null
+# Check what tools exist for this type of detection
+which semgrep eslint tsc 2>/dev/null
+```
+
+You are FORBIDDEN from guessing at regex patterns, encoding ranges, or tool flags. If you are unsure:
+- Search the codebase for existing examples
+- Consult `docs/chp/LAW-PATTERNS.md` for the correct approach
+- Test your detection logic against sample input BEFORE writing verify.sh
+- When in doubt, use a delegated tool (ESLint, Semgrep, tsc) instead of hand-rolling detection
+
+**Step 4: Validate your approach.**
+
+Before writing verify.sh, confirm:
+- [ ] You found and read the relevant LAW-PATTERNS.md section (or confirmed none exists)
+- [ ] You checked existing laws for similar implementations
+- [ ] You are confident in your detection method (regex, tool, or AST) — if not, you researched it
+- [ ] You can explain WHY your detection method works, not just what it does
+
+Only after all four checks pass may you write the verify.sh.
+
+#### Common Research Traps
+
+These are situations where agents typically skip research and produce broken verify.sh scripts. You MUST research in each case:
+
+| Situation | Wrong (guessing) | Right (researching) |
+|-----------|-------------------|---------------------|
+| Unicode detection (Chinese, emoji, RTL) | `grep -P '[\x{4e00}]'` | Check if `perl` or `grep -P` is available; test the range against real input |
+| Secret patterns | `sk_.*` | Look up actual key formats (lengths, character sets) from LAW-PATTERNS.md |
+| Encoding checks | Assume UTF-8 | Check `file --mime-encoding` availability; test with `iconv` |
+| Tool delegation | Guess ESLint flags | Run `eslint --help` or check the project's eslint config for available rules |
+| File type filtering | Hardcode extensions | Check project file types with `find . -type f \| sed 's/.*\.//' \| sort -u` |
+
+#### Research Confidence Levels
+
+Before writing, rate your confidence:
+
+- **High confidence** — Pattern exists in LAW-PATTERNS.md, or you've verified the detection method works. Proceed directly.
+- **Medium confidence** — You found a similar pattern but need to adapt it. Write a test case first, then implement.
+- **Low confidence** — You're unsure about the detection method, regex, or tool usage. **STOP. Research first.** Search the web, read tool docs, or test against sample input. Do NOT write verify.sh until confidence reaches medium or higher.
+
+**If confidence is low and you cannot find the answer after research, ask the user for guidance rather than shipping a broken check.**
+
+#### Now implement
+
+After completing research, edit the `verify.sh` script:
 
 ```bash
 #!/bin/bash
@@ -174,11 +249,102 @@ Scans for patterns: `sk_`, `AIza`, `AKIA`, `Bearer eyJ`
 
 ## Testing Your Law
 
-Before the law is active, test it:
+Before the law is active, you MUST test it:
 
 ```bash
-chp-law test no-api-keys
+# Test the verification script directly with sample input
+echo "test content with VIOLATION_PATTERN" | bash docs/chp/laws/<law-name>/verify.sh
+# Expected: exit 1 (violation detected)
+
+echo "clean content without violations" | bash docs/chp/laws/<law-name>/verify.sh
+# Expected: exit 0 (passes)
+
+# Then test via CHP
+chp-law test <law-name>
 ```
+
+**Both must pass.** If the direct test fails, the detection logic is wrong — go back to research. Do NOT proceed with a law that can't detect its own violation pattern.
+
+## Refining Existing Laws
+
+When a law has false positives, needs new patterns, or requires other adjustments:
+
+### Reduce False Positives
+
+A law flags things that shouldn't be violations. Example: `no-console-log` flags `console.error` which you need.
+
+Edit `verify.sh` to exclude the pattern:
+
+```bash
+# Before: grep -q 'console\.log'
+# After:  grep -q 'console\.log' | grep -v 'console\.error'
+```
+
+Test: `./commands/chp-law test no-console-log`
+
+### Change Severity
+
+Edit `law.json`:
+
+```json
+// Before: "severity": "error"
+// After:  "severity": "warn"
+```
+
+Test: `./commands/chp-law test <law-name>`
+
+### Add New Violation Patterns
+
+Edit `verify.sh` to add patterns:
+
+```bash
+# Add Bearer token detection to no-api-keys
+patterns+=("Bearer [A-Za-z0-9\\-._~+/]+=*")
+```
+
+Test: `./commands/chp-law test <law-name>`
+
+### Adjust Hooks
+
+A law runs at the wrong time. Example: `test-coverage` should run on `pre-push`, not `pre-commit`.
+
+Edit `law.json`:
+
+```json
+// Before: "hooks": ["pre-commit"]
+// After:  "hooks": ["pre-push"]
+```
+
+Then reinstall hooks:
+```bash
+./commands/chp-hooks disable pre-commit
+./commands/chp-hooks enable pre-push
+```
+
+### Update Guidance
+
+When documentation doesn't match behavior, edit `guidance.md` to keep it accurate.
+
+### Reset Failure Count
+
+When past issues are resolved and you want a clean slate:
+
+```bash
+./commands/chp-law reset <law-name>
+```
+
+### Disable vs Delete
+
+**Disable temporarily:** `./commands/chp-law disable <law-name>` — law stays, just stops enforcing. Re-enable with `./commands/chp-law enable <law-name>`.
+
+**Delete permanently:** `./commands/chp-law delete <law-name>` — removes the law directory and unregisters it from all hooks.
+
+### Before Refining
+
+1. Understand why the law exists — read the full guidance
+2. Consider the impact — changes affect everyone
+3. Document the change in `guidance.md` with rationale
+4. Always test after refining: `./commands/chp-law test <law-name>`
 
 ## Available Commands
 
@@ -188,17 +354,12 @@ chp-law list                            # List all laws
 chp-law delete <name>                   # Delete a law
 chp-law test <name>                     # Test verification
 chp-law reset <name>                    # Reset failure count
+chp-law enable <name>                   # Enable a disabled law
+chp-law disable <name>                  # Disable without deleting
 chp-status                               # Show system status
 ```
 
 ## Hook Types
-
-- `pre-commit` - Runs before `git commit`
-- `pre-push` - Runs before `git push`
-- `pre-merge-commit` - Runs before merge commits
-- `pre-write` - Runs before file writes (pretool)
-
-## Universal Hook System
 
 CHP supports 25+ hook types across Git, AI/Agent, and CI/CD operations:
 
@@ -218,33 +379,11 @@ When a law's verification fails:
 3. Guidance is automatically strengthened with violation history
 4. Future attempts get stricter context
 
-## Before Creating New Laws
-
-1. Check existing laws: `chp-law list`
-2. Ensure the law name is descriptive (lowercase, hyphens)
-3. Consider which hooks should trigger verification
-4. Consider scope (include/exclude) to avoid false positives
-5. Think about both the verification logic AND the guidance
-
 ## Pattern Reference
 
-**NEW:** Comprehensive pattern library available at `docs/chp/LAW-PATTERNS.md`
+Comprehensive pattern library at `docs/chp/LAW-PATTERNS.md`.
 
 When users describe what they want to enforce, match their language to patterns and ask "you mean something like this?"
-
-The reference includes:
-- **Section 1:** Regex/Shell patterns (secrets, console.log, file size, missing tests)
-- **Section 2:** AST-based analysis (nesting depth, unused imports, unhandled promises)
-- **Section 3:** Delegated tools (ESLint, Prettier, Semgrep, TypeScript)
-- **Section 4:** Hybrid patterns (conditional enforcement, multi-condition rules)
-
-Each pattern includes:
-- Common user requests that trigger it
-- Clarifying questions to ask
-- CHP implementation templates
-- Limitations
-
-**Quick examples from reference:**
 
 | User Request | Detection Method | Template |
 |--------------|------------------|----------|
@@ -262,23 +401,9 @@ Each pattern includes:
 
 **For the complete agent flow:**
 - See `docs/chp/AGENT-FLOW.md` for step-by-step walkthroughs
-- Shows how to match user requests to patterns
-- Includes real-world conversation examples
-- Explains when to clarify vs. implement directly
 
 ## Common Law Patterns
 
-**Security Laws:**
-- No API keys
-- No hardcoded credentials
-- No debug endpoints in production
-
-**Quality Laws:**
-- Max file size
-- Max function length
-- Required documentation
-
-**Style Laws:**
-- No console.log
-- Enforce import ordering
-- Require type annotations
+**Security:** no-api-keys, no-hardcoded-credentials, no-debug-endpoints
+**Quality:** max-file-size, max-function-length, required-documentation
+**Style:** no-console-log, import-ordering, type-annotations
