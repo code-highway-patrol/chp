@@ -16,8 +16,14 @@ from urllib.parse import parse_qs, urlparse
 PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 5177
 PROJECT_DIR = os.environ.get("CLAUDE_PROJECT_DIR", os.getcwd())
 PLUGIN_ROOT = os.environ.get("CLAUDE_PLUGIN_ROOT", str(Path(__file__).resolve().parent.parent))
-LAWS_FILE = Path(PROJECT_DIR) / "laws" / "chp-laws.txt"
-REPORT_FILE = Path(PROJECT_DIR) / ".chp" / "report.json"
+
+
+def get_laws_file():
+    return Path(PROJECT_DIR) / "laws" / "chp-laws.txt"
+
+
+def get_report_file():
+    return Path(PROJECT_DIR) / ".chp" / "report.json"
 
 
 def parse_laws(text):
@@ -383,15 +389,23 @@ class CHPHandler(http.server.BaseHTTPRequestHandler):
             self.send_html(DASHBOARD_HTML)
 
         elif path == "/api/laws":
-            if LAWS_FILE.exists():
-                laws = parse_laws(LAWS_FILE.read_text(encoding="utf-8"))
+            if get_laws_file().exists():
+                laws = parse_laws(get_laws_file().read_text(encoding="utf-8"))
             else:
                 laws = []
             self.send_json(laws)
 
+        elif path == "/api/status":
+            self.send_json({
+                "project_dir": PROJECT_DIR,
+                "laws_file": str(get_laws_file()),
+                "laws_exists": get_laws_file().exists(),
+                "report_file": str(get_report_file()),
+            })
+
         elif path == "/api/report":
-            if REPORT_FILE.exists():
-                report = json.loads(REPORT_FILE.read_text(encoding="utf-8"))
+            if get_report_file().exists():
+                report = json.loads(get_report_file().read_text(encoding="utf-8"))
                 self.send_json(report)
             else:
                 self.send_json({"error": "No report found"}, 404)
@@ -415,13 +429,13 @@ class CHPHandler(http.server.BaseHTTPRequestHandler):
                 self.send_json({"error": "id and intent are required"}, 400)
                 return
 
-            if LAWS_FILE.exists():
-                existing = LAWS_FILE.read_text(encoding="utf-8")
+            if get_laws_file().exists():
+                existing = get_laws_file().read_text(encoding="utf-8")
                 if f"Law: {law_id} ===" in existing:
                     self.send_json({"error": f"Law '{law_id}' already exists"}, 409)
                     return
             else:
-                LAWS_FILE.parent.mkdir(parents=True, exist_ok=True)
+                get_laws_file().parent.mkdir(parents=True, exist_ok=True)
                 existing = ""
 
             new_law = {"id": law_id, "intent": intent, "reaction": reaction}
@@ -430,7 +444,7 @@ class CHPHandler(http.server.BaseHTTPRequestHandler):
 
             separator = "\n" if existing and not existing.endswith("\n") else ""
             extra_newline = "\n" if existing.strip() else ""
-            LAWS_FILE.write_text(existing + separator + extra_newline + serialize_law(new_law) + "\n", encoding="utf-8")
+            get_laws_file().write_text(existing + separator + extra_newline + serialize_law(new_law) + "\n", encoding="utf-8")
             self.send_json(new_law, 201)
 
         elif path == "/api/scan":
@@ -440,8 +454,8 @@ class CHPHandler(http.server.BaseHTTPRequestHandler):
                 subprocess.run([sys.executable, str(check_script)], env=env, timeout=30, capture_output=True)
             except Exception:
                 pass
-            if REPORT_FILE.exists():
-                report = json.loads(REPORT_FILE.read_text(encoding="utf-8"))
+            if get_report_file().exists():
+                report = json.loads(get_report_file().read_text(encoding="utf-8"))
                 self.send_json(report)
             else:
                 self.send_json({"files_checked": 0, "total_violations": 0})
@@ -454,11 +468,11 @@ class CHPHandler(http.server.BaseHTTPRequestHandler):
         path = urlparse(self.path).path
         if path.startswith("/api/laws/"):
             law_id = path.split("/api/laws/")[1]
-            if not LAWS_FILE.exists():
+            if not get_laws_file().exists():
                 self.send_json({"error": "Laws file not found"}, 404)
                 return
 
-            text = LAWS_FILE.read_text(encoding="utf-8")
+            text = get_laws_file().read_text(encoding="utf-8")
             blocks = re.split(r"(?=^# === Law:)", text, flags=re.MULTILINE)
             new_blocks = [b for b in blocks if f"Law: {law_id} ===" not in b]
 
@@ -466,7 +480,7 @@ class CHPHandler(http.server.BaseHTTPRequestHandler):
                 self.send_json({"error": f"Law '{law_id}' not found"}, 404)
                 return
 
-            LAWS_FILE.write_text("".join(new_blocks).strip() + "\n", encoding="utf-8")
+            get_laws_file().write_text("".join(new_blocks).strip() + "\n", encoding="utf-8")
             self.send_json({"deleted": law_id})
         else:
             self.send_response(404)
