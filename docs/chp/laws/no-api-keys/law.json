@@ -2,8 +2,8 @@
   "name": "no-api-keys",
   "created": "2026-04-25T05:02:04Z",
   "severity": "error",
-  "failures": 38,
-  "tightening_level": 38,
+  "failures": 39,
+  "tightening_level": 39,
   "hooks": [
     "pre-commit",
     "pre-push",
