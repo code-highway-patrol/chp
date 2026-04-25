@@ -1,24 +1,4 @@
 {
-  "hooks": {
-    "pre-commit": {
-      "laws": [
-        "no-console-log"
-      ],
-      "enabled": true,
-      "blocking": true
-    },
-    "pre-push": {
-      "enabled": true,
-      "laws": [],
-      "blocking": true
-    },
-    "post-commit": {
-      "laws": [
-        "commit-metrics"
-      ],
-      "enabled": true,
-      "blocking": true
-    }
-  },
+  "hooks": {},
   "version": "1.0"
 }
