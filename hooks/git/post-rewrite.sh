@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # CHP Post-Rewrite Hook
 # Installed to .git/hooks/post-rewrite
 # Runs after commands that rewrite git history (rebase, commit --amend)

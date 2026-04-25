@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Law construction logic for CHP
 
 # Guard against direct execution

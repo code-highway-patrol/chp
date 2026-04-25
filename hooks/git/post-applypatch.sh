@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # CHP Post-Applypatch Hook
 # Installed to .git/hooks/post-applypatch
 # Runs after a patch has been applied

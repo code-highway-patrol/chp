@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Hook installation and management for CHP laws
 
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"

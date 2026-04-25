@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # CHP Pre-Rebase Hook
 # Installed to .git/hooks/pre-rebase
 # Runs before a rebase operation

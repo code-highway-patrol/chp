@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # CHP Pre-Prompt Hook
 # Installed to .claude/hooks/pre-prompt
 # Runs before each prompt is processed

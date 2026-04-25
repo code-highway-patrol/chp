@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Agent checker — subjective checks that output prompts for AI judgment
 
 # Usage: check_agent <hook_type> <config_json> <context_file>

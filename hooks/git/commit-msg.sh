@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # CHP Commit-Msg Hook
 # Installed to .git/hooks/commit-msg
 # Runs after commit message is provided

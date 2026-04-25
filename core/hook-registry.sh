@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Hook Registry - Manages hook type to law mappings
 
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Pattern checker — grep-based pattern matching for atomic checks
 
 # Usage: check_pattern <hook_type> <config_json> <context_file>

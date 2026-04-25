@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # CHP Pre-Tool Hook
 # Installed to .claude/hooks/pre-tool.sh
 # Runs before each tool invocation - can block tool execution

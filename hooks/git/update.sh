@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # CHP Update Hook
 # Installed to .git/hooks/update
 # Runs on remote repository when updates are pushed

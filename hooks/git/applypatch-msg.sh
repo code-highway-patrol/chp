@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # CHP Applypatch-Message Hook
 # Installed to .git/hooks/applypatch-msg
 # Validates the commit message of a patch

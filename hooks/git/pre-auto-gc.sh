@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # CHP Pre-Auto-GC Hook
 # Installed to .git/hooks/pre-auto-gc
 # Runs before automatic garbage collection

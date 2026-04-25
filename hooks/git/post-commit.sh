@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # CHP Post-Commit Hook
 # Installed to .git/hooks/post-commit
 # Runs after a commit has been made

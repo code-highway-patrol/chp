@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # CHP Pre-Push Hook
 # Installed to .git/hooks/pre-push
 # Runs before pushes are sent to remote

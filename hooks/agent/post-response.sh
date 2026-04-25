@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # CHP Post-Response Hook
 # Installed to .claude/hooks/post-response.sh
 # Runs after response is sent to user

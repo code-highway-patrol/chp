@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # CHP Prepare-Commit-Message Hook
 # Installed to .git/hooks/prepare-commit-msg
 # Runs before the commit message editor is shown

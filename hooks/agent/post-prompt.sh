@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # CHP Post-Prompt Hook
 # Installed to .claude/hooks/post-prompt.sh
 # Runs after each user prompt is processed

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Tightening logic for law violations
 
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then

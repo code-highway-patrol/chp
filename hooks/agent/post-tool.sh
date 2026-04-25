@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # CHP Post-Tool Hook
 # Installed to .claude/hooks/post-tool.sh
 # Runs after each tool invocation completes

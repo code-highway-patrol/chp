@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # CHP Test Runner
 # Runs all test scripts in tests/ directory
 

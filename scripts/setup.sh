@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # CHP Setup - One-command installation
 # Usage: bash scripts/setup.sh
 

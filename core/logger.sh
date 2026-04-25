@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # core/logger.sh - CHP Logging System
 
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then

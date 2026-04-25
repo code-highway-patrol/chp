@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # CHP Law Management Command
 # Main CLI for creating, listing, deleting, testing, and resetting laws
 

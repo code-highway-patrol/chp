@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Collect commit metrics
 
 # Get the absolute path to CHP base directory

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Detect available hook systems
 
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"

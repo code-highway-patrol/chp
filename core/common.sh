@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Shared utilities for CHP law enforcement
 
 declare -ga _CHP_TMPFILES=()

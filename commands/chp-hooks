@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # chp-hooks - Manage CHP hook types
 #
 # This command provides a CLI for managing hook types:

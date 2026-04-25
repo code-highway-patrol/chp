@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # CHP Pre-Response Hook
 # Installed to .claude/hooks/pre-response.sh
 # Runs before response is sent to user - can trigger regeneration

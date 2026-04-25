@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Structural checker — validates code conventions and structural invariants
 
 # Usage: check_structural <hook_type> <config_json> <context_file>

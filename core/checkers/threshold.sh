@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Threshold checker — metric-based threshold checking for atomic checks
 
 # Usage: check_threshold <hook_type> <config_json> <context_file>

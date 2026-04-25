@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Check runner — orchestrates atomic checks from law.json
 # Reads the checks array and dispatches each to core/checkers/<type>.sh
 

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # CHP Audit Trail - Show violation history and tightening information
 
 set -e

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # CHP Pre-Commit Hook
 # Installed to .git/hooks/pre-commit
 # Runs before each commit — blocking

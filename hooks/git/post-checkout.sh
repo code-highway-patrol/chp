@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # CHP Post-Checkout Hook
 # Installed to .git/hooks/post-checkout
 # Runs after a checkout operation

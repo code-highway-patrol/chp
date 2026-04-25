@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # CHP Post-Merge Hook
 # Installed to .git/hooks/post-merge
 # Runs after a merge has been completed

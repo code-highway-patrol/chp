@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Interactive prompting utilities for CHP CLI
 
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then

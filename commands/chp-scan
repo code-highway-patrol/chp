@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # CHP Repository Scanner
 # Scan entire repository for potential violations (dry-run mode)
 
