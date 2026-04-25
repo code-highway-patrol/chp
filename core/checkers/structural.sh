@@ -127,7 +127,6 @@ _check_no_circular_imports() {
             fi
 
             # Build import graph from staged files
-            declare -A import_graph
             declare -a files_to_check
 
             while IFS= read -r file; do

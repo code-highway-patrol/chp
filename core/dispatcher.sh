@@ -87,7 +87,9 @@ dispatch_hook() {
     local laws
     laws=$(get_hook_laws "$hook_type")
     if [ -n "$laws" ] && [ "$laws" != "[]" ]; then
-        mapfile -t law_names < <(jq -r '.[]' <<<"$laws" | tr -d '\r')
+        while IFS= read -r line; do
+            law_names+=("$line")
+        done < <(jq -r '.[]' <<<"$laws" | tr -d '\r')
     fi
 
     # If registry was empty/stale, discover from law.json files directly
