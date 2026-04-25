@@ -287,3 +287,11 @@ This law has been violated 25 time(s). The guidance has been automatically stren
 This law has been violated 26 time(s). The guidance has been automatically strengthened.
 
 **Previous violations indicate this pattern is easy to miss. Pay extra attention.**
+
+---
+
+**Violation recorded:** 2026-04-25T21:22:04Z (Total: 27)
+
+This law has been violated 27 time(s). The guidance has been automatically strengthened.
+
+**Previous violations indicate this pattern is easy to miss. Pay extra attention.**
