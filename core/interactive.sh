@@ -1,5 +1,16 @@
 #!/bin/bash
 # Interactive prompting utilities for CHP CLI
+# This file should be sourced, not executed directly
+
+# Guard against direct execution
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+    echo "Error: This file should be sourced, not executed directly."
+    echo "Usage: source core/interactive.sh"
+    exit 1
+fi
+
+# Enable strict mode
+set -euo pipefail
 
 # Prompt user with a question and multiple choice options
 # Usage: prompt_choice "Question text" "Option 1" "Option 2" "Option 3" ...
@@ -8,30 +19,33 @@ prompt_choice() {
     local question="$1"
     shift
     local options=("$@")
-    
-    echo ""
-    echo "$question"
-    for i in "${!options[@]}"; do
-        echo "  $((i+1))) ${options[$i]}"
+
+    while true; do
+        echo ""
+        echo "$question"
+        for i in "${!options[@]}"; do
+            echo "  $((i+1))) ${options[$i]}"
+        done
+        echo ""
+
+        local choice
+        read -p "Choose one: " choice
+
+        # Validate choice is a number
+        if [[ ! "$choice" =~ ^[0-9]+$ ]]; then
+            echo "Invalid choice. Please enter a number."
+            continue
+        fi
+
+        # Validate choice is in range
+        if [[ $choice -lt 1 || $choice -gt ${#options[@]} ]]; then
+            echo "Invalid choice. Please enter a number between 1 and ${#options[@]}."
+            continue
+        fi
+
+        echo "${options[$((choice-1))]}"
+        return 0
     done
-    echo ""
-    
-    local choice
-    read -p "Choose one: " choice
-    
-    # Validate choice is a number
-    if [[ ! "$choice" =~ ^[0-9]+$ ]]; then
-        echo "Invalid choice. Please enter a number."
-        return 1
-    fi
-    
-    # Validate choice is in range
-    if [[ $choice -lt 1 || $choice -gt ${#options[@]} ]]; then
-        echo "Invalid choice. Please enter a number between 1 and ${#options[@]}."
-        return 1
-    fi
-    
-    echo "${options[$((choice-1))]}"
 }
 
 # Prompt for yes/no confirmation
@@ -95,11 +109,11 @@ display_preview() {
     echo "    • docs/chp/laws/$law_name/verify.sh"
     echo "    • docs/chp/laws/$law_name/guidance.md"
     echo ""
-    
+
     # Show which hooks will be installed
+    echo "  Hooks installed:"
     local IFS=','
     for hook in $hooks; do
-        echo "  Hooks installed:"
         case "$hook" in
             pre-commit) echo "    • .git/hooks/pre-commit" ;;
             pre-push) echo "    • .git/hooks/pre-push" ;;
