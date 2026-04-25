@@ -594,7 +594,7 @@ After creating or editing a law, spawn a fix agent that reads the law fresh from
 
 ```
 Use the Agent tool to spawn a background agent with this prompt:
-"Run the chp:review-law skill for the law '<law-name>'. Read all three files fresh from disk, fix all inconsistencies, commit fixes, and report what you changed."
+"Run the chp:review-laws skill for the law '<law-name>'. Read all three files fresh from disk, fix all inconsistencies, commit fixes, and report what you changed."
 ```
 
 This runs in a separate agent context with fresh eyes — no assumptions from the writing process.

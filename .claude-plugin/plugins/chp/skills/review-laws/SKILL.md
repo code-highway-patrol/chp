@@ -1,6 +1,6 @@
 ---
-name: review-law
-description: Fix inconsistencies in a CHP law package. Reads law.json, verify.sh, and guidance.md fresh from disk and corrects drift between them. Triggers on "review law", "fix law", "check law", "verify law".
+name: review-laws
+description: Fix inconsistencies in CHP law packages. Reads law.json, verify.sh, and guidance.md fresh from disk and corrects drift between them. Triggers on "review laws", "fix laws", "check laws", "verify laws".
 ---
 
 # CHP Law Fixer
@@ -115,5 +115,5 @@ mandarin-only      3      1      1
 `chp:write-laws` spawns this skill as a background agent after writing a law:
 
 ```
-Agent prompt: "Run the chp:review-law skill for the law '<law-name>'. Read all three files fresh from disk, fix all inconsistencies, commit fixes, and report what you changed."
+Agent prompt: "Run the chp:review-laws skill for the law '<law-name>'. Read all three files fresh from disk, fix all inconsistencies, commit fixes, and report what you changed."
 ```

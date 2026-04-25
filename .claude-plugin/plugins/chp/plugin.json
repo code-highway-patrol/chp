@@ -22,7 +22,7 @@
     "./skills/investigate",
     "./skills/status",
     "./skills/write-laws",
-    "./skills/review-law",
+    "./skills/review-laws",
     "./skills/decompose-law"
   ]
 }
