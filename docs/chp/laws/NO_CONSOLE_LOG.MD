@@ -1,3 +1,13 @@
+---
+name: no-console-log
+created: 2026-04-25T04:05:10Z
+category: 
+severity: error
+enabled: True
+references:
+  -
+---
+
 # Law: no-console-log
 
 **Severity:** error

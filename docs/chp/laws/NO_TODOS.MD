@@ -1,3 +1,13 @@
+---
+name: no-todos
+created: 2026-04-25T05:35:43Z
+category: 
+severity: error
+enabled: True
+references:
+  -
+---
+
 # Law: no-todos
 
 **Severity:** error

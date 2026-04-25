@@ -1,3 +1,13 @@
+---
+name: commit-metrics
+created: 2026-04-25T04:33:44Z
+category: 
+severity: info
+enabled: True
+references:
+  -
+---
+
 # Law: Commit Metrics
 
 **Severity:** Info

@@ -1,3 +1,13 @@
+---
+name: test-dispatcher-law
+created: 
+category: 
+severity: medium
+enabled: True
+references:
+  -
+---
+
 # Test Law Guidance
 
 This is a test law for dispatcher testing.

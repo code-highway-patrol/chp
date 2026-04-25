@@ -1,3 +1,13 @@
+---
+name: no-api-keys
+created: 2026-04-25T05:02:04Z
+category: 
+severity: error
+enabled: True
+references:
+  -
+---
+
 # Law: no-api-keys
 
 **Severity:** error
