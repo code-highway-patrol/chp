@@ -3,12 +3,20 @@
   "name": "no-todos",
   "created": "2026-04-25T05:35:43Z",
   "severity": "error",
-  "failures": 26,
-  "tightening_level": 26,
-  "hooks": [
-    "pre-commit",
-    "pre-push",
-    "pre-tool"
-  ],
-  "enabled": true
+  "failures": 27,
+  "tightening_level": 27,
+  "hooks": ["pre-commit", "pre-push", "pre-tool"],
+  "enabled": true,
+  "checks": [
+    {
+      "id": "todo-comments",
+      "type": "pattern",
+      "config": {
+        "pattern": "(TODO|FIXME|HACK|XXX)",
+        "skip_extensions": ["md", "json", "txt", "sh", "yml", "yaml", "lock", "gitignore"]
+      },
+      "severity": "block",
+      "message": "Remove TODO/FIXME/HACK comments or reference an issue ticket"
+    }
+  ]
 }

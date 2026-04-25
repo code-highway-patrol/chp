@@ -2,19 +2,16 @@
   "id": "test-scope",
   "name": "test-scope",
   "intent": "Test law for scope filtering - only applies to TypeScript files",
-  "violations": [
-    {
-      "pattern": "fileContains('TODO', content)",
-      "fix": "Remove TODO or convert to proper issue tracking",
-      "satisfies": "!fileContains('TODO', content)"
-    }
-  ],
-  "reaction": "warn",
-  "include": ["**/*.ts", "**/*.tsx"],
-  "exclude": ["**/*.test.ts", "**/*.spec.ts"],
-  "tags": ["testing", "scope"],
-  "priority": 10,
-  "enabled": true,
+  "severity": "warn",
   "hooks": ["pre-commit"],
-  "severity": "warn"
+  "enabled": true,
+  "checks": [
+    {
+      "id": "todo-in-ts",
+      "type": "pattern",
+      "config": {"pattern": "TODO"},
+      "severity": "warn",
+      "message": "TODO found in TypeScript file"
+    }
+  ]
 }

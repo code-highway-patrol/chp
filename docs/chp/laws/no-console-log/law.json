@@ -5,8 +5,17 @@
   "severity": "error",
   "failures": 16,
   "tightening_level": 16,
-  "hooks": [
-    "pre-commit"
-  ],
-  "enabled": true
+  "hooks": ["pre-commit"],
+  "enabled": true,
+  "checks": [
+    {
+      "id": "console-log",
+      "type": "pattern",
+      "config": {
+        "pattern": "console\\.log\\("
+      },
+      "severity": "block",
+      "message": "Use logger.info() instead of console.log()"
+    }
+  ]
 }
