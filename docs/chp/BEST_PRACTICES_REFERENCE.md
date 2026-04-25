@@ -186,6 +186,129 @@ A curated collection of authoritative best practice guides across software engin
 | Chaos Engineering | https://principlesofchaos.org/ | Controlled failure injection |
 | Post-Mortem Templates | https://postmortems.papersdb.io/ | Incident analysis format |
 
+## Software Engineering Principles
+
+| Resource | URL | Why It Matters |
+|----------|-----|----------------|
+| Martin Fowler - SOLID Principles | https://martinfowler.com/bliki/SolidPrinciples.html | Pragmatic SOLID implementation guidance |
+| Microsoft Architecture Principles | https://learn.microsoft.com/en-us/dotnet/architecture/modern-web-apps-azure/architectural-principles | SOLID, DRY, KISS, YAGNI with examples |
+| Google Engineering Practices | https://google.github.io/eng-practices/ | Google's internal code review standards |
+
+## Code Review
+
+| Resource | URL | Why It Matters |
+|----------|-----|----------------|
+| SmartBear Code Review Best Practices | https://smartbear.com/learn/code-review/best-practices-for-peer-code-review/ | Research-backed review guidelines |
+| Phabricator Review Guide | https://secure.phabricator.com/book/phabflavor/article/reviews/ | Facebook's review philosophy |
+
+## Error Handling & Reliability
+
+| Resource | URL | Why It Matters |
+|----------|-----|----------------|
+| Microsoft Exception Handling Patterns | https://learn.microsoft.com/en-us/previous-versions/msp-n-p/ee658248(v=pandp.10) | Retry logic, circuit breaker patterns |
+| AWS Fault Isolation | https://docs.aws.amazon.com/wellarchitected/latest/reliability-pillar/fault-isolation.html | Blast radius containment |
+
+## Concurrency
+
+| Resource | URL | Why It Matters |
+|----------|-----|----------------|
+| Java Concurrency in Practice (Goetz) | http://jcip.net/ | Definitive threading reference |
+| Go Concurrency Patterns (Pike) | https://talks.golang.org/2012/concurrency.slide | Pipelines, fan-out/fan-in |
+| Herb Sutter Effective Concurrency | https://herbsutter.com/2010/01/14/effective-concurrency-prefer-futures-to-baked-in-async/ | Modern C++ async patterns |
+
+## Caching
+
+| Resource | URL | Why It Matters |
+|----------|-----|----------------|
+| AWS Caching Patterns Whitepaper | https://docs.aws.amazon.com/whitepapers/latest/database-caching-strategies-using-redis/caching-patterns.html | Cache-aside, write-through, write-behind |
+| Fowler - Cache Aside Pattern | https://martinfowler.com/articles/patterns-of-distributed-systems/cache-aside.html | Consistency and invalidation |
+| Google Cloud Memorystore Best Practices | https://cloud.google.com/memorystore/docs/redis/memory-management-best-practices | Eviction policies and optimization |
+
+## API Versioning
+
+| Resource | URL | Why It Matters |
+|----------|-----|----------------|
+| Stripe API Versioning | https://stripe.com/blog/api-versioning | Date-based versioning at scale |
+| Microsoft API Versioning Guidelines | https://github.com/microsoft/api-guidelines/blob/vNext/azure/Guidelines.md#versioning | Azure API versioning standards |
+| Troy Hunt - API Versioning Analysis | https://www.troyhunt.com/your-api-versioning-is-wrong-which-is/ | Header vs URL trade-offs |
+
+## Database Optimization
+
+| Resource | URL | Why It Matters |
+|----------|-----|----------------|
+| PostgreSQL Index Types | https://www.postgresql.org/docs/current/indexes-types.html | B-tree, GiST, GIN, BRIN guidance |
+| MySQL Query Optimization | https://dev.mysql.com/doc/refman/8.0/en/optimization-indexes.html | Composite and covering indexes |
+| AWS Database Blog - Query Optimization | https://aws.amazon.com/blogs/database/category/databases/query-optimization/ | High-throughput strategies |
+
+## Container Security
+
+| Resource | URL | Why It Matters |
+|----------|-----|----------------|
+| Docker Security Documentation | https://docs.docker.com/engine/security/ | Namespaces, seccomp, rootless mode |
+| NIST SP 800-190 - Container Security | https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-190.pdf | Federal container standards |
+| CIS Docker Benchmark | https://www.cisecurity.org/benchmark/docker | Hardened configuration guidance |
+| Red Hat Container Security Guide | https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/9/html/building_running_and_managing_containers/index | SELinux and capabilities |
+
+## Supply Chain Security
+
+| Resource | URL | Why It Matters |
+|----------|-----|----------------|
+| NIST SP 800-204D - SBOM | https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-204D.pdf | Software Bill of Materials standard |
+| OpenSSF Supply Chain Security | https://best.openssf.org/ | Source code and build security guides |
+| CNCF Supply Chain Security | https://github.com/cncf/tag-security/blob/main/supply-chain-security/supply-chain-security-paper/CNCF_SSCP_v1.pdf | SLSA framework and attestation |
+| SLSA Framework Specification | https://slsa.dev/spec/v1.0/ | Google's supply chain integrity levels |
+
+## Data Privacy & Compliance
+
+| Resource | URL | Why It Matters |
+|----------|-----|----------------|
+| GDPR Official Guidelines | https://ec.europa.eu/newsroom/article29/items/612052 | EU privacy by design standards |
+| NIST Privacy Framework | https://www.nist.gov/privacy-framework | Enterprise privacy risk management |
+| CCPA Official Regulations | https://cppa.ca.gov/regulations/pdf/cppa_regs.pdf | California privacy enforcement |
+| IAPP GDPR Resources | https://iapp.org/resources/article/gdpr-getting-ready-for-the-big-day/ | Privacy professional guidance |
+
+## Frontend Performance
+
+| Resource | URL | Why It Matters |
+|----------|-----|----------------|
+| web.dev Core Web Vitals | https://web.dev/articles/vitals | LCP, INP, CLS optimization |
+| Yahoo YSlow Rules | https://developer.yahoo.com/performance/rules.html | 35+ performance rules |
+| Mozilla Web Performance | https://developer.mozilla.org/en-US/docs/Web/Performance | Lazy loading and code splitting |
+
+## API Rate Limiting
+
+| Resource | URL | Why It Matters |
+|----------|-----|----------------|
+| AWS API Gateway Throttling | https://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-request-throttling.html | Token bucket algorithms |
+| Cloudflare Rate Limiting | https://developers.cloudflare.com/waf/rate-limiting-rules/ | Sophisticated counting methods |
+| Stripe Rate Limiting | https://docs.stripe.com/rate-limits | Exponential backoff guidance |
+
+## Event-Driven Architecture
+
+| Resource | URL | Why It Matters |
+|----------|-----|----------------|
+| Fowler - Event-Driven Architecture | https://martinfowler.com/articles/201709-event-driven.html | Event notification vs state transfer |
+| AWS Event-Driven Patterns | https://docs.aws.amazon.com/prescriptive-guidance/latest/large-migrations-event-driven-architecture/patterns-event-driven-architecture.html | Choreography vs orchestration |
+| Confluent Event Streaming Patterns | https://www.confluent.io/patterns/ | Kafka pattern catalog |
+
+## CQRS & Event Sourcing
+
+| Resource | URL | Why It Matters |
+|----------|-----|----------------|
+| Greg Young - CQRS Documents | https://cqrs.nu/ | Original CQRS documentation |
+| Microsoft CQRS Journey | https://github.com/mspnp/cqrs-journey | Complete reference implementation |
+| Fowler - Event Sourcing | https://martinfowler.com/eaaDev/EventSourcing.html | Snapshotting and projections |
+| Event Store Documentation | https://developers.eventstore.com/ | Event sourcing implementation |
+
+## Multi-Tenancy
+
+| Resource | URL | Why It Matters |
+|----------|-----|----------------|
+| AWS SaaS Architecture Patterns | https://docs.aws.amazon.com/wellarchitected/latest/saas-lens/saas-architecture-patterns.html | Pool, bridge, silo isolation |
+| Microsoft Multi-Tenant Patterns | https://learn.microsoft.com/en-us/azure/architecture/guide/multitenant/approaches/overview | Tenant isolation strategies |
+| Salesforce Multi-Tenant Whitepaper | https://architect.salesforce.com/whitepapers/multitenant-architecture | Millions of tenants, shared schema |
+| IBM Multi-Tenancy Patterns | https://www.ibm.com/garage/method/architectures/multitenantSaaS | Provisioning and identity |
+
 ---
 
 *This reference is a living document. Add resources as you discover them.*
