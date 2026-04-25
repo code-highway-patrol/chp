@@ -8,7 +8,7 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
 fi
 
 CHP_LOG_DIR=".chp"
-CHP_LOG_FILE="$CHP_LOG_DIR/logs.jsonl"
+CHP_LOG_FILE="$CHP_LOG_DIR/citation.logs.jsonl"
 
 logger_init() {
     mkdir -p "$CHP_LOG_DIR" 2>/dev/null
