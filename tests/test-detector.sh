@@ -234,11 +234,31 @@ else
 fi
 
 # Test with agent hook when .claude doesn't exist
+# Save current state
+if [ -d ".claude" ]; then
+    claude_existed=true
+    mv .claude .claude.test_backup
+else
+    claude_existed=false
+fi
+
 if is_hook_available "pre-prompt"; then
     echo "  ✗ pre-prompt should NOT be available without .claude"
+    # Restore .claude before exit
+    if [ "$claude_existed" = true ]; then
+        mv .claude.test_backup .claude
+    fi
     exit 1
 else
     echo "  ✓ pre-prompt not available without .claude"
+fi
+
+# Restore .claude if it existed
+if [ "$claude_existed" = true ]; then
+    mv .claude.test_backup .claude
+    mkdir -p .claude
+else
+    mkdir -p .claude
 fi
 
 # Test with agent hook when .claude exists

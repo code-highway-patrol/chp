@@ -6,7 +6,7 @@ source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 source "$(dirname "${BASH_SOURCE[0]}")/detector.sh"
 
 # Marker to identify CHP-managed hooks
-readonly CHP_MANAGED_MARKER="# CHP-MANAGED: Do not edit this line"
+readonly CHP_MANAGED_MARKER="# CHP-MANAGED"
 
 # Install a hook for a law
 install_hook() {

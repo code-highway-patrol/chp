@@ -1,6 +1,6 @@
 {
   "name": "chp",
-  "displayName": "CHP - Codebeat Highway Patrol",
+  "displayName": "CHP - Code Health Protocol",
   "description": "Code quality enforcement with traffic laws and automated violation detection",
   "version": "1.0.0",
   "author": {

@@ -82,7 +82,11 @@ Results:
    ```bash
    ./commands/chp-scan --law=<law-name>
    ```
-5. **Commit your changes**
+5. **Test the specific law after fixing**
+   ```bash
+   ./commands/chp-law test <law-name>
+   ```
+6. **Commit your changes**
    ```bash
    git add .
    git commit -m "fix: resolve CHP law violations"
@@ -92,8 +96,8 @@ Results:
 
 For laws with many violations (e.g., 50+ console.log statements):
 
-1. Use find/replace carefully
-2. Re-scan after each batch
+1. Fix in batches of 10-20 files
+2. Re-scan after each batch: `./commands/chp-scan --law=<law-name>`
 3. Don't introduce new violations while fixing
 
 ## Integration with Workflows
@@ -135,3 +139,7 @@ Add to CI pipeline:
 - The scanner is read-only - no files are modified
 - Disabled laws are skipped during scanning
 - Results are current snapshot - historical failures are in law.json
+
+## Related Skills
+
+- **chp:investigate** - Debug specific violations when you need deeper understanding
