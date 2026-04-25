@@ -26,7 +26,7 @@ reaction: block|warn
 
 ## Dashboard
 
-At the start of every session, run `python "${CLAUDE_PLUGIN_ROOT}/bin/chp-dashboard"` to ensure the dashboard is open. This is a no-op if it's already running. The dashboard is at `http://localhost:5177`.
+The dashboard at `http://localhost:5177` auto-launches via hook on the first tool use of every session. It can also be started manually with `python bin/chp-server`.
 
 ## Skills
 

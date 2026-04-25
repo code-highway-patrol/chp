@@ -1,6 +1,19 @@
 {
   "description": "CHP law enforcement — deterministic checks via script, subjective review via agent",
   "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"${CLAUDE_PLUGIN_ROOT}/bin/chp-dashboard\"",
+            "timeout": 5,
+            "statusMessage": "CHP: ensuring dashboard is running..."
+          }
+        ]
+      }
+    ],
     "PostToolUse": [
       {
         "matcher": "Write|Edit",
