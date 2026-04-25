@@ -5,6 +5,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/common.sh"
 source "$SCRIPT_DIR/hook-registry.sh"
 source "$SCRIPT_DIR/verifier.sh"
+source "$SCRIPT_DIR/check-runner.sh"
 
 if [ -f "$SCRIPT_DIR/tightener.sh" ]; then
     source "$SCRIPT_DIR/tightener.sh"
