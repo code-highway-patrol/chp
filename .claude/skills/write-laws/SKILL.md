@@ -10,12 +10,30 @@ The CHP (Code Health Protocol) law enforcement system provides two layers of rul
 1. **Suggestive Layer** - Context documents that guide you to follow rules
 2. **Verification Layer** - Programmatic checks that catch violations
 
+## Setup (First Time Only)
+
+Before creating laws, ensure hooks are installed:
+
+```bash
+# Check if hooks are installed
+bash commands/chp-hooks list
+
+# If no hooks are installed, install them
+bash commands/chp-hooks install
+```
+
+**Auto-install:** When using this skill, hooks will be auto-installed if not present.
+
 ## Creating a Law
 
 When you need to enforce a rule or standard in the repository, use the `chp-law` CLI:
 
 ```bash
-chp-law create <law-name> --hooks=pre-commit,pre-push
+# Interactive mode (will prompt for confirmation)
+bash commands/chp-law create <law-name> --hooks=pre-commit,pre-push
+
+# Non-interactive mode (for agents/automation)
+bash commands/chp-law create <law-name> --hooks=pre-commit,pre-push --yes
 ```
 
 ### Example: No API Keys Law

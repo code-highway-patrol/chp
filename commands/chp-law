@@ -34,10 +34,12 @@ Commands:
 Options:
     --hooks=<hooks>    Comma-separated list of hooks to install (e.g., pre-commit,pre-push)
     --dry-run          Show preview without creating the law
+    --yes, -y          Skip confirmation prompts (non-interactive mode)
 
 Examples:
     chp-law create no-debug-code --hooks=pre-commit
     chp-law create test-coverage --hooks=pre-commit,pre-push
+    chp-law create no-secrets --hooks=pre-commit --yes
     chp-law list
     chp-law test no-debug-code
     chp-law reset no-debug-code
@@ -94,6 +96,13 @@ create_law() {
     local law_name="$1"
     local hooks_arg="$2"
     local dry_run=false
+    local auto_yes=false
+
+    # Flag variables (from command line or interactive)
+    local specified_severity=""
+    local specified_pattern=""
+    local specified_files=""
+    local specified_exceptions=""
 
     # Parse optional arguments
     shift 2
@@ -101,6 +110,21 @@ create_law() {
         case "$1" in
             --dry-run)
                 dry_run=true
+                ;;
+            --yes|-y)
+                auto_yes=true
+                ;;
+            --severity=*)
+                specified_severity="${1#*=}"
+                ;;
+            --pattern=*)
+                specified_pattern="${1#*=}"
+                ;;
+            --files=*)
+                specified_files="${1#*=}"
+                ;;
+            --exceptions=*)
+                specified_exceptions="${1#*=}"
                 ;;
             *)
                 log_error "Unknown option: $1"
@@ -145,18 +169,18 @@ create_law() {
     local exceptions
 
     if is_intent_clear "$law_name"; then
-        # Suggest configuration
+        # Suggest configuration (call once and parse all 5 output lines)
         local config
-        config=$(suggest_config "$law_name")
-        read severity _ <<< "$config"
-        config=$(suggest_config "$law_name")
-        read _ hooks _ <<< "$config"
-        config=$(suggest_config "$law_name")
-        read pattern _ <<< "$config"
-        config=$(suggest_config "$law_name")
-        read _ files _ <<< "$config"
-        config=$(suggest_config "$law_name")
-        read exceptions _ <<< "$config"
+        config=$(suggest_config "$law_name" | tr '\n' ' ')
+
+        # Read all 5 values from suggest_config output
+        local severity hooks_pattern pattern files exceptions
+        read severity hooks_pattern pattern files exceptions <<< "$config"
+
+        # Convert comma-separated hooks to array (if not already set via --hooks)
+        if [[ ${#hooks[@]} -eq 0 && -n "$hooks_pattern" ]]; then
+            IFS=',' read -ra hooks <<< "$hooks_pattern"
+        fi
     else
         # Ask questions interactively
         echo "Creating law: $law_name"
@@ -203,15 +227,17 @@ create_law() {
     # Show preview
     display_preview "$law_name" "$severity" "$hooks" "$pattern" "$files" "$exceptions"
 
-    # Confirm before creating (unless dry-run)
-    if [[ "$dry_run" = false ]]; then
+    # Confirm before creating (unless dry-run or auto-yes)
+    if [[ "$dry_run" = true ]]; then
+        log_info "Dry run - law not created"
+        return 0
+    fi
+
+    if [[ "$auto_yes" = false ]]; then
         if ! prompt_yes_no "Create this law?"; then
             log_info "Law creation cancelled"
             return 0
         fi
-    else
-        log_info "Dry run - law not created"
-        return 0
     fi
 
     # Create law directory
@@ -287,7 +313,7 @@ EOF
     cat > "$law_dir/guidance.md" <<EOF
 # Law: $law_name
 
-**Severity:** error
+**Severity:** $severity
 **Created:** $(date -u +"%Y-%m-%dT%H:%M:%SZ")
 **Failures:** 0
 
@@ -571,32 +597,14 @@ main() {
     case "$command" in
         create)
             if [[ $# -lt 1 ]]; then
-                log_error "Usage: chp-law create <law-name> [--hooks=<hooks>] [--dry-run]"
+                log_error "Usage: chp-law create <law-name> [--hooks=<hooks>] [--dry-run] [--severity=<severity>] [--pattern=<pattern>] [--files=<files>] [--exceptions=<exceptions>]"
                 exit 1
             fi
             local law_name="$1"
-            local hooks_arg=""
-            local dry_run_flag=""
             shift
 
-            # Parse optional arguments
-            while [[ $# -gt 0 ]]; do
-                case "$1" in
-                    --hooks=*)
-                        hooks_arg="${1#*=}"
-                        ;;
-                    --dry-run)
-                        dry_run_flag="--dry-run"
-                        ;;
-                    *)
-                        log_error "Unknown option: $1"
-                        exit 1
-                        ;;
-                esac
-                shift
-            done
-
-            create_law "$law_name" "$hooks_arg" $dry_run_flag
+            # Pass all remaining arguments to create_law
+            create_law "$law_name" "" "$@"
             ;;
         list)
             list_laws_cmd
