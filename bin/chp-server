@@ -287,10 +287,12 @@ async function runScan() {
   try {
     const res = await fetch(API + '/api/scan', { method: 'POST' });
     const data = await res.json();
+    const fc = data.files_checked || 0;
+    const tv = data.total_violations || data.total || (data.violations||[]).length || 0;
     document.getElementById('scan-result').innerHTML = `
       <div class="card">
         <p style="color:#22c55e;font-weight:600;margin-bottom:8px">Scan complete</p>
-        <p style="color:#a1a1aa;font-size:14px">${data.files_checked} files checked &middot; ${data.total_violations} violations found</p>
+        <p style="color:#a1a1aa;font-size:14px">${fc} files checked &middot; ${tv} violations found</p>
       </div>`;
   } catch(e) {
     document.getElementById('scan-result').innerHTML = '<div class="card"><p style="color:#ef4444">Scan failed: ' + e.message + '</p></div>';
@@ -311,10 +313,11 @@ async function loadReport() {
     return;
   }
 
-  const t = data.total_violations || 0;
-  const b = data.total_block || 0;
-  const w = data.total_warn || 0;
-  const lv = Object.keys(data.summary || {}).length;
+  const vs = data.violations || [];
+  const t = data.total_violations || data.total || vs.length || 0;
+  const b = data.total_block || data.blocked || vs.filter(v=>v.reaction==='block').length || 0;
+  const w = data.total_warn || data.warnings || vs.filter(v=>v.reaction==='warn').length || 0;
+  const lv = Object.keys(data.summary || {}).length || new Set(vs.map(v=>v.law)).size;
   document.getElementById('report-stats').innerHTML = `
     <div class="stat"><div class="label">Total</div><div class="val b">${t}</div></div>
     <div class="stat"><div class="label">Blocked</div><div class="val r">${b}</div></div>
@@ -339,7 +342,7 @@ async function loadReport() {
       const file = (v.file||'').split(/[/\\]/).slice(-2).join('/');
       const vtypeClass = v.type === 'subjective' ? 'sub' : 'det';
       const vtypeLabel = v.type === 'subjective' ? 'REVIEW' : 'AUTO';
-      return `<div class="violation"><span class="vtag ${vtypeClass}">${vtypeLabel}</span><span class="loc">${file}:${v.line||''}</span><span class="snip">${v.snippet||v.detail||''}</span></div>`;
+      return `<div class="violation"><span class="vtag ${vtypeClass}">${vtypeLabel}</span><span class="loc">${file}:${v.line||''}</span><span class="snip">${v.snippet||v.code||v.detail||v.message||''}</span></div>`;
     }).join('');
     html += `<div class="group-header open" onclick="this.classList.toggle('open');this.nextElementSibling.style.display=this.classList.contains('open')?'block':'none'">
       <span class="gh-badge badge ${reaction}">${reaction}</span><span class="gh-name">${lid}</span><span class="gh-count">${vlist.length}</span><span class="gh-arrow">&#9654;</span>
