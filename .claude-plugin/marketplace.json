@@ -6,8 +6,9 @@
   "plugins": [
     {
       "name": "chp",
-      "source": "./",
+      "description": "Code quality enforcement with traffic laws and automated violation detection",
       "version": "1.0.0",
+      "source": "./.claude-plugin/plugins/chp",
       "author": {
         "name": "CHP Contributors"
       }
