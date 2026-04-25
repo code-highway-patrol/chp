@@ -1,0 +1,94 @@
+{
+  "mcpServers": {
+    "chp": {
+      "command": "node",
+      "args": ["./lib/mcp-server.js"],
+      "env": {
+        "CHP_ROOT": "${workspaceFolder}"
+      }
+    }
+  },
+  "tools": [
+    {
+      "name": "chp_analyze",
+      "description": "Run full CHP analysis on the codebase to detect violations and enforce traffic laws",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "rules": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Specific rules to check (optional - checks all if not provided)"
+          },
+          "severity": {
+            "type": "string",
+            "enum": ["error", "warn", "info"],
+            "description": "Minimum severity level to report"
+          }
+        }
+      }
+    },
+    {
+      "name": "chp_check",
+      "description": "Check specific files or rules against CHP traffic laws",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "files": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Files to check"
+          },
+          "rule": {
+            "type": "string",
+            "description": "Specific rule to check"
+          }
+        }
+      }
+    },
+    {
+      "name": "chp_create_law",
+      "description": "Create a new CHP traffic law with verification and guidance",
+      "inputSchema": {
+        "type": "object",
+        "required": ["name", "hooks"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Name of the law (kebab-case)"
+          },
+          "description": {
+            "type": "string",
+            "description": "Description of what the law enforces"
+          },
+          "hooks": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Git hooks to attach (pre-commit, pre-push, etc.)"
+          }
+        }
+      }
+    },
+    {
+      "name": "chp_validate",
+      "description": "Validate CHP configuration and law definitions",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "law": {
+            "type": "string",
+            "description": "Specific law to validate (validates all if not provided)"
+          }
+        }
+      }
+    }
+  ],
+  "resources": [
+    {
+      "uri": "file://${workspaceFolder}/docs/chp",
+      "name": "CHP Documentation",
+      "description": "Context files for CHP laws and guidance",
+      "mimeType": "text/markdown"
+    }
+  ]
+}

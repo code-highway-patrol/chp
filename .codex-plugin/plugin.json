@@ -17,6 +17,6 @@
     "pre-commit",
     "hooks"
   ],
-  "skills": "./.claude/skills/",
-  "commands": "./.claude/commands/"
+  "skills": "./skills/",
+  "commands": "./commands/"
 }

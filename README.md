@@ -27,6 +27,7 @@ chp/
 ├── .claude-plugin/   # Claude Code integration
 ├── .codex-plugin/    # Codex integration
 ├── .cursor-plugin/   # Cursor integration
+├── .windsurf-plugin/ # Windsurf IDE integration
 └── .opencode/        # OpenCode integration
 ```
 

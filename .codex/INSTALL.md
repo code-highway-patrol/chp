@@ -19,14 +19,14 @@ Enable CHP (Codebeat Highway Patrol) in Codex via native skill discovery. Just c
 
    ```bash
    mkdir -p ~/.agents/skills
-   ln -s ~/.codex/chp/.claude/skills ~/.agents/skills/chp
+   ln -s ~/.codex/chp/skills ~/.agents/skills/chp
    ```
 
    **Windows (PowerShell):**
 
    ```powershell
    New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\.agents\skills"
-   cmd /c mklink /J "$env:USERPROFILE\.agents\skills\chp" "$env:USERPROFILE\.codex\chp\.claude\skills"
+   cmd /c mklink /J "$env:USERPROFILE\.agents\skills\chp" "$env:USERPROFILE\.codex\chp\skills"
    ```
 
 3. **Install CHP CLI tools:**
