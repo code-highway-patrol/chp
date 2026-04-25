@@ -134,3 +134,24 @@ The principle applies to many similar patterns:
 ---
 
 *This guidance will be automatically strengthened if violations occur.*
+
+---
+
+**Violation:** 2026-04-24T14:30:00Z
+**Context:** Found console.log in src/app.js line 45
+**Pattern:** `console.log('User data:', user);`
+**Remediation:** Replaced with logger.info()
+
+---
+
+**Violation:** 2026-04-24T15:45:00Z
+**Context:** Found console.log in src/utils/api.js line 123
+**Pattern:** `console.log('API response:', data);`
+**Remediation:** Replaced with logger.debug()
+
+---
+
+**Violation:** 2026-04-24T16:20:00Z
+**Context:** Found console.log in src/components/Header.jsx line 78
+**Pattern:** `console.log('Header mounted');`
+**Remediation:** Removed debug statement

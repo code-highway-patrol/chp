@@ -2,8 +2,8 @@
   "name": "no-console-log",
   "created": "2026-04-25T04:05:10Z",
   "severity": "error",
-  "failures": 0,
-  "tightening_level": 0,
+  "failures": 3,
+  "tightening_level": 3,
   "hooks": ["pre-commit"],
   "enabled": true
 }
