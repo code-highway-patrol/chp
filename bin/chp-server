@@ -349,6 +349,7 @@ async function loadReport() {
 }
 
 loadLaws();
+setInterval(() => fetch(API + '/api/heartbeat').catch(() => {}), 5000);
 </script>
 </body>
 </html>"""
@@ -394,6 +395,11 @@ class CHPHandler(http.server.BaseHTTPRequestHandler):
             else:
                 laws = []
             self.send_json(laws)
+
+        elif path == "/api/heartbeat":
+            import time
+            self.server.last_heartbeat = time.time()
+            self.send_json({"ok": True})
 
         elif path == "/api/status":
             self.send_json({
@@ -489,12 +495,26 @@ class CHPHandler(http.server.BaseHTTPRequestHandler):
 
 class ThreadedServer(http.server.ThreadingHTTPServer):
     allow_reuse_address = True
+    last_heartbeat = 0.0
+    HEARTBEAT_TIMEOUT = 15
+
+
+def watchdog(server):
+    """Shut down the server if no heartbeat received within timeout."""
+    import time
+    server.last_heartbeat = time.time()
+    while True:
+        time.sleep(5)
+        if time.time() - server.last_heartbeat > server.HEARTBEAT_TIMEOUT:
+            server.shutdown()
+            break
 
 
 def main():
     server = ThreadedServer(("127.0.0.1", PORT), CHPHandler)
     url = f"http://localhost:{PORT}"
     print(f"CHP Dashboard running at {url}", flush=True)
+    threading.Thread(target=watchdog, args=[server], daemon=True).start()
     threading.Timer(0.5, webbrowser.open, args=[url]).start()
     try:
         server.serve_forever()
