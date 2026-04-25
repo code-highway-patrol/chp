@@ -22,11 +22,20 @@ LAWS_DIR="${LAWS_DIR:-$CHP_BASE/docs/chp/laws}"
 GUIDANCE_DIR="${GUIDANCE_DIR:-$CHP_BASE/docs/chp}"
 
 # Highlight tag style: bold white text on colored background
-BG_RED='\033[41m\033[1m'
-BG_GREEN='\033[42m\033[1m'
-BG_ORANGE='\033[48;5;202m\033[1m'
-BG_YELLOW='\033[43m\033[1m'
-NC='\033[0m'
+# Colors disabled when stdout is not a terminal (piped/Claude Code)
+if [ -t 1 ] 2>/dev/null; then
+    BG_RED='\033[41m\033[1m'
+    BG_GREEN='\033[42m\033[1m'
+    BG_ORANGE='\033[48;5;202m\033[1m'
+    BG_YELLOW='\033[43m\033[1m'
+    NC='\033[0m'
+else
+    BG_RED=''
+    BG_GREEN=''
+    BG_ORANGE=''
+    BG_YELLOW=''
+    NC=''
+fi
 
 log_info() {
     echo -e " ${BG_GREEN} INFO ${NC}  $1"

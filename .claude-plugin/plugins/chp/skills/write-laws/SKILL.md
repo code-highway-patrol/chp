@@ -1,6 +1,6 @@
 ---
 name: write-laws
-description: Create, manage, and tune CHP enforcement laws
+description: Create new CHP laws, brainstorm enforcement ideas, propose rules to add, or tune existing laws. Triggers on "new law", "add a rule", "enforce", "come up with laws", "what should we enforce", "create a law", "write a law".
 ---
 
 # CHP Law Management

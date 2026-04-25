@@ -28,7 +28,7 @@
     "pre-tool"
   ],
   "created": "2026-04-25T05:30:00Z",
-  "failures": 1,
-  "tightening_level": 1,
+  "failures": 8,
+  "tightening_level": 8,
   "enabled": true
 }

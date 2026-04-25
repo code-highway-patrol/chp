@@ -219,3 +219,43 @@ This law has been violated 10 time(s). The guidance has been automatically stren
 This law has been violated 11 time(s). The guidance has been automatically strengthened.
 
 **Previous violations indicate this pattern is easy to miss. Pay extra attention.**
+
+---
+
+**Violation recorded:** 2026-04-25T20:08:43Z (Total: 12)
+
+This law has been violated 12 time(s). The guidance has been automatically strengthened.
+
+**Previous violations indicate this pattern is easy to miss. Pay extra attention.**
+
+---
+
+**Violation recorded:** 2026-04-25T20:09:41Z (Total: 13)
+
+This law has been violated 13 time(s). The guidance has been automatically strengthened.
+
+**Previous violations indicate this pattern is easy to miss. Pay extra attention.**
+
+---
+
+**Violation recorded:** 2026-04-25T20:17:59Z (Total: 14)
+
+This law has been violated 14 time(s). The guidance has been automatically strengthened.
+
+**Previous violations indicate this pattern is easy to miss. Pay extra attention.**
+
+---
+
+**Violation recorded:** 2026-04-25T20:18:46Z (Total: 15)
+
+This law has been violated 15 time(s). The guidance has been automatically strengthened.
+
+**Previous violations indicate this pattern is easy to miss. Pay extra attention.**
+
+---
+
+**Violation recorded:** 2026-04-25T20:20:29Z (Total: 16)
+
+This law has been violated 16 time(s). The guidance has been automatically strengthened.
+
+**Previous violations indicate this pattern is easy to miss. Pay extra attention.**

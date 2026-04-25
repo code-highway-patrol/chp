@@ -85,6 +85,7 @@ dispatch_hook() {
 
     local passed=0
     local failed=0
+    local -a passing_contexts=()
 
     for law_name in "${law_names[@]}"; do
         local law_dir="$LAWS_DIR/$law_name"
@@ -126,18 +127,35 @@ dispatch_hook() {
         fi
 
         log_debug "Running verify script for law: $law_name"
+        local verify_exit=0
+        local verify_stdout=""
         if [ -n "$CHP_TOOL_INPUT" ]; then
-            echo "$CHP_TOOL_INPUT" | "$verify_script" "${hook_args[@]}"
+            verify_stdout=$(echo "$CHP_TOOL_INPUT" | "$verify_script" "${hook_args[@]}" 2>/dev/null)
+            verify_exit=$?
         else
-            "$verify_script" "${hook_args[@]}"
+            verify_stdout=$("$verify_script" "${hook_args[@]}" 2>/dev/null)
+            verify_exit=$?
         fi
-        if [ $? -eq 0 ]; then
+        if [ $verify_exit -eq 0 ]; then
             log_debug "Law '$law_name' passed"
             ((passed++))
+            # Accumulate additionalContext from passing laws
+            if [ -n "$verify_stdout" ] && [[ "$hook_type" == "pre-tool" ]]; then
+                passing_contexts+=("$verify_stdout")
+            fi
         else
-            local exit_code=$?
-            log_error "Law '$law_name' failed with exit code $exit_code"
+            log_error "Law '$law_name' failed with exit code $verify_exit"
             ((failed++))
+
+            # For pre-tool hooks, output only the block JSON and stop
+            if [[ "$hook_type" == "pre-tool" || "$hook_type" == "pre-write" ]]; then
+                echo "$verify_stdout"
+                # record failure after outputting block JSON so stdout stays clean
+                if command -v record_failure >/dev/null 2>&1; then
+                    record_failure "$law_name" >&2
+                fi
+                return 1
+            fi
 
             if command -v record_failure >/dev/null 2>&1; then
                 record_failure "$law_name"
@@ -145,8 +163,12 @@ dispatch_hook() {
         fi
     done
 
-    echo ""
-    log_info "Hook '$hook_type' complete: passed: $passed, failed: $failed"
+    # For pre-tool hooks with no failures, output accumulated context
+    if [[ "$hook_type" == "pre-tool" ]] && [ ${#passing_contexts[@]} -gt 0 ]; then
+        printf '%s\n' "${passing_contexts[@]}"
+    fi
+
+    log_info "Hook '$hook_type' complete: passed: $passed, failed: $failed" >&2
 
     # Pre-tool and pre-write hooks always block on failure
     local should_block=false

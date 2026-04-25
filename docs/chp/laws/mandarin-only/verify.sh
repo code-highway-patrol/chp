@@ -90,7 +90,7 @@ latin_words=$(echo "$content" | perl -ne 'while (/\b[a-zA-Z]{4,}\b/g) { print "$
 content_len=${#content}
 if [ "$content_len" -gt 50 ] && [ "$latin_words" -gt 5 ] && [ "$chinese_chars" -lt "$latin_words" ]; then
     cat <<EOF
-{"hookSpecificOutput":{"hookEventName":"PreToolUse","additionalContext":$PROMPT_JSON},"continue":false,"stopReason":"[CHP mandarin-only] 内容必须使用简体中文撰写。检测到拉丁文字过多（${latin_words}个英文词 vs ${chinese_chars}个中文字符）。请用简体中文重写。","decision":"block","reason":"File content is not in simplified Mandarin Chinese"}
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","additionalContext":$PROMPT_JSON},"continue":false,"stopReason":"[CHP mandarin-only] Content must be written in simplified Mandarin Chinese. Detected too many Latin words (${latin_words} English words vs ${chinese_chars} Chinese characters). Rewrite in simplified Chinese.","decision":"block","reason":"[CHP mandarin-only] Detected ${latin_words} English words vs ${chinese_chars} Chinese characters. All file content must be in simplified Mandarin Chinese."}
 EOF
     exit 1
 fi
