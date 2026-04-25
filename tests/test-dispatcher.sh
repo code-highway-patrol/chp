@@ -1,52 +1,40 @@
 #!/bin/bash
 # Test dispatcher functions
 
-set -e  # Exit on test failures
+set -e
 
-# Get the script directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Source core modules
 source "$SCRIPT_DIR/../core/common.sh"
 source "$SCRIPT_DIR/../core/hook-registry.sh"
-source "$SCRIPT_DIR/../core/tightener.sh"
+source "$SCRIPT_DIR/../core/verifier.sh"
 
-# Setup test environment
+if [ -f "$SCRIPT_DIR/../core/tightener.sh" ]; then
+    source "$SCRIPT_DIR/../core/tightener.sh"
+fi
+
+# Source dispatcher (which re-sources dependencies — that's fine)
+source "$SCRIPT_DIR/../core/dispatcher.sh"
+
+# Set up isolated test environment AFTER all sourcing
 TEST_REGISTRY="$CHP_BASE/.chp/hook-registry.json.test"
-TEST_CHP_BASE="$CHP_BASE"
 TEST_LAWS_DIR="$CHP_BASE/docs/chp/laws"
-
-# Backup original registry if exists
-backup_registry() {
-    if [ -f "$TEST_REGISTRY" ]; then
-        mv "$TEST_REGISTRY" "$TEST_REGISTRY.backup"
-    fi
-}
-
-restore_registry() {
-    if [ -f "$TEST_REGISTRY.backup" ]; then
-        mv "$TEST_REGISTRY.backup" "$TEST_REGISTRY"
-    elif [ -f "$TEST_REGISTRY" ]; then
-        rm "$TEST_REGISTRY"
-    fi
-}
-
-cleanup_test_law() {
-    if [ -d "$TEST_LAWS_DIR/test-dispatcher-law" ]; then
-        rm -rf "$TEST_LAWS_DIR/test-dispatcher-law"
-    fi
-}
-
-# Set up test environment
-backup_registry
-
-# Override registry location for testing
-export CHP_BASE="$TEST_CHP_BASE"
 export HOOK_REGISTRY="$TEST_REGISTRY"
 
+cleanup_test_law() {
+    rm -rf "$TEST_LAWS_DIR/test-dispatcher-law"
+}
+
 cleanup() {
-    restore_registry
+    rm -f "$TEST_REGISTRY"
     cleanup_test_law
 }
 trap cleanup EXIT
+
+# Force a clean test registry
+rm -f "$TEST_REGISTRY"
+echo '{"hooks":{},"version":"1.0"}' > "$TEST_REGISTRY"
 
 echo "Testing dispatcher.sh functions..."
 echo "Using test registry: $TEST_REGISTRY"
@@ -54,7 +42,6 @@ echo ""
 
 # Test 1: get_hook_context returns correct git commands
 echo "Test 1: get_hook_context returns correct git commands"
-source "$SCRIPT_DIR/../core/dispatcher.sh"
 
 context=$(get_hook_context "pre-commit")
 if [ "$context" = "git diff --cached --name-only" ]; then
@@ -91,9 +78,8 @@ echo ""
 
 # Test 2: Dispatch hook with no laws registered
 echo "Test 2: Dispatch hook with no laws registered"
-rm -f "$TEST_REGISTRY"
-init_hook_registry
-dispatch_hook "pre-commit"
+echo '{"hooks":{},"version":"1.0"}' > "$TEST_REGISTRY"
+dispatch_hook "pre-commit" >/dev/null 2>&1
 echo "  ✓ Dispatch with no laws completes without error"
 echo ""
 
@@ -103,7 +89,6 @@ cleanup_test_law
 
 mkdir -p "$TEST_LAWS_DIR/test-dispatcher-law"
 
-# Create law.json
 cat > "$TEST_LAWS_DIR/test-dispatcher-law/law.json" << 'EOF'
 {
   "name": "test-dispatcher-law",
@@ -115,7 +100,6 @@ cat > "$TEST_LAWS_DIR/test-dispatcher-law/law.json" << 'EOF'
 }
 EOF
 
-# Create verify.sh that succeeds
 cat > "$TEST_LAWS_DIR/test-dispatcher-law/verify.sh" << 'EOF'
 #!/bin/bash
 echo "Test law verification passed"
@@ -123,16 +107,13 @@ exit 0
 EOF
 chmod +x "$TEST_LAWS_DIR/test-dispatcher-law/verify.sh"
 
-# Create guidance.md
 cat > "$TEST_LAWS_DIR/test-dispatcher-law/guidance.md" << 'EOF'
 # Test Law Guidance
 
 This is a test law for dispatcher testing.
 EOF
 
-# Register the law
-rm -f "$TEST_REGISTRY"
-init_hook_registry
+echo '{"hooks":{},"version":"1.0"}' > "$TEST_REGISTRY"
 register_hook_law "pre-commit" "test-dispatcher-law"
 
 laws=$(get_hook_laws "pre-commit")
@@ -166,7 +147,6 @@ echo ""
 
 # Test 5: Dispatch with failing law
 echo "Test 5: Dispatch with failing law"
-# Update verify.sh to fail
 cat > "$TEST_LAWS_DIR/test-dispatcher-law/verify.sh" << 'EOF'
 #!/bin/bash
 echo "Test law verification failed"
@@ -237,8 +217,7 @@ echo ""
 
 # Test 9: Handle missing law directory gracefully
 echo "Test 9: Handle missing law directory gracefully"
-rm -f "$TEST_REGISTRY"
-init_hook_registry
+echo '{"hooks":{},"version":"1.0"}' > "$TEST_REGISTRY"
 register_hook_law "pre-commit" "non-existent-law"
 
 output=$(dispatch_hook "pre-commit" 2>&1)
@@ -265,10 +244,8 @@ cat > "$TEST_LAWS_DIR/test-dispatcher-law/law.json" << 'EOF'
   "enabled": true
 }
 EOF
-# Don't create verify.sh
 
-rm -f "$TEST_REGISTRY"
-init_hook_registry
+echo '{"hooks":{},"version":"1.0"}' > "$TEST_REGISTRY"
 register_hook_law "pre-commit" "test-dispatcher-law"
 
 output=$(dispatch_hook "pre-commit" 2>&1)
