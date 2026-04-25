@@ -180,4 +180,112 @@ else
 fi
 
 echo ""
+
+# Test 6: threshold checker detects oversized files
+echo "Test 6: threshold checker detects oversized files"
+
+source "$TEST_ROOT/core/checkers/threshold.sh"
+
+# Create a long file (60 lines)
+for i in $(seq 1 60); do echo "line $i"; done > "$TEST_ROOT/src/long.ts"
+cd "$TEST_ROOT"
+git add src/long.ts >/dev/null 2>&1
+
+CONFIG='{"metric":"file_line_count","max":50}'
+RESULT=$(check_threshold "pre-commit" "$CONFIG" "" || true)
+if [[ "$RESULT" == FAIL* ]]; then
+    echo "  ✓ Threshold checker detected oversized file"
+else
+    echo "  ✗ Threshold checker should have failed: $RESULT"
+    exit 1
+fi
+
+echo ""
+
+# Test 7: threshold checker passes under limit
+echo "Test 7: threshold checker passes under limit"
+
+rm -f "$TEST_ROOT/src/long.ts"
+git reset src/long.ts >/dev/null 2>&1 || true
+echo "short file" > "$TEST_ROOT/src/short.ts"
+cd "$TEST_ROOT"
+git add src/short.ts >/dev/null 2>&1
+
+RESULT=$(check_threshold "pre-commit" "$CONFIG" "")
+if [[ "$RESULT" == "PASS" ]]; then
+    echo "  ✓ Threshold checker passed short file"
+else
+    echo "  ✗ Threshold checker should have passed: $RESULT"
+    exit 1
+fi
+
+echo ""
+
+# Test 8: structural checker - test_file_exists assertion
+echo "Test 8: structural checker - test_file_exists assertion"
+
+source "$TEST_ROOT/core/checkers/structural.sh"
+
+# Create source file without matching test
+echo 'export function foo() {}' > "$TEST_ROOT/src/utils.ts"
+cd "$TEST_ROOT"
+git add src/utils.ts >/dev/null 2>&1
+
+CONFIG='{"assert":"test_file_exists","source_pattern":"src/","test_pattern":"tests/"}'
+RESULT=$(check_structural "pre-commit" "$CONFIG" "" || true)
+if [[ "$RESULT" == FAIL* ]]; then
+    echo "  ✓ Structural checker detected missing test file"
+else
+    echo "  ✗ Structural checker should have failed: $RESULT"
+    exit 1
+fi
+
+echo ""
+
+# Test 9: structural checker passes when test exists
+echo "Test 9: structural checker passes when test exists"
+
+mkdir -p "$TEST_ROOT/tests"
+echo 'test("foo", () => {})' > "$TEST_ROOT/tests/utils.test.ts"
+cd "$TEST_ROOT"
+git add tests/utils.test.ts >/dev/null 2>&1
+
+RESULT=$(check_structural "pre-commit" "$CONFIG" "")
+if [[ "$RESULT" == "PASS" ]]; then
+    echo "  ✓ Structural checker passed with test file present"
+else
+    echo "  ✗ Structural checker should have passed: $RESULT"
+    exit 1
+fi
+
+echo ""
+
+# Test 10: agent checker outputs prompt context
+echo "Test 10: agent checker outputs prompt for agent hooks"
+
+source "$TEST_ROOT/core/checkers/agent.sh"
+
+CONFIG='{"prompt":"Are these variable names meaningful?"}'
+RESULT=$(check_agent "pre-tool" "$CONFIG" "")
+if [[ "$RESULT" == PASS* ]]; then
+    echo "  ✓ Agent checker outputs context for pre-tool hooks"
+else
+    echo "  ✗ Agent checker should output context: $RESULT"
+    exit 1
+fi
+
+echo ""
+
+# Test 11: agent checker skips for non-agent hooks
+echo "Test 11: agent checker skips for non-agent hooks"
+
+RESULT=$(check_agent "pre-commit" "$CONFIG" "")
+if [[ "$RESULT" == SKIP* ]]; then
+    echo "  ✓ Agent checker skips for git hooks"
+else
+    echo "  ✗ Agent checker should skip for git hooks: $RESULT"
+    exit 1
+fi
+
+echo ""
 echo "All tests passed!"
