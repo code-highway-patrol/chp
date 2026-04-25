@@ -18,11 +18,11 @@
     "hooks"
   ],
   "skills": [
-    "./skills/audit",
-    "./skills/investigate",
-    "./skills/onboard",
-    "./skills/plan-check",
-    "./skills/refine-laws",
-    "./skills/write-laws"
+    "./.claude-plugin/skills/audit",
+    "./.claude-plugin/skills/investigate",
+    "./.claude-plugin/skills/onboard",
+    "./.claude-plugin/skills/plan-check",
+    "./.claude-plugin/skills/refine-laws",
+    "./.claude-plugin/skills/write-laws"
   ]
 }
