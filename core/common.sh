@@ -57,3 +57,26 @@ list_laws() {
         fi
     done
 }
+
+# Detect language based on file extension
+detect_language() {
+    local file="$1"
+    local ext="${file##*.}"
+    local lang=""
+
+    case "$ext" in
+        js)      lang="javascript" ;;
+        ts)      lang="typescript" ;;
+        py)      lang="python" ;;
+        java)    lang="java" ;;
+        go)      lang="go" ;;
+        rs)      lang="rust" ;;
+        rb)      lang="ruby" ;;
+        php)     lang="php" ;;
+        c)       lang="c" ;;
+        cpp|h)   lang="cpp" ;;
+        *)       lang="unknown" ;;
+    esac
+
+    echo "$lang"
+}

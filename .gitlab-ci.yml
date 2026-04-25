@@ -1,0 +1,54 @@
+stages:
+  - pre-build
+  - build
+  - deploy
+
+variables:
+  NODE_VERSION: "20"
+
+chp-pre-build:
+  stage: pre-build
+  image: ubuntu:latest
+  before_script:
+    - apt-get update && apt-get install -y git bash jq
+    - chmod +x ./commands/chp-hooks ./commands/chp-law .chp/cicd-hooks/pre-build.sh
+  script:
+    - bash .chp/cicd-hooks/pre-build.sh
+  only:
+    - main
+    - develop
+    - merge_requests
+
+chp-build:
+  stage: build
+  image: node:${NODE_VERSION}
+  before_script:
+    - chmod +x .chp/cicd-hooks/post-build.sh
+  script:
+    - npm ci
+    - npm run build
+    - bash .chp/cicd-hooks/post-build.sh
+  artifacts:
+    paths:
+      - dist/
+    expire_in: 1 day
+  only:
+    - main
+    - develop
+    - merge_requests
+
+chp-deploy:
+  stage: deploy
+  image: node:${NODE_VERSION}
+  before_script:
+    - chmod +x .chp/cicd-hooks/pre-deploy.sh .chp/cicd-hooks/post-deploy.sh
+  script:
+    - bash .chp/cicd-hooks/pre-deploy.sh
+    - npm run deploy
+    - bash .chp/cicd-hooks/post-deploy.sh
+  environment:
+    name: production
+    url: https://example.com
+  when: manual
+  only:
+    - main

@@ -5,8 +5,21 @@
 
 # CHP-MANAGED
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/../../core/dispatcher.sh" post-tool "$@"
+# Calculate CHP_BASE from .claude/hooks going up to repo root
+CHP_BASE="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+
+# Log tool execution for audit purposes
+if [ -n "$TOOL_NAME" ]; then
+    echo "[CHP POST-TOOL] Tool executed: $TOOL_NAME"
+fi
+
+# Source dispatcher for any post-tool law validations
+source "$CHP_BASE/core/dispatcher.sh" post-tool "$@"
+
+# Log completion
+if [ -n "$TOOL_NAME" ]; then
+    echo "[CHP POST-TOOL] Completed: $TOOL_NAME"
+fi
 
 # Always allow continuation
 exit 0

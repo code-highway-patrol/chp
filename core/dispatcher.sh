@@ -15,6 +15,11 @@ if [ -f "$SCRIPT_DIR/tightener.sh" ]; then
     source "$SCRIPT_DIR/tightener.sh"
 fi
 
+# Source parallel runner for concurrent law execution
+if [ -f "$SCRIPT_DIR/parallel-runner.sh" ]; then
+    source "$SCRIPT_DIR/parallel-runner.sh"
+fi
+
 # Get the git command for retrieving context based on hook type
 get_hook_context() {
     local hook_type="$1"
@@ -131,12 +136,28 @@ dispatch_hook() {
     echo ""
     log_info "Hook '$hook_type' complete: passed: $passed, failed: $failed"
 
-    # Check if hook is blocking
-    if is_hook_blocking "$hook_type"; then
-        if [ $failed -gt 0 ]; then
-            log_error "Blocking hook '$hook_type' had failures"
-            return 1
+    # Check if hook is blocking with proper defaults based on hook type
+    local blocking_value
+    blocking_value=$(jq -r ".hooks[\"$hook_type\"].blocking // empty" "$HOOK_REGISTRY" 2>/dev/null)
+    if [ -z "$blocking_value" ] || [ "$blocking_value" = "null" ]; then
+        # Default based on hook type: pre-* are blocking, post-* are non-blocking
+        if [[ "$hook_type" =~ ^pre- ]]; then
+            blocking_value="true"
+        elif [[ "$hook_type" =~ ^post- ]]; then
+            blocking_value="false"
+        else
+            blocking_value="true"
         fi
+    fi
+
+    if [ "$blocking_value" = "true" ] && [ $failed -gt 0 ]; then
+        log_error "Blocking hook '$hook_type' had failures"
+        return 1
+    fi
+
+    # Log warning for non-blocking failures
+    if [ "$blocking_value" != "true" ] && [ $failed -gt 0 ]; then
+        log_warn "Non-blocking hook '$hook_type' had $failed failure(s) - continuing anyway"
     fi
 
     return 0

@@ -39,6 +39,14 @@ record_failure() {
        "$law_json" > "${law_json}.tmp" && \
     mv "${law_json}.tmp" "$law_json"
 
+    # Check for auto-disable threshold
+    local threshold="${CHP_AUTO_DISABLE_THRESHOLD:-5}"
+    if [[ "$failures" -ge "$threshold" ]]; then
+        jq '.enabled = false' "$law_json" > "${law_json}.tmp" && \
+        mv "${law_json}.tmp" "$law_json"
+        log_error "[AUTO-DISABLED] Law '$law_name' exceeded failure threshold ($failures >= $threshold)"
+    fi
+
     # Append violation history to guidance file
     local timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
     cat >> "$guidance_md" <<EOF

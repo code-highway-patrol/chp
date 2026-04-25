@@ -5,7 +5,8 @@
 
 # CHP-MANAGED
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/../../core/dispatcher.sh" pre-tool "$@"
+# Calculate CHP_BASE from .claude/hooks going up to repo root
+CHP_BASE="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+source "$CHP_BASE/core/dispatcher.sh" pre-tool "$@"
 
 exit $?

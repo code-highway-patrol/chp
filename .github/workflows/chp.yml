@@ -1,0 +1,63 @@
+name: CHP Law Enforcement
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  chp-pre-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup CHP
+        run: |
+          chmod +x ./commands/chp-hooks
+          chmod +x ./commands/chp-law
+          chmod +x .chp/cicd-hooks/pre-build.sh
+
+      - name: Run Pre-Build Checks
+        run: bash .chp/cicd-hooks/pre-build.sh
+
+  chp-build:
+    needs: chp-pre-build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Run Post-Build Checks
+        run: bash .chp/cicd-hooks/post-build.sh
+
+  chp-deploy:
+    needs: chp-build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    environment:
+      name: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup CHP
+        run: chmod +x .chp/cicd-hooks/pre-deploy.sh .chp/cicd-hooks/post-deploy.sh
+
+      - name: Run Pre-Deploy Checks
+        run: bash .chp/cicd-hooks/pre-deploy.sh
+
+      - name: Deploy
+        run: npm run deploy
+
+      - name: Run Post-Deploy Checks
+        run: bash .chp/cicd-hooks/post-deploy.sh

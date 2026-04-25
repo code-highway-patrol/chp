@@ -5,8 +5,9 @@
 
 # CHP-MANAGED
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/../../core/dispatcher.sh" pre-commit "$@"
+# Calculate CHP_BASE from .git/hooks going up to repo root
+CHP_BASE="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+source "$CHP_BASE/core/dispatcher.sh" pre-commit "$@"
 
 # Exit with dispatcher's exit code
 exit $?

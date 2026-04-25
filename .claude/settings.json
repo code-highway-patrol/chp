@@ -1,10 +1,12 @@
 {
   "env": {
-    "ANTHROPIC_AUTH_TOKEN": "df4e8801756040bbb3c8a9745b8ee181.2NicvUwMEfFZjnaR",
-    "ANTHROPIC_BASE_URL": "https://api.z.ai/api/anthropic",
+    "ANTHROPIC_BASE_URL": "https://api.minimax.io/anthropic",
+    "ANTHROPIC_AUTH_TOKEN": "sk-cp-AXUMvntriJGe5Jb5RFyRYynK-XBySvg2qYt5uay_1vjZxSQcJduRGPSOnvqLImN3ATj6DdRNKMlZR6-vhzz5RNNef4m9gfsVXc-TjliF4iJGtnGgScQ4QAE",
     "API_TIMEOUT_MS": "3000000",
-    "ANTHROPIC_DEFAULT_HAIKU_MODEL": "glm-4.5-air",
-    "ANTHROPIC_DEFAULT_SONNET_MODEL": "glm-4.7",
-    "ANTHROPIC_DEFAULT_OPUS_MODEL": "glm-4.7"
+    "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": "1",
+    "ANTHROPIC_MODEL": "MiniMax-M2.7",
+    "ANTHROPIC_DEFAULT_SONNET_MODEL": "MiniMax-M2.7",
+    "ANTHROPIC_DEFAULT_OPUS_MODEL": "MiniMax-M2.7",
+    "ANTHROPIC_DEFAULT_HAIKU_MODEL": "MiniMax-M2.7"
   }
 }
