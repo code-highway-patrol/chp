@@ -1,7 +1,7 @@
 {
   "name": "chp",
   "displayName": "CHP - Code Highway Patrol",
-  "description": "Define and enforce code laws with regex-based violation detection and self-improving exclusion rules.",
+  "description": "Define and enforce code laws with subjective AI judgment. Laws get stricter over time as violations are caught.",
   "version": "1.0.0",
   "author": {
     "name": "CHP Contributors"
@@ -13,14 +13,5 @@
     "linting",
     "guardrails"
   ],
-  "skills": {
-    "scan-repo": "skills/scan-repo/skill.md",
-    "write-laws": "skills/write-laws/skill.md",
-    "refine-laws": "skills/refine-laws/skill.md",
-    "onboard": "skills/onboard/skill.md"
-  },
-  "context": [
-    "laws/chp-laws.txt",
-    "CLAUDE.md"
-  ]
+  "skills": "./skills/"
 }

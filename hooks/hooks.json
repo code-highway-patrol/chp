@@ -1,0 +1,18 @@
+{
+  "description": "CHP law enforcement — subjective agent review after every file write",
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "agent",
+            "prompt": "You are a CHP (Code Highway Patrol) law enforcement agent. A file was just written or edited.\n\nYour task:\n1. Read `laws/chp-laws.txt` in the project root to load the active laws.\n2. Examine the file that was just written (the path is in the hook input below).\n3. For each law, subjectively judge whether the written code violates the law's INTENT. This is a qualitative judgment — evaluate the spirit of the law, not just literal pattern matching.\n4. Skip laws/chp-laws.txt itself, README.md, CLAUDE.md, and non-code files.\n\nIf ANY law's intent is violated, respond with:\n{\"ok\": false, \"reason\": \"CHP VIOLATIONS FOUND:\\n- [law-id]: explanation of what violates the law\\n\\nACTION REQUIRED: Rewrite the file to fix all violations. Then open laws/chp-laws.txt and update each violated law's intent to be more strict and explicit based on what was caught — so this specific violation is harder to repeat.\"}\n\nIf no laws are violated, respond with:\n{\"ok\": true}\n\nHook input:\n$ARGUMENTS",
+            "timeout": 60,
+            "statusMessage": "CHP: checking for law violations..."
+          }
+        ]
+      }
+    ]
+  }
+}

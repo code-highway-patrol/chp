@@ -1,15 +1,15 @@
 ---
 name: refine-laws
-description: Adjust existing CHP laws to reduce false positives or update patterns
+description: Adjust existing CHP laws
 ---
 
 # Refine an Existing Law
 
 ## When to Use
 
-- A law is flagging false positives
-- A law needs broader or narrower patterns
-- User wants to change a reaction type (block/warn/auto_fix)
+- A law is catching things it shouldn't (too broad)
+- A law is missing things it should catch (too narrow)
+- User wants to change a reaction type
 - User wants to disable or delete a law
 
 ## Process
@@ -17,30 +17,25 @@ description: Adjust existing CHP laws to reduce false positives or update patter
 1. Read `laws/chp-laws.txt`
 2. Identify the law to refine (by name or by the user's description of the problem)
 3. Discuss the change with the user if ambiguous
-4. Edit the law block in `laws/chp-laws.txt`
+4. Edit the law's `intent` in `laws/chp-laws.txt`
 5. Confirm what changed
 
 ## Common Refinements
 
-**Add exclusion** (reduce false positives):
-```
-exclusion: <regex matching the false positive pattern>
-```
+**Make more specific** (reduce false positives):
+Narrow the intent to exclude legitimate patterns. Example: "No console.log in production code" → "No console.log in production code, except in dedicated logging utility files."
 
-**Broaden violation** (catch more cases):
-Update the `violation:` regex to cover additional patterns.
+**Make broader** (catch more cases):
+Expand the intent to cover additional patterns. Example: "No hardcoded passwords" → "No hardcoded passwords, API keys, tokens, connection strings, or any sensitive credentials."
 
-**Change reaction**:
-Switch between `block`, `warn`, and `auto_fix`.
+**Change reaction**: Switch between `block` and `warn`.
 
-**Disable temporarily**:
-Comment out the entire law block with `#` on each line.
+**Disable**: Comment out the entire law block with `#` on each line.
 
-**Delete permanently**:
-Remove the entire law block from the file.
+**Delete**: Remove the entire law block from the file.
 
 ## Guidelines
 
-- Always read the law's `intent` first to understand its purpose
-- Prefer adding exclusions over weakening the violation pattern
-- After editing, mentally test the regex against the problematic code to verify the fix
+- Read the law's current intent first to understand its purpose
+- Prefer making the intent more specific over deleting the law
+- Laws tighten automatically over time — manual refinement is for course corrections

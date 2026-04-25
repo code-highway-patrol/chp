@@ -13,8 +13,8 @@ description: Create new CHP enforcement laws
 ## Process
 
 1. Ask the user what they want to enforce (or infer from context)
-2. Draft a law block with: unique id, intent, violation regex, reaction type
-3. Read `laws/chp-laws.txt` to check for duplicates or conflicts
+2. Draft a law with a unique id, a clear intent, and a reaction type
+3. Read `laws/chp-laws.txt` to check for duplicates or overlap
 4. Append the new law block to `laws/chp-laws.txt`
 5. Confirm what was added
 
@@ -24,23 +24,19 @@ Append to `laws/chp-laws.txt`:
 
 ```
 # === Law: <unique-id> ===
-intent: <plain English description>
-violation: <regex pattern matching the bad code>
-exclusion: <optional regex for legitimate exceptions>
-reaction: block|warn|auto_fix
+intent: <plain-language description of what this law prohibits — be specific and actionable>
+reaction: block|warn
 ```
 
 ## Fields
 
-- **id**: Lowercase kebab-case, unique across all laws (e.g. `no-eval`, `require-error-handling`)
-- **intent**: One sentence explaining what the law protects against
-- **violation**: Regex pattern that matches violating code. Test it mentally against realistic examples
-- **exclusion**: Optional. Patterns that look like violations but are acceptable (e.g. test files, debug modes)
-- **reaction**: `block` (must fix), `warn` (flag but allow), `auto_fix` (attempt automatic correction)
+- **id**: Lowercase kebab-case, unique across all laws
+- **intent**: A clear, specific statement of what's not allowed and what to do instead. Write it like a rule you'd explain to a teammate. The more explicit, the better — this is what the agent evaluates against.
+- **reaction**: `block` (must fix before continuing) or `warn` (flag but allow)
 
 ## Guidelines
 
-- Use precise regex — overly broad patterns cause false positives
-- Prefer `block` for security laws, `warn` for style laws
-- Add exclusions proactively for known legitimate patterns
+- Write intents that are specific enough to act on — "no bad code" is too vague, "no raw SQL queries without parameterized inputs" is good
+- Prefer `block` for security and correctness laws, `warn` for style preferences
 - Check existing laws first to avoid overlap
+- Laws evolve over time — they get tightened automatically when violations are caught
