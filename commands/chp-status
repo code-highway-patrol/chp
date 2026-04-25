@@ -1,0 +1,77 @@
+#!/bin/bash
+# CHP Status Display
+
+set -e
+
+# Source core functions
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../core/common.sh"
+source "$SCRIPT_DIR/../core/detector.sh"
+
+echo "CHP Law Enforcement Status"
+echo "=========================="
+echo ""
+
+# Show detected hooks
+echo "🔌 Detected Hook Systems:"
+if [ -d .git ]; then
+    echo "   ✓ Git hooks available"
+    echo "     Available: pre-commit, pre-push, pre-merge-commit"
+else
+    echo "   ✗ Git hooks not available"
+fi
+
+if [ -d .pretool ] || [ -f .pretool ]; then
+    echo "   ✓ Pretool hooks available"
+    echo "     Available: pre-write, pre-commit, pre-push"
+else
+    echo "   - Pretool not configured"
+fi
+
+echo ""
+
+# Show active laws
+echo "📋 Active Laws:"
+if [ -z "$(ls -A "$LAWS_DIR" 2>/dev/null)" ]; then
+    echo "   No laws defined"
+else
+    for law_dir in "$LAWS_DIR"/*; do
+        if [ -d "$law_dir" ]; then
+            name=$(basename "$law_dir")
+            severity=$(get_law_meta "$name" "severity")
+            failures=$(get_law_meta "$name" "failures")
+
+            # Check if jq is available before using it
+            if command -v jq >/dev/null 2>&1; then
+                hooks=$(get_law_meta "$name" "hooks" | jq -r 'join(", ")' 2>/dev/null || echo "unknown")
+            else
+                hooks="jq not available"
+            fi
+
+            if [ "$failures" -gt 0 ]; then
+                echo "   ⚠️  $name ($severity) - $failures failures"
+            else
+                echo "   ✓ $name ($severity)"
+            fi
+            echo "      Hooks: $hooks"
+        fi
+    done
+fi
+
+echo ""
+
+# Show installed hooks
+echo "🔨 Installed Hooks:"
+if [ -d .git/hooks ]; then
+    for hook in .git/hooks/pre-commit .git/hooks/pre-push .git/hooks/pre-merge-commit; do
+        if [ -f "$hook" ] && grep -q "CHP-MANAGED" "$hook"; then
+            hook_name=$(basename "$hook")
+            law_count=$(grep -c "^# Law:" "$hook" || echo "0")
+            echo "   ✓ $hook_name ($law_count laws)"
+        fi
+    done
+else
+    echo "   No git hooks installed"
+fi
+
+echo ""
