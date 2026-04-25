@@ -89,7 +89,7 @@ scan_law_files() {
     local all_files=$(git ls-files | grep -vE '^(node_modules/|\.git/|\.chp/|dist/|build/|\.next/|coverage/)' || true)
 
     # File extensions to skip
-    local skip_pattern='\.(md|json|txt|sh|yml|yaml|lock|gitignore)$'
+    local skip_pattern='\.(md|MD|json|txt|sh|yml|yaml|lock|gitignore)$'
 
     # Test files and directories to skip
     local test_pattern='^(tests?/|test/|__tests__/|.*test[-_].*\.(js|ts|tsx|py)$|test[-_].*\.js$)'

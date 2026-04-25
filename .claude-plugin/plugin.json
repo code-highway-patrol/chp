@@ -17,6 +17,13 @@
     "pre-commit",
     "hooks"
   ],
-  "skills": "./skills/",
-  "commands": "./commands/"
+  "skills": [
+    "./skills/audit",
+    "./skills/investigate",
+    "./skills/onboard",
+    "./skills/plan-check",
+    "./skills/refine-laws",
+    "./skills/scan-repo",
+    "./skills/write-laws"
+  ]
 }

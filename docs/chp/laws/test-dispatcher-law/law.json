@@ -1,0 +1,8 @@
+{
+  "name": "test-dispatcher-law",
+  "description": "Test law for dispatcher",
+  "severity": "medium",
+  "failures": 3,
+  "tightening_level": 3,
+  "enabled": true
+}

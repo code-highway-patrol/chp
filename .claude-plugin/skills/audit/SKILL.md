@@ -1,5 +1,5 @@
 ---
-name: chp:audit
+name: chp-audit
 description: Scan codebase for CHP violations and assess code health
 ---
 

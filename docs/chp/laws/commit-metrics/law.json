@@ -1,0 +1,9 @@
+{
+  "name": "commit-metrics",
+  "created": "2026-04-25T04:33:44Z",
+  "severity": "info",
+  "failures": 0,
+  "tightening_level": 0,
+  "hooks": ["post-commit"],
+  "enabled": true
+}
