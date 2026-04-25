@@ -112,6 +112,52 @@ Contributions are welcome! Please read our [Code of Conduct](CODE_OF_CONDUCT.md)
 - [AGENTS.md](AGENTS.md) - Agent development guide
 - [docs/](docs/) - Detailed documentation
 
+## Law Enforcement System
+
+CHP includes a two-layer law enforcement system:
+
+### Quick Start
+
+```bash
+# Create a new law
+./commands/chp-law create my-law --hooks=pre-commit
+
+# List all laws
+./commands/chp-law list
+
+# Check system status
+./commands/chp-status
+```
+
+### How It Works
+
+1. **Suggestive Layer** - Context files in `docs/chp/` guide agents to follow rules
+2. **Verification Layer** - Scripts in `docs/chp/laws/` check for violations
+3. **Auto-Tightening** - Failed verifications strengthen guidance automatically
+
+### Creating Laws
+
+See the [chp:write-laws](skills/write-laws/skill.md) skill for detailed guidance.
+
+```bash
+# Create a law
+./commands/chp-law create no-secrets --hooks=pre-commit,pre-push
+
+# Edit the verification script
+vim docs/chp/laws/no-secrets/verify.sh
+
+# Edit the guidance
+vim docs/chp/no-secrets.md
+
+# Test it
+./commands/chp-law test no-secrets
+```
+
+### Example Laws
+
+- **no-console-log** - Prevents console.log commits (included)
+- **no-api-keys** - Detects API key patterns (create with chp-law)
+
 ## License
 
 MIT - See [LICENSE](LICENSE) for details.
