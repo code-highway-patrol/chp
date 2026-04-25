@@ -44,3 +44,28 @@ The dashboard at `http://localhost:5177` auto-launches via hook on the first too
 | `chp:write-laws` | Create new laws (auto-classifies as deterministic or subjective) |
 | `chp:refine-laws` | Adjust existing laws |
 | `chp:onboard` | Understand project guardrails |
+| `chp:setup` | Configure CHP's PreToolUse hook for real-time enforcement |
+
+## Hook Configuration
+
+For real-time law enforcement (laws injected before every tool use), users must manually configure the `PreToolUse` hook in their project's `.claude/settings.json`:
+
+```json
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": { "type": "all" },
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bin/chp-context"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+Run `/chp:setup` to have CHP configure this automatically. The hook is project-local (not global to Claude Code) — each project using CHP needs to configure it separately.
