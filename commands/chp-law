@@ -222,7 +222,7 @@ create_law() {
 {
   "name": "$law_name",
   "created": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
-  "severity": "error",
+  "severity": "$severity",
   "failures": 0,
   "tightening_level": 0,
   "hooks": $(printf '%s\n' "${hooks[@]}" | jq -R . | jq -s -c .),
