@@ -28,6 +28,21 @@ For each law, execute its configured verification method:
 
 Collect verification results with full context (file, line, code snippet, law violated)
 
+Atomic Check Reporting:
+
+When reporting verification results, identify the specific check that failed:
+- Report the check ID, type, and severity (not just the law name)
+- Example: "Law 'no-console-log' check 'console-log' (pattern, block) failed in src/app.ts"
+- For agent-type checks, apply your own judgment using the check's configured prompt
+- Different checks in the same law can have different severities
+- A law fails overall only if any block-severity check fails; warn checks are reported but don't block
+
+Check types you'll encounter:
+- pattern: grep-based regex matching on diffs or files
+- threshold: metric counting (file length, complexity, import count) vs min/max
+- structural: convention assertions (test files, import rules, middleware)
+- agent: subjective prompts requiring AI judgment
+
 Violation Handling:
 
 When a law is violated:

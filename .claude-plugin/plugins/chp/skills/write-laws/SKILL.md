@@ -112,10 +112,149 @@ A law file contains the following fields:
 }
 ```
 
+## Composing Laws from Atomic Checks
+
+CHP laws are composed of **atomic checks** — individual verifiable units that each check one specific thing. Each check has a type, configuration, severity level, and failure message. Checks are declared in `law.json` and executed by shared checker scripts in `core/checkers/`.
+
+### Decompose Law Intent into Atomic Checks
+
+When creating a law, break down what the user wants into individual verifiable units. Each unit should check ONE thing.
+
+**Example: "No console logging in production code"**
+
+Decompose into:
+1. No `console.log()` — block
+2. No `console.debug()` — warn
+3. No `console.error()` in non-error-handling contexts — warn
+
+Each becomes a separate check with its own severity.
+
+### Choose Check Types
+
+| Type | When to use | Config fields | Example |
+|------|-------------|---------------|---------|
+| `pattern` | String/pattern matching (secrets, debug statements, keywords) | `pattern` (regex) | `"pattern": "console\\.log\\("` |
+| `threshold` | Measurable limits (file size, function length, complexity) | `metric`, `max`/`min` | `"metric": "function_line_count", "max": 50` |
+| `structural` | Convention checks (test files exist, import rules, auth middleware) | `assert` (named assertion) | `"assert": "test_file_exists"` |
+| `agent` | Subjective judgment (meaningful names, clear intent, good abstractions) | `prompt` (question for AI) | `"prompt": "Are these variable names meaningful?"` |
+
+**Choosing the right type:**
+- If you can grep for it → `pattern`
+- If you can count it → `threshold`
+- If it's a convention → `structural`
+- If it requires judgment → `agent`
+
+### Set Per-Check Severity Levels
+
+Each check has its own severity:
+
+- `block` — commit rejected, operation blocked
+- `warn` — logged but passes (counts toward tightening)
+- `log` — silent tracking only
+
+**Example mix:**
+```json
+{
+  "checks": [
+    {
+      "id": "no-console-log",
+      "type": "pattern",
+      "config": { "pattern": "console\\.log\\(" },
+      "severity": "block",
+      "message": "Use logger.info() instead of console.log()"
+    },
+    {
+      "id": "no-console-debug",
+      "type": "pattern",
+      "config": { "pattern": "console\\.debug\\(" },
+      "severity": "warn",
+      "message": "Prefer logger.debug() over console.debug()"
+    }
+  ]
+}
+```
+
+### Create Laws with Checks
+
+**Using `chp-law create` with check flags:**
+
+```bash
+# Create a law with a single check
+chp-law create no-console-log \
+  --hooks=pre-commit,pre-push \
+  --check-type=pattern \
+  --check-pattern="console\.log\(" \
+  --check-severity=block \
+  --check-message="Use logger.info() instead"
+
+# Create a law with multiple checks (call multiple times)
+chp-law create no-logging \
+  --hooks=pre-commit,pre-push \
+  --check-type=pattern --check-pattern="console\.log\(" --check-severity=block \
+  --check-type=pattern --check-pattern="console\.debug\(" --check-severity=warn
+```
+
+**Add checks to existing laws:**
+
+```bash
+# Add another check to an existing law
+chp-law update no-console-log \
+  --add-check \
+  --check-type=pattern \
+  --check-pattern="console\.error\(" \
+  --check-severity=warn
+```
+
+**Update individual check properties:**
+
+```bash
+# Escalate a check from warn to block
+chp-law update no-console-log \
+  --check=no-console-debug \
+  --severity=block
+
+# Adjust a threshold
+chp-law update no-long-functions \
+  --check=function-length \
+  --config.max=60
+```
+
+### Auto-Generated verify.sh
+
+When you create or update a law with checks, the `verify.sh` script is **auto-generated**. You do NOT write verify.sh manually anymore.
+
+The auto-generated verify.sh:
+1. Reads the `checks` array from `law.json`
+2. Dispatches each check to `core/checkers/<type>.sh`
+3. Collects results and exits 1 if any `block`-severity check fails
+
+**Example auto-generated verify.sh structure:**
+```bash
+#!/bin/bash
+source "$(dirname "$0")/../../../core/check-runner.sh"
+
+run_checks "$LAW_NAME" "$HOOK_TYPE" "$@"
+```
+
+The `check-runner.sh` script handles all check execution. You only need to:
+1. Declare checks in `law.json`
+2. Use `chp-law create` or `chp-law update` to add them
+
+### Available Checkers
+
+Located in `core/checkers/`:
+
+- `pattern.sh` — Regex matching against staged diff or files
+- `threshold.sh` — Metric counting and comparison
+- `structural.sh` — Convention assertions
+- `agent.sh` — Subjective AI judgment
+
+Each checker implements the interface: `check_<type> <hook_type> <config_json> <context>`
+
 ### Implementing the Verification
 
-> **MANDATORY: You MUST follow the Research-First Protocol below before writing any verify.sh.**
-> Skipping research is a violation of this skill. There are NO exceptions.
+> **NOTE: With atomic checks, verify.sh is auto-generated. You do NOT write it manually.**
+> However, you MUST still follow the Research-First Protocol below when designing checks.
 
 #### Research-First Protocol
 

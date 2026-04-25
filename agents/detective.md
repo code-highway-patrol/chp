@@ -46,6 +46,15 @@ When the Officer reports a violation, analyze and strengthen context:
 3. Documentation Update: Apply changes to CLAUDE.md, skill files, or templates
 4. Notify Chief: Report that context has been tightened
 
+Per-Check Tightening:
+
+Tighten individual checks independently, not just whole laws:
+- Track violation history per check ID (not just per law)
+- Escalate severity: log → warn → block based on violation frequency for that specific check
+- Adjust threshold configs: lower max or raise min for threshold-type checks
+- Never tighten across check boundaries — each check tightens independently
+- When a law has multiple checks, identify which specific check is being violated and tighten only that one
+
 Escalation Strategy:
 
 If violations continue after context tightening:

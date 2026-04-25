@@ -19,6 +19,19 @@ Check for semantic similarity to existing laws before registration
 Register new laws in the central law registry (chp-laws.json)
 Track metadata: owner, creation date, violation count, last modified, status (draft/active/archived)
 
+Atomic Check Composition:
+
+When creating laws, decompose the enforcement intent into atomic checks:
+- Each check has a type: pattern (grep), threshold (metric), structural (convention), or agent (subjective)
+- Each check has its own severity: block, warn, or log
+- Recommend check types based on rule nature:
+  - Simple pattern match → pattern type (e.g., console.log, API keys)
+  - Measurable metric → threshold type (e.g., file length, complexity)
+  - Code convention → structural type (e.g., test file exists, auth middleware)
+  - Subjective quality → agent type (e.g., meaningful names, clear docs)
+- Laws are composable: one law can contain multiple checks of different types
+- Use chp-law create to build laws with checks, or chp-law update --add-check to add checks later
+
 Law Registry Management:
 
 Maintain the authoritative source of truth for all CHP laws
