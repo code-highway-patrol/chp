@@ -13,6 +13,7 @@ source "$SCRIPT_DIR/logger.sh"
 
 record_failure() {
     local law_name="$1"
+    local check_id="${2:-}"
 
     if [[ -z "$law_name" ]]; then
         log_error "Law name is required"
@@ -42,18 +43,27 @@ record_failure() {
     mv "${law_json}.tmp" "$law_json"
 
     local timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+    local check_label=""
+    if [[ -n "$check_id" ]]; then
+        check_label=" (check: $check_id)"
+    fi
+
     cat >> "$guidance_md" <<EOF
 
 ---
 
-**Violation recorded:** $timestamp (Total: $failures)
+**Violation recorded:** $timestamp (Total: $failures)${check_label}
 
 This law has been violated $failures time(s). The guidance has been automatically strengthened.
 
 **Previous violations indicate this pattern is easy to miss. Pay extra attention.**
 EOF
 
-    log_warn "Law '$law_name' failed (failure #$failures, tightening level $tightening_level)"
+    if [[ -n "$check_id" ]]; then
+        log_warn "Law '$law_name' check '$check_id' failed (failure #$failures, tightening level $tightening_level)"
+    else
+        log_warn "Law '$law_name' failed (failure #$failures, tightening level $tightening_level)"
+    fi
 
     logger_init
     logger_violation "$law_name" "tightening" "failed" "violation-trend" "address the pattern causing repeated violations"
