@@ -1,9 +1,28 @@
 {
+  "id": "no-api-keys",
   "name": "no-api-keys",
+  "intent": "Prevent API keys, tokens, and secrets from being committed to the repository",
+  "violations": [
+    {
+      "pattern": "fileContains(/sk-[a-zA-Z0-9]{32,}|AIza[0-9A-Za-z\\-_]{35}|AKIA[0-9A-Z]{16}|ghp_[a-zA-Z0-9]{36}|xox[bop]-[0-9]+/, content)",
+      "fix": "Move the secret to an environment variable or secret manager, then rotate the compromised key",
+      "satisfies": "!fileContains(/sk-[a-zA-Z0-9]{32,}|AIza[0-9A-Za-z\\-_]{35}|AKIA[0-9A-Z]{16}|ghp_[a-zA-Z0-9]{36}|xox[bop]-[0-9]+/, content)"
+    }
+  ],
+  "reaction": "block",
+  "include": [],
+  "exclude": [
+    "**/node_modules/**",
+    "**/.git/**",
+    "**/*.lock",
+    "**/*.min.js"
+  ],
+  "tags": ["security", "secrets"],
+  "priority": 100,
   "created": "2026-04-25T05:02:04Z",
   "severity": "error",
-  "failures": 39,
-  "tightening_level": 39,
+  "failures": 0,
+  "tightening_level": 0,
   "hooks": [
     "pre-commit",
     "pre-push",
