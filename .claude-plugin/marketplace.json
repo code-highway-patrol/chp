@@ -6,6 +6,7 @@
   "plugins": [
     {
       "name": "chp",
+      "source": "./",
       "version": "1.0.0",
       "author": {
         "name": "CHP Contributors"
