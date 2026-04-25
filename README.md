@@ -159,6 +159,35 @@ vim docs/chp/no-secrets.md
 - **no-console-log** - Prevents console.log commits (included)
 - **no-api-keys** - Detects API key patterns (create with chp-law)
 
+## Universal Hook System
+
+CHP now supports 25+ hook types across Git, AI/Agent, and CI/CD operations:
+
+### Quick Start
+
+```bash
+# Detect available hooks
+./commands/chp-hooks detect
+
+# Create a law for multiple hook types
+./commands/chp-law create no-secrets --hooks=pre-commit,pre-push,pre-tool
+
+# Manage hooks
+./commands/chp-hooks list
+./commands/chp-hooks enable pre-commit
+./commands/chp-hooks install pre-commit
+```
+
+### Hook Types
+
+- **Git Hooks (15):** pre-commit, post-commit, pre-push, post-merge, commit-msg, prepare-commit-msg, pre-rebase, post-checkout, post-rewrite, applypatch-msg, pre-applypatch, post-applypatch, update, pre-auto-gc, post-update
+- **AI/Agent Hooks (6):** pre-prompt, post-prompt, pre-tool, post-tool, pre-response, post-response
+- **CI/CD Hooks (4):** pre-build, post-build, pre-deploy, post-deploy
+
+### Documentation
+
+See [docs/chp/HOOKS.md](docs/chp/HOOKS.md) for complete hook system documentation.
+
 ## License
 
 MIT - See [LICENSE](LICENSE) for details.
