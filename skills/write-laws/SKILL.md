@@ -1,138 +1,46 @@
 ---
 name: write-laws
-description: Create and manage CHP enforcement laws using the chp-law CLI
+description: Create new CHP enforcement laws
 ---
 
-# Using CHP Laws
+# Create a New Law
 
-The CHP (Code Health Protocol) law enforcement system provides two layers of rule enforcement:
+## When to Use
 
-1. **Suggestive Layer** - Context documents that guide you to follow rules
-2. **Verification Layer** - Programmatic checks that catch violations
+- User wants to add a new code rule
+- User says "add a law", "create a rule", "enforce", "ban", or "block"
 
-## Creating a Law
+## Process
 
-When you need to enforce a rule or standard in the repository, use the `chp-law` CLI:
+1. Ask the user what they want to enforce (or infer from context)
+2. Draft a law block with: unique id, intent, violation regex, reaction type
+3. Read `laws/chp-laws.txt` to check for duplicates or conflicts
+4. Append the new law block to `laws/chp-laws.txt`
+5. Confirm what was added
 
-```bash
-chp-law create <law-name> --hooks=pre-commit,pre-push
+## Law Format
+
+Append to `laws/chp-laws.txt`:
+
+```
+# === Law: <unique-id> ===
+intent: <plain English description>
+violation: <regex pattern matching the bad code>
+exclusion: <optional regex for legitimate exceptions>
+reaction: block|warn|auto_fix
 ```
 
-### Example: No API Keys Law
+## Fields
 
-```bash
-# Create the law
-chp-law create no-api-keys --hooks=pre-commit,pre-push
+- **id**: Lowercase kebab-case, unique across all laws (e.g. `no-eval`, `require-error-handling`)
+- **intent**: One sentence explaining what the law protects against
+- **violation**: Regex pattern that matches violating code. Test it mentally against realistic examples
+- **exclusion**: Optional. Patterns that look like violations but are acceptable (e.g. test files, debug modes)
+- **reaction**: `block` (must fix), `warn` (flag but allow), `auto_fix` (attempt automatic correction)
 
-# This creates:
-# - docs/chp/laws/no-api-keys/law.json (metadata)
-# - docs/chp/laws/no-api-keys/verify.sh (verification script)
-# - docs/chp/no-api-keys.md (suggestive context)
-```
+## Guidelines
 
-### Implementing the Verification
-
-Edit the `verify.sh` script to detect violations:
-
-```bash
-#!/bin/bash
-# Check for API keys in staged files
-
-if git diff --cached --name-only | xargs grep -l "sk_\|AIza\|AKIA" 2>/dev/null; then
-    echo "❌ API key detected in staged files"
-    exit 1  # Block the commit
-fi
-exit 0
-```
-
-### Writing the Guidance
-
-Edit the `.md` file to provide context:
-
-```markdown
-# Law: No API Keys
-
-**Severity:** Error
-**Action:** Blocks commits and pushes
-
-## What this means
-Never commit API keys, tokens, or secrets to this repository.
-
-## How to comply
-- Use environment variables
-- Use `.env` files (already gitignored)
-- Use secret management services
-
-## Detection
-Scans for patterns: `sk_`, `AIza`, `AKIA`, `Bearer eyJ`
-```
-
-## Testing Your Law
-
-Before the law is active, test it:
-
-```bash
-chp-law test no-api-keys
-```
-
-## Available Commands
-
-```bash
-chp-law create <name> [--hooks=<list>]  # Create new law
-chp-law list                            # List all laws
-chp-law delete <name>                   # Delete a law
-chp-law test <name>                     # Test verification
-chp-law reset <name>                    # Reset failure count
-chp-status                               # Show system status
-```
-
-## Hook Types
-
-- `pre-commit` - Runs before `git commit`
-- `pre-push` - Runs before `git push`
-- `pre-merge-commit` - Runs before merge commits
-- `pre-write` - Runs before file writes (pretool)
-
-## Universal Hook System
-
-CHP supports 25+ hook types across Git, AI/Agent, and CI/CD operations:
-
-**Git Hooks (15):** pre-commit, post-commit, pre-push, post-merge, commit-msg, prepare-commit-msg, pre-rebase, post-checkout, post-rewrite, applypatch-msg, pre-applypatch, post-applypatch, update, pre-auto-gc, post-update
-
-**AI/Agent Hooks (6):** pre-prompt, post-prompt, pre-tool, post-tool, pre-response, post-response
-
-**CI/CD Hooks (4):** pre-build, post-build, pre-deploy, post-deploy
-
-Use `chp-hooks detect` to see available hooks and `chp-hooks list` to see installed hooks.
-
-## Auto-Tightening
-
-When a law's verification fails:
-1. The operation is blocked
-2. Failure count increments
-3. Guidance is automatically strengthened with violation history
-4. Future attempts get stricter context
-
-## Before Creating New Laws
-
-1. Check existing laws: `chp-law list`
-2. Ensure the law name is descriptive (lowercase, hyphens)
-3. Consider which hooks should trigger verification
-4. Think about both the verification logic AND the guidance
-
-## Common Law Patterns
-
-**Security Laws:**
-- No API keys
-- No hardcoded credentials
-- No debug endpoints in production
-
-**Quality Laws:**
-- Max file size
-- Max function length
-- Required documentation
-
-**Style Laws:**
-- No console.log
-- Enforce import ordering
-- Require type annotations
+- Use precise regex — overly broad patterns cause false positives
+- Prefer `block` for security laws, `warn` for style laws
+- Add exclusions proactively for known legitimate patterns
+- Check existing laws first to avoid overlap

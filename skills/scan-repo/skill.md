@@ -1,150 +1,56 @@
 ---
 name: scan-repo
-description: Scan entire repository for potential violations in dry-run mode
+description: Scan repository for CHP law violations
 ---
 
-# CHP Repository Scanner
+# Scan Repository for Violations
 
-Scan the entire repository for potential violations of CHP traffic laws without making any modifications.
+## When to Use
 
-## Usage
+- User asks to check code quality or scan for violations
+- Before a commit, PR, or release
+- User says "scan", "check", "enforce", or "violations"
 
-Invoke this skill when:
-- User wants to check codebase for violations
-- User asks about code quality or compliance issues
-- Pre-commit or general repository health check is needed
-- User wants to see violation report before committing
+## Process
 
-## Scanning Process
+1. Read `laws/chp-laws.txt` from the project root
+2. Parse each law block (delimited by `# === Law: <id> ===`)
+3. For each law, extract: `intent`, `violation` (regex), `exclusion` (regex, optional), `reaction`
+4. Scan relevant source files (skip `node_modules`, `.git`, `dist`, `build`, binary files, images, lock files)
+5. For each file, test each line against each law's `violation` regex
+6. Skip lines that match any of the law's `exclusion` patterns
+7. Collect and report all violations
 
-1. **Load all enabled CHP traffic laws** from `docs/chp/laws/`
-2. **Parse law metadata** (severity, enabled status, hooks)
-3. **Scan all tracked files** (not just staged files)
-4. **Collect violations** with file paths and context
-5. **Generate violation report** with counts and severity
+## Auto-Tightening (for `block` or `auto_fix` reactions)
 
-## Running the Scan
+When a violation is found during code generation:
 
-Use the `chp-scan` command:
+1. Attempt to fix the violating code
+2. If the violation was a false positive, add an `exclusion:` line to the law in `laws/chp-laws.txt`
+3. Re-check — repeat up to 3 attempts
+4. If all 3 fail, report to the user and stop
 
-```bash
-# Scan all laws against all files
-./commands/chp-scan
+## Output Format
 
-# Scan for specific law violations
-./commands/chp-scan --law=no-console-log
+No violations:
+```
+All code passes N laws. Scanned M files.
 ```
 
-## Output
-
-The scanner provides:
-- **Law name and description**
-- **Severity level** (error, warning, info)
-- **Historical failure count** (from law.json)
-- **Current violation count** (from scan)
-- **List of violating files** with paths
-- **Total summary** of all violations
-
-## Violation Types
-
-- **speeding**: Code that's too complex or doing too much
-- **reckless-driving**: Dangerous patterns (security risks, anti-patterns)
-- **running-red-lights**: Skipping required steps (error handling, validation)
-- **improper-lane-change**: Inconsistent patterns or abrupt style changes
-
-## Dry-Run Mode
-
-The scanner operates in **read-only mode**:
-- No files are modified
-- No git operations are performed
-- Only reads file contents to detect violations
-- Safe to run at any time
-
-## Fixing Violations
-
-When violations are found:
-
-1. **Review the violation report**
-   - Note which laws were violated
-   - Identify specific files with violations
-   - Check severity levels
-
-2. **Fix the issues**
-   - Edit the violating files
-   - Remove or fix the problematic code
-   - Follow the law's guidance document
-
-3. **Verify the fix**
-   ```bash
-   ./commands/chp-scan
-   # or for specific law:
-   ./commands/chp-scan --law=<law-name>
-   ```
-
-4. **Commit your changes**
-   ```bash
-   git add .
-   git commit -m "fix: resolve CHP law violations"
-   ```
-
-## Example Output
-
+Violations found:
 ```
-==================================
-  CHP Repository Scanner
-  Mode: DRY-RUN (read-only)
-==================================
-
-Scanning for violations of: no-console-log
-
-  Law: no-console-log
-  Severity: error
-  Historical failures: 3
-  Current violations: 2
-  Violating files:
-    - src/debug.js
-    - lib/logger.js
-
-==================================
-  Scan Summary
-==================================
-  Laws scanned: 1
-  Total violations: 2
-
-  To fix violations:
-    1. Review violating files above
-    2. Fix the issues
-    3. Run chp-scan again to verify
-    4. Commit your changes
+[block] no-api-keys — src/config.js:12
+  Hardcoded API key detected
+[warn] no-todo-comments — src/utils.ts:45
+  TODO comment found
 ```
 
-## Available Laws
+## Law Format Reference
 
-To see all available laws:
-
-```bash
-./commands/chp-law list
 ```
-
-To view guidance for a specific law:
-
-```bash
-cat docs/chp/laws/<law-name>/guidance.md
+# === Law: <id> ===
+intent: <what this law enforces>
+violation: <regex>
+exclusion: <optional regex to skip false positives>
+reaction: block|warn|auto_fix
 ```
-
-## Integration with CI/CD
-
-The scanner can be integrated into CI/CD pipelines:
-
-```yaml
-# Example GitHub Actions step
-- name: Scan for CHP violations
-  run: ./commands/chp-scan
-```
-
-## Notes
-
-- The scanner checks **all tracked files**, not just staged changes
-- Disabled laws are **skipped** during scanning
-- The scan is **fast** and can be run frequently
-- Use specific law scanning to focus on particular issues

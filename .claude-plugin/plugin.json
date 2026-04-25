@@ -1,22 +1,26 @@
 {
   "name": "chp",
-  "displayName": "CHP - Code Health Protocol",
-  "description": "Code quality enforcement with traffic laws and automated violation detection",
+  "displayName": "CHP - Code Highway Patrol",
+  "description": "Define and enforce code laws with regex-based violation detection and self-improving exclusion rules.",
   "version": "1.0.0",
   "author": {
     "name": "CHP Contributors"
   },
-  "homepage": "https://github.com/yourusername/chp",
-  "repository": "https://github.com/yourusername/chp",
   "license": "MIT",
   "keywords": [
     "code-quality",
-    "linting",
     "enforcement",
-    "traffic-laws",
-    "pre-commit",
-    "hooks"
+    "linting",
+    "guardrails"
   ],
-  "skills": "./skills/",
-  "commands": "./commands/"
+  "skills": {
+    "scan-repo": "skills/scan-repo/skill.md",
+    "write-laws": "skills/write-laws/skill.md",
+    "refine-laws": "skills/refine-laws/skill.md",
+    "onboard": "skills/onboard/skill.md"
+  },
+  "context": [
+    "laws/chp-laws.txt",
+    "CLAUDE.md"
+  ]
 }

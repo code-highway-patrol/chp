@@ -1,0 +1,27 @@
+# === Law: no-console-log ===
+intent: No console.log statements in production code
+violation: console\.log\(.*
+exclusion: console\.log\(.*debug.*\)
+exclusion: console\.log\(['"]test['"]\)
+exclusion: console\.log\("hello"\);  # Auto-added after 1 violation(s) on line 1
+reaction: block
+
+# === Law: no-api-keys ===
+intent: No hardcoded API keys in source code
+violation: (api[_-]?key|apikey|api_secret)\s*[=:]\s*['"][A-Za-z0-9]{20,}['"]
+reaction: block
+
+# === Law: no-todo-comments ===
+intent: No TODO/FIXME/HACK comments left in code
+violation: (TODO|FIXME|HACK|XXX):\s*
+reaction: warn
+
+# === Law: no-hardcoded-passwords ===
+intent: No hardcoded passwords in source code
+violation: (password|passwd|pwd)\s*[=:]\s*['"][^'"]+['"]
+reaction: block
+
+# === Law: no-debug-code ===
+intent: No debug code left in production
+violation: (debugger;|console\.debug\(\))
+reaction: block

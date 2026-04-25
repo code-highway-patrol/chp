@@ -1,4 +1,2 @@
-.claude/memory/
-.claude/settings.local.json
-.claude/scheduled_tasks.json
-.worktrees
+node_modules/
+.claude/
