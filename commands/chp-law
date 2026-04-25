@@ -166,6 +166,18 @@ EOF
 
     chmod +x "$law_dir/verify.sh"
 
+    # Register law in hook registry
+    source "$SCRIPT_DIR/../core/hook-registry.sh"
+    init_hook_registry
+
+    if [[ ${#hooks[@]} -gt 0 ]]; then
+        for hook in "${hooks[@]}"; do
+            hook=$(echo "$hook" | xargs)  # trim whitespace
+            register_hook_law "$hook" "$law_name"
+        done
+        log_info "Registered '$law_name' with hooks: $(IFS=', '; echo "${hooks[*]}")"
+    fi
+
     # Create guidance.md (guidance documentation template)
     cat > "$law_dir/guidance.md" <<EOF
 # Law: $law_name
@@ -281,8 +293,21 @@ delete_law() {
     local law_dir="$LAWS_DIR/$law_name"
     local law_json="$law_dir/law.json"
 
-    # Get hooks from law.json
+    # Unregister from hook registry
+    source "$SCRIPT_DIR/../core/hook-registry.sh"
+
     local hooks
+    hooks=$(jq -r '.hooks[]? // empty' "$law_json" 2>/dev/null)
+    if [[ -n "$hooks" ]]; then
+        log_info "Unregistering from hook registry..."
+        while IFS= read -r hook; do
+            hook=$(echo "$hook" | tr -d '\r')  # handle Windows line endings
+            unregister_hook_law "$hook" "$law_name"
+            log_info "Unregistered '$law_name' from hook: $hook"
+        done <<< "$hooks"
+    fi
+
+    # Get hooks from law.json for uninstall
     hooks=$(jq -r '.hooks[] // empty' "$law_json")
 
     # Uninstall hooks
