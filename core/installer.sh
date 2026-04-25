@@ -10,12 +10,12 @@ install_hook() {
     local hook_type="$2"
 
     if [[ -z "$law_name" ]]; then
-        error "Law name is required"
+        log_error "Law name is required"
         return 1
     fi
 
     if [[ -z "$hook_type" ]]; then
-        error "Hook type is required"
+        log_error "Hook type is required"
         return 1
     fi
 
@@ -41,12 +41,13 @@ install_hook() {
         if ! grep -q "$CHP_MANAGED_MARKER" "$hook_file"; then
             local backup_file="${hook_file}.backup.$(date +%s)"
             cp "$hook_file" "$backup_file"
-            info "Backed up existing hook to $backup_file"
+            log_info "Backed up existing hook to $backup_file"
         fi
     fi
 
     # Create or update the hook file
     {
+        echo "#!/bin/bash"
         echo "$CHP_MANAGED_MARKER"
         echo "# CHP Law: $law_name"
         echo "# Hook type: $hook_type"
@@ -62,7 +63,7 @@ install_hook() {
     } > "$hook_file"
 
     chmod +x "$hook_file"
-    info "Installed hook: $hook_file for law: $law_name"
+    log_info "Installed hook: $hook_file for law: $law_name"
 
     return 0
 }
@@ -73,12 +74,12 @@ uninstall_hook() {
     local hook_type="$2"
 
     if [[ -z "$law_name" ]]; then
-        error "Law name is required"
+        log_error "Law name is required"
         return 1
     fi
 
     if [[ -z "$hook_type" ]]; then
-        error "Hook type is required"
+        log_error "Hook type is required"
         return 1
     fi
 
@@ -98,25 +99,25 @@ uninstall_hook() {
 
     # Check if hook exists
     if [[ ! -f "$hook_file" ]]; then
-        warn "Hook file does not exist: $hook_file"
+        log_warn "Hook file does not exist: $hook_file"
         return 0
     fi
 
     # Check if hook is CHP-managed
     if ! grep -q "$CHP_MANAGED_MARKER" "$hook_file"; then
-        warn "Hook is not CHP-managed, skipping: $hook_file"
+        log_warn "Hook is not CHP-managed, skipping: $hook_file"
         return 0
     fi
 
     # Check if hook contains the law
     if ! grep -q "# CHP Law: $law_name" "$hook_file"; then
-        warn "Hook does not contain law: $law_name"
+        log_warn "Hook does not contain law: $law_name"
         return 0
     fi
 
     # Remove the hook file
     rm -f "$hook_file"
-    info "Uninstalled hook: $hook_file for law: $law_name"
+    log_info "Uninstalled hook: $hook_file for law: $law_name"
 
     return 0
 }
