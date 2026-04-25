@@ -1,72 +1,50 @@
 # Installing CHP for Codex
 
-Enable CHP (Codebeat Highway Patrol) in Codex via native skill discovery. Just clone and symlink.
+CHP ships as a Codex plugin via a Git-backed marketplace. Every push to `main`
+in this repo updates the plugin for users automatically.
 
-## Prerequisites
-
-- Git
-- Node.js (for CHP CLI tools)
-
-## Installation
-
-1. **Clone the CHP repository:**
-
-   ```bash
-   git clone https://github.com/yourusername/chp.git ~/.codex/chp
-   ```
-
-2. **Create the skills symlink:**
-
-   ```bash
-   mkdir -p ~/.agents/skills
-   ln -s ~/.codex/chp/skills ~/.agents/skills/chp
-   ```
-
-   **Windows (PowerShell):**
-
-   ```powershell
-   New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\.agents\skills"
-   cmd /c mklink /J "$env:USERPROFILE\.agents\skills\chp" "$env:USERPROFILE\.codex\chp\skills"
-   ```
-
-3. **Install CHP CLI tools:**
-
-   ```bash
-   cd ~/.codex/chp
-   npm install
-   npm link
-   ```
-
-4. **Restart Codex** (quit and relaunch the CLI) to discover the skills.
-
-## Verify
+## Install
 
 ```bash
-ls -la ~/.agents/skills/chp
+codex plugin marketplace add code-highway-patrol/chp
 ```
 
-You should see a symlink (or junction on Windows) pointing to your CHP skills directory.
+Then open the Codex plugin directory, select the **Code Highway Patrol**
+marketplace, and install **chp**.
+
+## Update
 
 ```bash
-chp --help
+codex plugin marketplace upgrade chp
 ```
 
-Should show the CHP CLI usage.
-
-## Updating
+## Remove
 
 ```bash
-cd ~/.codex/chp && git pull
+codex plugin marketplace remove chp
+```
+
+## What you get
+
+Six skills for working with CHP laws:
+
+- `audit` — scan codebase for violations and assess code health
+- `investigate` — diagnose a specific violation
+- `status` — show registered laws, hooks, and recent failures
+- `write-laws` — author a new CHP law (verify.sh + guidance.md)
+- `review-laws` — review an existing law for correctness and scope
+- `decompose-laws` — split a broad law into focused sub-laws
+
+## CLI tools (separate from the plugin)
+
+The CHP CLI (`chp`, `chp-status`, `chp-law`, etc.) is a Node + Bash toolchain.
+Install it separately by cloning the repo:
+
+```bash
+git clone https://github.com/code-highway-patrol/chp.git ~/src/chp
+cd ~/src/chp
 npm install
+npm link
 ```
 
-Skills update instantly through the symlink.
-
-## Uninstalling
-
-```bash
-rm ~/.agents/skills/chp
-npm unlink -g chp
-```
-
-Optionally delete the clone: `rm -rf ~/.codex/chp`
+Requires Node.js 18+ and Bash 4+ (on macOS, install via `brew install bash`).

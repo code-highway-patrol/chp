@@ -1,0 +1,27 @@
+{
+  "name": "chp",
+  "description": "Code quality enforcement with traffic laws and automated violation detection",
+  "author": {
+    "name": "CHP Contributors",
+    "url": "https://github.com/code-highway-patrol/chp"
+  },
+  "homepage": "https://github.com/code-highway-patrol/chp",
+  "repository": "https://github.com/code-highway-patrol/chp",
+  "license": "MIT",
+  "keywords": [
+    "code-quality",
+    "linting",
+    "enforcement",
+    "traffic-laws",
+    "pre-commit",
+    "hooks"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "CHP - Code Highway Patrol",
+    "shortDescription": "Enforce code-quality laws via git and agent hooks",
+    "longDescription": "CHP (Code Highway Patrol) is a static analysis framework that enforces rules (\"laws\") through git hooks and agent hooks. Each law has a verify.sh script that runs on commit/push and can block violations. After repeated failures, guidance is auto-strengthened so agents avoid the same mistake.",
+    "developerName": "CHP Contributors",
+    "category": "Productivity"
+  }
+}
