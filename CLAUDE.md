@@ -2,6 +2,10 @@
 
 A hybrid code law enforcement plugin for Claude Code. Laws are enforced through deterministic regex checks (fast, automatic) or subjective agent review (nuanced, AI-powered). All violations are collected into a report.
 
+## IMPORTANT: Follow the Laws
+
+Before generating or editing any code, read `laws/chp-laws.txt` and obey every law defined there. Treat each law's `intent:` as a hard constraint on all code you produce. Do not write code that would violate any law — prevent violations at authoring time rather than relying on post-hoc checks.
+
 ## Core Concept
 
 Users define laws in `laws/chp-laws.txt`. Each law has an intent and optionally a `check:` regex pattern.
