@@ -30,6 +30,70 @@ chp-law create no-api-keys --hooks=pre-commit,pre-push
 # - docs/chp/no-api-keys.md (suggestive context)
 ```
 
+### Law Schema
+
+A law file contains the following fields:
+
+**Required Fields:**
+- `id` - Unique identifier for the law
+- `intent` - High-level description of what the law protects
+- `violations` - Array of violation patterns with `pattern`, `fix`, and `satisfies`
+- `reaction` - How to respond: `"block"`, `"warn"`, or `"auto_fix"`
+
+**Scope Control:**
+- `include` - Glob patterns of files/directories this law applies to (empty = all files)
+- `exclude` - Glob patterns to exempt from this law (overrides include)
+
+**Metadata:**
+- `tags` - Categories for organizing/filtering laws (e.g., `["security", "secrets"]`)
+- `priority` - Higher priority wins when multiple laws conflict (default: 0)
+- `author` - Law owner/team
+- `documentation` - URL or path to extended documentation
+- `version` - Semantic version for tracking law evolution
+
+**Lifecycle:**
+- `createdAt` - ISO 8601 timestamp when law was created
+- `updatedAt` - ISO 8601 timestamp when law was last updated
+- `expiresAt` - ISO 8601 timestamp for temporary laws
+- `enabled` - Quick disable without deleting (default: true)
+
+**Conditions:**
+- `environment` - Environments where law applies (e.g., `["production", "staging"]`)
+- `dependsOn` - Other law IDs that must be satisfied first
+
+**Enforcement:**
+- `severity` - Severity level: `"error"`, `"warn"`, or `"info"`
+- `hooks` - Array of hooks that trigger this law
+
+### Example Law with Scope Control
+
+```json
+{
+  "id": "no-api-keys",
+  "name": "no-api-keys",
+  "intent": "Prevent API keys from being committed to the repository",
+  "violations": [
+    {
+      "pattern": "fileContains(/sk_|AIza|AKIA/, content)",
+      "fix": "Remove API key and use environment variable",
+      "satisfies": "!fileContains(/sk_|AIza|AKIA/, content)"
+    }
+  ],
+  "reaction": "block",
+  "include": ["**/*.ts", "**/*.js", "**/*.json"],
+  "exclude": ["**/examples/**", "**/*.example.json"],
+  "tags": ["security", "secrets"],
+  "priority": 100,
+  "author": "security-team",
+  "documentation": "/docs/security/api-key-handling.md",
+  "version": "1.2.0",
+  "environment": ["production", "staging"],
+  "enabled": true,
+  "hooks": ["pre-commit", "pre-push", "pre-tool"],
+  "severity": "error"
+}
+```
+
 ### Implementing the Verification
 
 Edit the `verify.sh` script to detect violations:
@@ -39,7 +103,7 @@ Edit the `verify.sh` script to detect violations:
 # Check for API keys in staged files
 
 if git diff --cached --name-only | xargs grep -l "sk_\|AIza\|AKIA" 2>/dev/null; then
-    echo "❌ API key detected in staged files"
+    echo "API key detected in staged files"
     exit 1  # Block the commit
 fi
 exit 0
@@ -65,6 +129,29 @@ Never commit API keys, tokens, or secrets to this repository.
 
 ## Detection
 Scans for patterns: `sk_`, `AIza`, `AKIA`, `Bearer eyJ`
+```
+
+## Scope Control Examples
+
+**Apply only to TypeScript files:**
+```json
+"include": ["**/*.ts"]
+```
+
+**Apply to all files except test files:**
+```json
+"exclude": ["**/*.test.ts", "**/*.spec.ts", "**/test/**"]
+```
+
+**Apply to source files only (not build artifacts):**
+```json
+"include": ["src/**/*"],
+"exclude": ["dist/**", "build/**", "**/*.min.js"]
+```
+
+**Apply to specific directories:**
+```json
+"include": ["lib/**/*", "components/**/*"]
 ```
 
 ## Testing Your Law
@@ -118,7 +205,42 @@ When a law's verification fails:
 1. Check existing laws: `chp-law list`
 2. Ensure the law name is descriptive (lowercase, hyphens)
 3. Consider which hooks should trigger verification
-4. Think about both the verification logic AND the guidance
+4. Consider scope (include/exclude) to avoid false positives
+5. Think about both the verification logic AND the guidance
+
+## Pattern Reference
+
+**NEW:** Comprehensive pattern library available at `docs/chp/LAW-PATTERNS.md`
+
+When users describe what they want to enforce, match their language to patterns and ask "you mean something like this?"
+
+The reference includes:
+- **Section 1:** Regex/Shell patterns (secrets, console.log, file size, missing tests)
+- **Section 2:** AST-based analysis (nesting depth, unused imports, unhandled promises)
+- **Section 3:** Delegated tools (ESLint, Prettier, Semgrep, TypeScript)
+- **Section 4:** Hybrid patterns (conditional enforcement, multi-condition rules)
+
+Each pattern includes:
+- Common user requests that trigger it
+- Clarifying questions to ask
+- CHP implementation templates
+- Limitations
+
+**Quick examples from reference:**
+
+| User Request | Detection Method | Template |
+|--------------|------------------|----------|
+| "no API keys" | Regex | `sk_\|AIza\|AKIA` |
+| "no console.log" | Regex | `console\.log` |
+| "too nested" | AST | Nesting depth check |
+| "enforce style" | Delegated | ESLint/Prettier |
+| "console in tests only" | Hybrid | Regex + file path |
+
+**Before writing custom verify.sh:**
+1. Check `docs/chp/LAW-PATTERNS.md` for existing patterns
+2. Match user's request to a pattern
+3. Use the provided template
+4. Adapt to specific requirements
 
 ## Common Law Patterns
 
