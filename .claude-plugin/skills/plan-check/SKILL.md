@@ -1,5 +1,5 @@
 ---
-name: plan-check
+name: chp:plan-check
 description: Preview which CHP laws apply before implementing changes
 ---
 

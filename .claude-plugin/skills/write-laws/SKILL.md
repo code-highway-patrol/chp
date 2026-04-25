@@ -1,5 +1,5 @@
 ---
-name: write-laws
+name: chp:write-laws
 description: Create and manage CHP enforcement laws using the chp-law CLI
 ---
 

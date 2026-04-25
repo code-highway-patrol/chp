@@ -1,5 +1,5 @@
 ---
-name: onboard
+name: chp:onboard
 description: Understand what CHP guardrails are in place for a project
 ---
 
