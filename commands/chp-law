@@ -22,7 +22,7 @@ Usage:
     chp-law <command> [options]
 
 Commands:
-    create <law-name> [--hooks=<hook1,hook2>] [--dry-run]  Create a new law
+    create <law-name> [--hooks=<hook1,hook2>] [--dry-run] [--response=<text>]...  Create a new law
     list                                      List all laws
     delete <law-name>                         Delete a law and uninstall hooks
     test <law-name>                           Test a law's verification script
@@ -34,12 +34,12 @@ Commands:
 Options:
     --hooks=<hooks>    Comma-separated list of hooks to install (e.g., pre-commit,pre-push)
     --dry-run          Show preview without creating the law
-    --yes, -y          Skip confirmation prompts (non-interactive mode)
+    --response=<text>  Pre-answer interactive prompts (can be used multiple times)
 
 Examples:
     chp-law create no-debug-code --hooks=pre-commit
     chp-law create test-coverage --hooks=pre-commit,pre-push
-    chp-law create no-secrets --hooks=pre-commit --yes
+    chp-law create custom-law --response="Choose one: D" --response="Enter pattern: console.log"
     chp-law list
     chp-law test no-debug-code
     chp-law reset no-debug-code
@@ -96,7 +96,9 @@ create_law() {
     local law_name="$1"
     local hooks_arg="$2"
     local dry_run=false
-    local auto_yes=false
+
+    # Response queue for pre-answered prompts
+    declare -a RESPONSE_QUEUE=()
 
     # Flag variables (from command line or interactive)
     local specified_severity=""
@@ -111,8 +113,8 @@ create_law() {
             --dry-run)
                 dry_run=true
                 ;;
-            --yes|-y)
-                auto_yes=true
+            --response=*)
+                RESPONSE_QUEUE+=("${1#*=}")
                 ;;
             --severity=*)
                 specified_severity="${1#*=}"
@@ -145,12 +147,6 @@ create_law() {
         return 1
     fi
 
-    # Flag variables (from command line or interactive)
-    local specified_severity=""
-    local specified_pattern=""
-    local specified_files=""
-    local specified_exceptions=""
-
     # Parse hooks
     local hooks=()
     if [[ -n "$hooks_arg" ]]; then
@@ -170,19 +166,22 @@ create_law() {
 
     if is_intent_clear "$law_name"; then
         # Suggest configuration (call once and parse all 5 output lines)
-        local config
-        config=$(suggest_config "$law_name" | tr '\n' ' ')
+        local config output_array
+        mapfile -t output_array < <(suggest_config "$law_name")
 
-        # Read all 5 values from suggest_config output
-        local severity hooks_pattern pattern files exceptions
-        read severity hooks_pattern pattern files exceptions <<< "$config"
+        # Read all 5 values from suggest_config output (each on its own line)
+        local severity="${output_array[0]}"
+        local hooks_pattern="${output_array[1]}"
+        local pattern="${output_array[2]}"
+        local files="${output_array[3]}"
+        local exceptions="${output_array[4]}"
 
         # Convert comma-separated hooks to array (if not already set via --hooks)
         if [[ ${#hooks[@]} -eq 0 && -n "$hooks_pattern" ]]; then
             IFS=',' read -ra hooks <<< "$hooks_pattern"
         fi
     else
-        # Ask questions interactively
+        # Ask questions interactively (or use pre-configured responses)
         echo "Creating law: $law_name"
         echo ""
         echo "What should this law enforce?"
@@ -192,7 +191,13 @@ create_law() {
         echo "  D) Custom pattern"
 
         local choice
-        read -p "Choose one: " choice
+        if [[ ${#RESPONSE_QUEUE[@]} -gt 0 ]]; then
+            choice="${RESPONSE_QUEUE[0]}"
+            RESPONSE_QUEUE=("${RESPONSE_QUEUE[@]:1}")
+            echo "Choose one: $choice"
+        else
+            read -p "Choose one: " choice
+        fi
 
         case "$choice" in
             A|a)
@@ -208,8 +213,21 @@ create_law() {
                 files="All source files"
                 ;;
             *)
-                pattern=$(prompt_text "Enter the pattern to detect")
-                files=$(prompt_text "Which file types" "*.js,*.ts")
+                if [[ ${#RESPONSE_QUEUE[@]} -gt 0 ]]; then
+                    pattern="${RESPONSE_QUEUE[0]}"
+                    RESPONSE_QUEUE=("${RESPONSE_QUEUE[@]:1}")
+                    echo "Enter the pattern to detect: $pattern"
+                else
+                    pattern=$(prompt_text "Enter the pattern to detect")
+                fi
+
+                if [[ ${#RESPONSE_QUEUE[@]} -gt 0 ]]; then
+                    files="${RESPONSE_QUEUE[0]}"
+                    RESPONSE_QUEUE=("${RESPONSE_QUEUE[@]:1}")
+                    echo "Which file types: $files"
+                else
+                    files=$(prompt_text "Which file types" "*.js,*.ts")
+                fi
                 ;;
         esac
 
@@ -224,20 +242,38 @@ create_law() {
     [[ -n "$specified_files" ]] && files="$specified_files"
     [[ -n "$specified_exceptions" ]] && exceptions="$specified_exceptions"
 
-    # Show preview
-    display_preview "$law_name" "$severity" "$hooks" "$pattern" "$files" "$exceptions"
+    # Show preview (convert hooks array to comma-separated string)
+    local hooks_str
+    if [[ ${#hooks[@]} -gt 0 ]]; then
+        # Join array elements with comma
+        hooks_str=$(IFS=','; echo "${hooks[*]}")
+    else
+        hooks_str=""
+    fi
+    display_preview "$law_name" "$severity" "$hooks_str" "$pattern" "$files" "$exceptions"
 
-    # Confirm before creating (unless dry-run or auto-yes)
+    # Confirm before creating (unless dry-run or response provided)
     if [[ "$dry_run" = true ]]; then
         log_info "Dry run - law not created"
         return 0
     fi
 
-    if [[ "$auto_yes" = false ]]; then
-        if ! prompt_yes_no "Create this law?"; then
-            log_info "Law creation cancelled"
-            return 0
+    local confirmed=false
+    if [[ ${#RESPONSE_QUEUE[@]} -gt 0 ]]; then
+        local response="${RESPONSE_QUEUE[0]}"
+        RESPONSE_QUEUE=("${RESPONSE_QUEUE[@]:1}")
+        if [[ "$response" =~ ^[Yy]([Ee][Ss])?$ ]]; then
+            confirmed=true
         fi
+    else
+        if prompt_yes_no "Create this law?"; then
+            confirmed=true
+        fi
+    fi
+
+    if [[ "$confirmed" = false ]]; then
+        log_info "Law creation cancelled"
+        return 0
     fi
 
     # Create law directory
@@ -597,14 +633,29 @@ main() {
     case "$command" in
         create)
             if [[ $# -lt 1 ]]; then
-                log_error "Usage: chp-law create <law-name> [--hooks=<hooks>] [--dry-run] [--severity=<severity>] [--pattern=<pattern>] [--files=<files>] [--exceptions=<exceptions>]"
+                log_error "Usage: chp-law create <law-name> [--hooks=<hooks>] [--dry-run] [--response=<text>]... [--severity=<severity>] [--pattern=<pattern>] [--files=<files>] [--exceptions=<exceptions>]"
                 exit 1
             fi
             local law_name="$1"
+            local hooks_arg=""
             shift
 
+            # Parse --hooks argument separately (needed for create_law signature)
+            local remaining_args=()
+            while [[ $# -gt 0 ]]; do
+                case "$1" in
+                    --hooks=*)
+                        hooks_arg="${1#*=}"
+                        ;;
+                    *)
+                        remaining_args+=("$1")
+                        ;;
+                esac
+                shift
+            done
+
             # Pass all remaining arguments to create_law
-            create_law "$law_name" "" "$@"
+            create_law "$law_name" "$hooks_arg" "${remaining_args[@]}"
             ;;
         list)
             list_laws_cmd
