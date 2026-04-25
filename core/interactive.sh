@@ -9,8 +9,8 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     exit 1
 fi
 
-# Enable strict mode
-set -euo pipefail
+# Note: We don't set strict mode here since this file is sourced,
+# and it would affect the parent script's behavior
 
 # Prompt user with a question and multiple choice options
 # Usage: prompt_choice "Question text" "Option 1" "Option 2" "Option 3" ...
