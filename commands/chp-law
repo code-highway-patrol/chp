@@ -408,16 +408,39 @@ EOF
     log_info "Created verify.sh: $law_dir/verify.sh"
     log_info "Created guidance.md: $law_dir/guidance.md"
 
-    # Install hooks if specified
+    # Install hooks if specified (using category-aware installer)
     if [[ ${#hooks[@]} -gt 0 ]]; then
         log_info "Installing hooks..."
+        local has_agent_hooks=false
         for hook in "${hooks[@]}"; do
-            if install_hook "$law_name" "$hook"; then
-                log_info "Installed hook: $hook"
+            hook=$(echo "$hook" | xargs)  # trim whitespace
+            local hook_category
+            hook_category=$(get_hook_category "$hook")
+
+            if [[ "$hook_category" == "unknown" ]]; then
+                log_warn "Unknown hook type: $hook (skipping)"
+                continue
+            fi
+
+            if install_hook_template "$hook" "$hook_category"; then
+                log_info "Installed $hook_category hook: $hook"
             else
-                log_warn "Failed to install hook: $hook"
+                log_warn "Failed to install $hook_category hook: $hook"
+            fi
+
+            if [[ "$hook_category" == "agent" ]]; then
+                has_agent_hooks=true
             fi
         done
+
+        # Auto-configure Claude Code settings.json when agent hooks are used
+        if [[ "$has_agent_hooks" == true ]]; then
+            if command -v jq >/dev/null 2>&1; then
+                install_claude_hooks
+            else
+                log_warn "jq is required to configure Claude Code agent hooks (skipping settings.json)"
+            fi
+        fi
     else
         log_warn "No hooks specified. Use --hooks=pre-commit,pre-push to install hooks"
     fi
@@ -494,12 +517,21 @@ delete_law() {
     # Get hooks from law.json for uninstall
     hooks=$(jq -r '.hooks[] // empty' "$law_json")
 
-    # Uninstall hooks
+    # Uninstall hooks (using category-aware uninstaller)
     if [[ -n "$hooks" ]]; then
         log_info "Uninstalling hooks..."
         while IFS= read -r hook; do
-            if uninstall_hook "$law_name" "$hook"; then
-                log_info "Uninstalled hook: $hook"
+            hook=$(echo "$hook" | tr -d '\r' | xargs)
+            local hook_category
+            hook_category=$(get_hook_category "$hook")
+
+            if [[ "$hook_category" == "unknown" ]]; then
+                log_warn "Unknown hook type: $hook (skipping uninstall)"
+                continue
+            fi
+
+            if uninstall_hook_template "$hook" "$hook_category"; then
+                log_info "Uninstalled $hook_category hook: $hook"
             fi
         done <<< "$hooks"
     fi
