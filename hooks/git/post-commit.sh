@@ -6,7 +6,7 @@
 # CHP-MANAGED
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/../../core/dispatcher.sh" post-commit "$@"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+exec "$PROJECT_ROOT/core/dispatcher.sh" post-commit "$@"
 
 # Always allow commit to succeed
-exit 0

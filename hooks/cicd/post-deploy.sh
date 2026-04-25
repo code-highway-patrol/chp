@@ -6,7 +6,7 @@
 # CHP-MANAGED
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/../../core/dispatcher.sh" post-deploy "$@"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+exec "$PROJECT_ROOT/core/dispatcher.sh" post-deploy "$@"
 
 # May trigger rollback but always exits cleanly
-exit 0

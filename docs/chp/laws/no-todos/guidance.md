@@ -79,3 +79,19 @@ For legitimate documentation that uses these words:
 ---
 
 *This guidance will be automatically strengthened if violations occur.*
+
+---
+
+**Violation recorded:** 2026-04-25T07:43:36Z (Total: 1)
+
+This law has been violated 1 time(s). The guidance has been automatically strengthened.
+
+**Previous violations indicate this pattern is easy to miss. Pay extra attention.**
+
+---
+
+**Violation recorded:** 2026-04-25T07:46:05Z (Total: 2)
+
+This law has been violated 2 time(s). The guidance has been automatically strengthened.
+
+**Previous violations indicate this pattern is easy to miss. Pay extra attention.**

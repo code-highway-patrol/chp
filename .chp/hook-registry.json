@@ -6,7 +6,9 @@
       "laws": [
         "no-console-log",
         "no-api-keys",
-        "no-todos"
+        "no-todos",
+        "test-scope",
+        "no-alerts"
       ],
       "enabled": true,
       "blocking": true
@@ -15,7 +17,8 @@
       "category": "git",
       "laws": [
         "no-api-keys",
-        "no-todos"
+        "no-todos",
+        "no-alerts"
       ],
       "enabled": true,
       "blocking": true
@@ -70,6 +73,13 @@
     "post-deploy": {
       "category": "cicd",
       "laws": []
+    },
+    "test-scope": {
+      "laws": [
+        "pre-commit"
+      ],
+      "enabled": true,
+      "blocking": true
     }
   },
   "lastUpdated": "2026-04-24T22:00:00Z"

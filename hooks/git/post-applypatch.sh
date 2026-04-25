@@ -6,7 +6,7 @@
 # CHP-MANAGED
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/../../core/dispatcher.sh" post-applypatch "$@"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+exec "$PROJECT_ROOT/core/dispatcher.sh" post-applypatch "$@"
 
 # Always allow patch application to succeed
-exit 0

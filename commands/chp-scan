@@ -75,20 +75,64 @@ scan_law_files() {
 
     log_info "Scanning for violations of: $law_name"
 
-    # Get all tracked files (not just staged)
-    local all_files=$(git ls-files)
+    # Skip non-code-quality laws (metrics, tracking, etc.)
+    case "$law_name" in
+        commit-metrics|test-*)
+            echo ""
+            echo "  Law: $law_name"
+            echo "  Status: SKIPPED (not a scannable code quality law)"
+            return 0
+            ;;
+    esac
+
+    # Get all tracked files (not just staged), excluding common directories
+    local all_files=$(git ls-files | grep -vE '^(node_modules/|\.git/|dist/|build/|\.next/|coverage/)' || true)
 
     # File extensions to skip
     local skip_pattern='\.(md|json|txt|sh|yml|yaml|lock|gitignore)$'
 
+    # Directories to skip
+    local dir_skip_pattern='^(node_modules/|\.git/|dist/|build/|\.next/|coverage/|vendor/)'
+
     local violations=0
     local violating_files=()
 
-    # Temporarily modify verify.sh to scan all files
-    # We'll do this by checking file contents directly
+    # Define patterns for each law type
+    local check_pattern=""
+    local file_filter=""
+
+    case "$law_name" in
+        no-console-log)
+            check_pattern='console\.log'
+            ;;
+        no-todos)
+            check_pattern='TODO|FIXME|HACK|XXX'
+            ;;
+        no-alerts)
+            check_pattern='alert\('
+            file_filter='\.(js|ts|tsx)$'
+            ;;
+        no-api-keys)
+            check_pattern='api[_-]?key|apikey|api[_-]?secret'
+            ;;
+        *)
+            # Unknown law - skip
+            echo ""
+            echo "  Law: $law_name"
+            echo "  Status: SKIPPED (no scan pattern defined)"
+            return 0
+            ;;
+    esac
+
+    # Scan all files
     while IFS= read -r file; do
         # Skip files that match the skip pattern
         if echo "$file" | grep -qE "$skip_pattern"; then
+            continue
+        fi
+
+        # Apply file filter if specified
+        if [[ -n "$file_filter" ]] && ! echo "$file" | grep -qE "$file_filter"; then
             continue
         fi
 
@@ -97,20 +141,11 @@ scan_law_files() {
             continue
         fi
 
-        # Run law-specific checks based on law name
-        case "$law_name" in
-            no-console-log)
-                # Check for console.log in file
-                if grep -q 'console\.log' "$file" 2>/dev/null; then
-                    violations=$((violations + 1))
-                    violating_files+=("$file")
-                fi
-                ;;
-            *)
-                # For other laws, we'd need to parse their verify.sh logic
-                # For now, just note that we're checking
-                ;;
-        esac
+        # Check for pattern in file
+        if grep -qE "$check_pattern" "$file" 2>/dev/null; then
+            violations=$((violations + 1))
+            violating_files+=("$file")
+        fi
     done <<< "$all_files"
 
     # Get law metadata

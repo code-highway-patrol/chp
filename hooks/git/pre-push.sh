@@ -6,6 +6,6 @@
 # CHP-MANAGED
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/../../core/dispatcher.sh" pre-push "$@"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+exec "$PROJECT_ROOT/core/dispatcher.sh" pre-push "$@"
 
-exit $?

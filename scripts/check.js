@@ -40,7 +40,7 @@ function checkFile(file, rules, minSeverity) {
       if (rule.patterns && rule.patterns.checks) {
         rule.patterns.checks.forEach(check => {
           if (check.type === 'pattern' && check.regex) {
-            const regex = new RegExp(check.regex, 'g');
+            const regex = new RegExp(check.regex);
 
             lines.forEach((line, idx) => {
               if (regex.test(line)) {

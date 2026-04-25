@@ -1,0 +1,9 @@
+{
+  "name": "no-alerts",
+  "created": "2026-04-25T07:52:30Z",
+  "severity": "warn",
+  "failures": 0,
+  "tightening_level": 0,
+  "hooks": ["pre-commit","pre-push"],
+  "enabled": true
+}
