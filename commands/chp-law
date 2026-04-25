@@ -23,6 +23,8 @@ Commands:
     delete <law-name>                         Delete a law and uninstall hooks
     test <law-name>                           Test a law's verification script
     reset <law-name>                          Reset failure count for a law
+    disable <law-name>                        Disable a law (keep but don't enforce)
+    enable <law-name>                         Enable a disabled law
     help                                      Show this help message
 
 Options:
@@ -34,7 +36,8 @@ Examples:
     chp-law list
     chp-law test no-debug-code
     chp-law reset no-debug-code
-    chp-law delete no-debug-code
+    chp-law disable no-debug-code
+    chp-law enable no-debug-code
 
 Law Naming Rules:
     - Only lowercase letters, numbers, and hyphens allowed
@@ -360,6 +363,76 @@ reset_law() {
     fi
 }
 
+# Disable a law
+disable_law() {
+    local law_name="$1"
+
+    if [[ -z "$law_name" ]]; then
+        log_error "Law name is required"
+        return 1
+    fi
+
+    if ! law_exists "$law_name"; then
+        log_error "Law does not exist: $law_name"
+        return 1
+    fi
+
+    local law_dir="$LAWS_DIR/$law_name"
+    local law_json="$law_dir/law.json"
+
+    # Check if already disabled
+    local enabled
+    enabled=$(get_law_meta "$law_name" "enabled")
+
+    if [[ "$enabled" == "false" ]]; then
+        log_info "Law already disabled: $law_name"
+        return 0
+    fi
+
+    # Update law.json to set enabled=false
+    jq '.enabled = false' "$law_json" > "${law_json}.tmp" && \
+    mv "${law_json}.tmp" "$law_json"
+
+    log_info "Law disabled successfully: $law_name"
+
+    return 0
+}
+
+# Enable a law
+enable_law() {
+    local law_name="$1"
+
+    if [[ -z "$law_name" ]]; then
+        log_error "Law name is required"
+        return 1
+    fi
+
+    if ! law_exists "$law_name"; then
+        log_error "Law does not exist: $law_name"
+        return 1
+    fi
+
+    local law_dir="$LAWS_DIR/$law_name"
+    local law_json="$law_dir/law.json"
+
+    # Check if already enabled
+    local enabled
+    enabled=$(get_law_meta "$law_name" "enabled")
+
+    if [[ "$enabled" == "true" ]]; then
+        log_info "Law already enabled: $law_name"
+        return 0
+    fi
+
+    # Update law.json to set enabled=true
+    jq '.enabled = true' "$law_json" > "${law_json}.tmp" && \
+    mv "${law_json}.tmp" "$law_json"
+
+    log_info "Law enabled successfully: $law_name"
+
+    return 0
+}
+
 # Main command routing
 main() {
     local command="$1"
@@ -414,6 +487,20 @@ main() {
                 exit 1
             fi
             reset_law "$1"
+            ;;
+        disable)
+            if [[ $# -lt 1 ]]; then
+                log_error "Usage: chp-law disable <law-name>"
+                exit 1
+            fi
+            disable_law "$1"
+            ;;
+        enable)
+            if [[ $# -lt 1 ]]; then
+                log_error "Usage: chp-law enable <law-name>"
+                exit 1
+            fi
+            enable_law "$1"
             ;;
         help|--help|-h)
             show_usage

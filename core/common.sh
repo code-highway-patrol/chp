@@ -42,7 +42,7 @@ get_law_meta() {
     local law_name="$1"
     local field="$2"
     if [ -f "$LAWS_DIR/$law_name/law.json" ]; then
-        jq -r ".$field // empty" "$LAWS_DIR/$law_name/law.json"
+        jq -r "if has(\"$field\") then .$field else \"\" end" "$LAWS_DIR/$law_name/law.json"
     fi
 }
 

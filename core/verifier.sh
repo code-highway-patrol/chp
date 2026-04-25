@@ -19,7 +19,17 @@ verify_law() {
     fi
 
     local law_dir="$LAWS_DIR/$law_name"
+    local law_json="$law_dir/law.json"
     local verify_script="$law_dir/verify.sh"
+
+    # Check if law is enabled
+    local enabled
+    enabled=$(jq -r 'if has("enabled") then .enabled else "true" end' "$law_json" 2>/dev/null)
+
+    if [[ "$enabled" != "true" ]]; then
+        log_info "Law is disabled, skipping verification: $law_name"
+        return 0
+    fi
 
     if [[ ! -f "$verify_script" ]]; then
         log_error "Verification script not found: $verify_script"
@@ -60,6 +70,15 @@ verify_hook_laws() {
             local law_json="$law_dir/law.json"
 
             if [[ -f "$law_json" ]]; then
+                # Check if this law is enabled
+                local enabled
+                enabled=$(jq -r 'if has("enabled") then .enabled else "true" end' "$law_json" 2>/dev/null)
+
+                if [[ "$enabled" != "true" ]]; then
+                    # Skip disabled laws
+                    continue
+                fi
+
                 # Check if this law applies to the hook
                 local hooks
                 hooks=$(jq -r '.hooks[]? // empty' "$law_json" 2>/dev/null)
