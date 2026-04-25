@@ -3,7 +3,6 @@
   "displayName": "Code Health Protocol",
   "version": "1.0.0",
   "description": "Highway Patrol for your code - enforcing traffic laws, catching speeders, and keeping your codebase safe",
-  "type": "module",
   "main": "index.js",
   "bin": {
     "chp": "./bin/chp",
