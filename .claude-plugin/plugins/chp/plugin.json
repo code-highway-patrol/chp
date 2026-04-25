@@ -21,6 +21,7 @@
     "./skills/audit",
     "./skills/investigate",
     "./skills/status",
-    "./skills/write-laws"
+    "./skills/write-laws",
+    "./skills/review-law"
   ]
 }
