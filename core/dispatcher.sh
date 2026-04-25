@@ -126,7 +126,12 @@ dispatch_hook() {
         fi
 
         log_debug "Running verify script for law: $law_name"
-        if "$verify_script" "${hook_args[@]}"; then
+        if [ -n "$CHP_TOOL_INPUT" ]; then
+            echo "$CHP_TOOL_INPUT" | "$verify_script" "${hook_args[@]}"
+        else
+            "$verify_script" "${hook_args[@]}"
+        fi
+        if [ $? -eq 0 ]; then
             log_debug "Law '$law_name' passed"
             ((passed++))
         else

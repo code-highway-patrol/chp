@@ -3,8 +3,8 @@
   "name": "no-console-log",
   "created": "2026-04-25T04:05:10Z",
   "severity": "error",
-  "failures": 8,
-  "tightening_level": 8,
+  "failures": 11,
+  "tightening_level": 11,
   "hooks": [
     "pre-commit"
   ],

@@ -1,21 +1,5 @@
 {
   "hooks": {
-    "post-commit": {
-      "laws": [
-        "commit-metrics"
-      ],
-      "enabled": true,
-      "blocking": false
-    },
-    "pre-tool": {
-      "laws": [
-        "mandarin-only",
-        "no-api-keys",
-        "no-todos"
-      ],
-      "enabled": true,
-      "blocking": true
-    },
     "pre-commit": {
       "laws": [
         "no-alerts",
@@ -23,6 +7,22 @@
         "no-console-log",
         "no-todos",
         "test-scope"
+      ],
+      "enabled": true,
+      "blocking": true
+    },
+    "post-commit": {
+      "laws": [
+        "commit-metrics"
+      ],
+      "enabled": true,
+      "blocking": true
+    },
+    "pre-tool": {
+      "laws": [
+        "mandarin-only",
+        "no-api-keys",
+        "no-todos"
       ],
       "enabled": true,
       "blocking": true
@@ -41,7 +41,7 @@
         "no-api-keys"
       ],
       "enabled": true,
-      "blocking": false
+      "blocking": true
     }
   },
   "version": "1.0"

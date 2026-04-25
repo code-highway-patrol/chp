@@ -14,9 +14,12 @@ echo ""
 # Setup: create a self-contained test directory with CHP structure
 TEST_DIR="$(mktemp -d)"
 mkdir -p "$TEST_DIR/.git/hooks" "$TEST_DIR/.claude/hooks"
-mkdir -p "$TEST_DIR/hooks/git" "$TEST_DIR/hooks/agent" "$TEST_DIR/hooks/cicd"
-mkdir -p "$TEST_DIR/docs/chp/laws"
+mkdir -p "$TEST_DIR/hooks/git" "$TEST_DIR/hooks/agent"
+mkdir -p "$TEST_DIR/docs/chp/laws" "$TEST_DIR/.chp"
 echo '{"hooks":{},"version":"1.0"}' > "$TEST_DIR/.chp/hook-registry.json"
+
+# Init a real git repo so git-based checks pass
+git init "$TEST_DIR" >/dev/null 2>&1
 
 # Helper: create a test template
 make_template() {

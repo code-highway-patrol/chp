@@ -48,7 +48,7 @@ else
                 hooks="jq not available"
             fi
 
-            if [ "$failures" -gt 0 ]; then
+            if [ "${failures:-0}" -gt 0 ]; then
                 echo "   ⚠️  $name ($severity) - $failures failures"
             else
                 echo "   ✓ $name ($severity)"

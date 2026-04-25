@@ -626,7 +626,9 @@ ensure_hooks_installed() {
         fi
 
         if _is_hook_installed "$hook_type" "$hook_category"; then
-            log_debug "Hook already installed: $hook_type ($hook_category)"
+            # Reinstall to pick up template changes
+            log_debug "Hook already installed, updating: $hook_type ($hook_category)"
+            install_hook_template "$hook_type" "$hook_category" >/dev/null 2>&1 || true
             continue
         fi
 

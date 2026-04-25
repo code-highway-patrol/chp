@@ -11,13 +11,24 @@
   ],
   "reaction": "block",
   "include": [],
-  "exclude": ["docs/chp/**", ".claude/**", "*.json", "*.sh", "*.lock"],
-  "tags": ["style", "language"],
+  "exclude": [
+    "docs/chp/**",
+    ".claude/**",
+    "*.json",
+    "*.sh",
+    "*.lock"
+  ],
+  "tags": [
+    "style",
+    "language"
+  ],
   "priority": 50,
   "severity": "error",
-  "hooks": ["pre-tool"],
+  "hooks": [
+    "pre-tool"
+  ],
   "created": "2026-04-25T05:30:00Z",
-  "failures": 0,
-  "tightening_level": 0,
+  "failures": 1,
+  "tightening_level": 1,
   "enabled": true
 }

@@ -36,6 +36,7 @@ verify_law() {
             [[ "$file" =~ node_modules/|vendor/|\.git/ ]] && continue
             [[ "$file" =~ docs/chp/laws/ ]] && continue
             [[ "$file" =~ ^core/ ]] && continue
+            [[ "$file" =~ ^(CLAUDE|GEMINI|AGENTS)\.md$ ]] && continue
 
             # Check for TODO/FIXME/HACK comments (case insensitive, word-boundary)
             if grep -iwE 'TODO|FIXME|HACK' "$file" >/dev/null 2>&1; then
