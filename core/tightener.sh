@@ -9,6 +9,7 @@ fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/common.sh"
+source "$SCRIPT_DIR/logger.sh"
 
 record_failure() {
     local law_name="$1"
@@ -53,6 +54,9 @@ This law has been violated $failures time(s). The guidance has been automaticall
 EOF
 
     log_warn "Law '$law_name' failed (failure #$failures, tightening level $tightening_level)"
+
+    logger_init
+    logger_violation "$law_name" "tightening" "failed" "violation-trend" "address the pattern causing repeated violations"
 
     return 0
 }
