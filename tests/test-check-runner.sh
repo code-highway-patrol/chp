@@ -224,6 +224,9 @@ echo ""
 # Test 8: structural checker - test_file_exists assertion
 echo "Test 8: structural checker - test_file_exists assertion"
 
+# Clean up staged files from previous tests by committing them
+git commit -m "temp commit" >/dev/null 2>&1 || true
+
 source "$TEST_ROOT/core/checkers/structural.sh"
 
 # Create source file without matching test
