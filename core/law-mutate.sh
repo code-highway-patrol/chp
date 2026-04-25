@@ -147,21 +147,16 @@ mutate_field() {
 
     read -r law_dir law_json guidance_md < <(get_law_paths "$law_name")
 
-    # Determine jq value type: numeric if value is a number, boolean if true/false, else string
-    local jq_expr
-    if [[ "$value" =~ ^[0-9]+$ ]]; then
-        jq_expr="--argjson val \"$value\""
-    elif [[ "$value" == "true" || "$value" == "false" ]]; then
-        jq_expr="--argjson val \"$value\""
-    else
-        jq_expr="--arg val \"$value\""
-    fi
-
     local tmpfile
     tmpfile=$(mktemp_chp "chp_law_json_XXXXXX")
 
-    eval jq "$jq_expr" '.[$field] = $val' --arg field "$field" "$law_json" > "$tmpfile" && \
-    mv "$tmpfile" "$law_json"
+    if [[ "$value" =~ ^[0-9]+$ ]] || [[ "$value" == "true" || "$value" == "false" ]]; then
+        jq --arg field "$field" --argjson val "$value" '.[$field] = $val' "$law_json" > "$tmpfile" && \
+        mv "$tmpfile" "$law_json"
+    else
+        jq --arg field "$field" --arg val "$value" '.[$field] = $val' "$law_json" > "$tmpfile" && \
+        mv "$tmpfile" "$law_json"
+    fi
 
     # Sync guidance.md header for severity and failures
     case "$field" in

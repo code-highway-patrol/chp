@@ -14,6 +14,9 @@ source "$SCRIPT_DIR/../core/interactive.sh"
 source "$SCRIPT_DIR/../core/law-builder.sh"
 source "$SCRIPT_DIR/../core/probe.sh"
 
+# Source mutation layer for atomic law updates
+source "$SCRIPT_DIR/../core/law-mutate.sh"
+
 # Display usage information
 show_usage() {
     cat <<EOF
@@ -630,10 +633,6 @@ disable_law() {
         return 1
     fi
 
-    local law_dir="$LAWS_DIR/$law_name"
-    local law_json="$law_dir/law.json"
-
-    # Check if already disabled
     local enabled
     enabled=$(get_law_meta "$law_name" "enabled")
 
@@ -642,9 +641,7 @@ disable_law() {
         return 0
     fi
 
-    # Update law.json to set enabled=false
-    jq '.enabled = false' "$law_json" > "${law_json}.tmp" && \
-    mv "${law_json}.tmp" "$law_json"
+    mutate_status "$law_name" "disabled"
 
     log_info "Law disabled successfully: $law_name"
 
@@ -665,10 +662,6 @@ enable_law() {
         return 1
     fi
 
-    local law_dir="$LAWS_DIR/$law_name"
-    local law_json="$law_dir/law.json"
-
-    # Check if already enabled
     local enabled
     enabled=$(get_law_meta "$law_name" "enabled")
 
@@ -677,9 +670,7 @@ enable_law() {
         return 0
     fi
 
-    # Update law.json to set enabled=true
-    jq '.enabled = true' "$law_json" > "${law_json}.tmp" && \
-    mv "${law_json}.tmp" "$law_json"
+    mutate_status "$law_name" "enabled"
 
     log_info "Law enabled successfully: $law_name"
 
@@ -761,8 +752,7 @@ update_law() {
     local updated=false
 
     if [[ -n "$new_severity" ]]; then
-        jq ".severity = \"$new_severity\"" "$law_json" > "${law_json}.tmp" && \
-            mv "${law_json}.tmp" "$law_json"
+        mutate_field "$law_name" "severity" "$new_severity"
         log_info "Updated severity to: $new_severity"
         updated=true
     fi
@@ -771,6 +761,8 @@ update_law() {
         local hooks_array=$(echo "$new_hooks" | jq -R . | jq -s -c .)
         jq ".hooks = $hooks_array" "$law_json" > "${law_json}.tmp" && \
             mv "${law_json}.tmp" "$law_json"
+        build_verify_with_checks "$law_name" > "$law_dir/verify.sh" && chmod +x "$law_dir/verify.sh"
+        _append_guidance_entry "$law_dir/guidance.md" "Hooks replaced: $new_hooks"
         log_info "Updated hooks to: $new_hooks"
         updated=true
     fi
@@ -778,6 +770,8 @@ update_law() {
     if [[ -n "$add_hook" ]]; then
         jq ".hooks += [\"$add_hook\"]" "$law_json" > "${law_json}.tmp" && \
             mv "${law_json}.tmp" "$law_json"
+        build_verify_with_checks "$law_name" > "$law_dir/verify.sh" && chmod +x "$law_dir/verify.sh"
+        _append_guidance_entry "$law_dir/guidance.md" "Hook added: $add_hook"
         log_info "Added hook: $add_hook"
         updated=true
     fi
@@ -785,6 +779,8 @@ update_law() {
     if [[ -n "$remove_hook" ]]; then
         jq ".hooks -= [\"$remove_hook\"]" "$law_json" > "${law_json}.tmp" && \
             mv "${law_json}.tmp" "$law_json"
+        build_verify_with_checks "$law_name" > "$law_dir/verify.sh" && chmod +x "$law_dir/verify.sh"
+        _append_guidance_entry "$law_dir/guidance.md" "Hook removed: $remove_hook"
         log_info "Removed hook: $remove_hook"
         updated=true
     fi
@@ -807,20 +803,19 @@ update_law() {
     fi
 
     if [[ -n "$new_check_json" ]]; then
-        jq --argjson check "$new_check_json" '.checks += [$check]' "$law_json" > "${law_json}.tmp" && \
-            mv "${law_json}.tmp" "$law_json"
-        build_verify_with_checks "$law_name" > "$law_dir/verify.sh"
-        chmod +x "$law_dir/verify.sh"
+        mutate_checks "$law_name" "add" "$new_check_json"
         log_info "Added check to law: $law_name"
         updated=true
     fi
 
     if [[ -n "$target_check" && -n "$target_check_severity" ]]; then
-        jq --arg cid "$target_check" --arg sev "$target_check_severity" \
-            '(.checks[] | select(.id == $cid)).severity = $sev' \
-            "$law_json" > "${law_json}.tmp" && \
-            mv "${law_json}.tmp" "$law_json"
-        log_info "Updated check '$target_check' severity to: $target_check_severity"
+        local updated_check
+        updated_check=$(jq --arg cid "$target_check" '.checks[] | select(.id == $cid)' "$law_json")
+        if [[ -n "$updated_check" ]]; then
+            updated_check=$(echo "$updated_check" | jq --arg sev "$target_check_severity" '.severity = $sev')
+            mutate_checks "$law_name" "update" "$updated_check"
+            log_info "Updated check '$target_check' severity to: $target_check_severity"
+        fi
         updated=true
     fi
 
