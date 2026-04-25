@@ -2,7 +2,7 @@
 
 A hybrid code law enforcement plugin for Claude Code. Laws are enforced through deterministic regex checks (fast, automatic) or subjective agent review (nuanced, AI-powered). All violations are collected into a report.
 
-> **Note:** This file provides context when working on CHP itself. When CHP is installed as a plugin in another project, the PreToolUse `chp-context` hook injects the active laws into the agent's context automatically before every write — this file is not involved.
+> **Note:** This file provides context when working on CHP itself. When CHP is installed as a plugin in another project, the PreToolUse `chp-context` hook injects the active laws before **every tool use** (any tool) — this file is not involved.
 
 ## IMPORTANT: Follow the Laws
 
@@ -19,7 +19,7 @@ Violations are flagged in `.chp/report.json` and can be viewed as a clean HTML d
 
 ## How Laws Reach the Agent
 
-1. **PreToolUse hook** (`bin/chp-context`): Before every Write/Edit, injects all laws from `laws/chp-laws.txt` into the agent's context as `additionalContext`. This is the primary prevention mechanism.
+1. **PreToolUse hook** (`bin/chp-context`): Before **every** tool invocation (matcher matches all tools), injects all laws from `laws/chp-laws.txt` into the agent's context as `additionalContext`. This is the primary prevention mechanism. (Turns where the model responds with **no** tools do not run PreToolUse — that is a Claude Code limitation.)
 2. **PostToolUse hooks**: After every Write/Edit, `bin/chp-check` runs regex checks and an agent subagent runs subjective review. This is the detection mechanism.
 
 ## Law Format

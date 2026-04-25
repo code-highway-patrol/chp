@@ -63,7 +63,7 @@ Start a Claude Code session. On the first tool use you should see:
 CHP: ensuring dashboard is running...
 ```
 
-Before any file write or edit:
+Before **any** tool use (Read, Bash, Write, etc.):
 
 ```
 CHP: loading active laws...
@@ -119,8 +119,8 @@ Use the `chp:scan-repo` skill to scan every file in the codebase and generate an
 ## How It Works
 
 1. **Define** laws in `laws/chp-laws.txt` — each has an intent, optional regex, and a reaction level
-2. **Before every file write/edit**, a PreToolUse hook fires:
-   - **Context injection** (`bin/chp-context`) — reads all laws and injects them into the agent's context as `additionalContext`, so the agent knows the rules before writing code
+2. **Before every tool use**, a PreToolUse hook fires:
+   - **Context injection** (`bin/chp-context`) — reads all laws and injects them into the agent's context as `additionalContext`, so the agent sees the rules before Read, Bash, Write, Edit, and every other tool
 3. **After every file write/edit**, two PostToolUse hooks fire:
    - **Deterministic hook** (`bin/chp-check`) — scans the changed file against all `check:` regex patterns
    - **Agent hook** — a subagent reviews the file against all subjective law intents
@@ -131,7 +131,7 @@ Use the `chp:scan-repo` skill to scan every file in the codebase and generate an
 
 CHP works on two levels:
 
-- **Prevention**: A PreToolUse hook (`bin/chp-context`) injects all active laws into the agent's context before every Write/Edit. The agent sees the rules and avoids violations proactively.
+- **Prevention**: A PreToolUse hook (`bin/chp-context`) injects all active laws before **every** tool call. If the model answers with text only and no tools, no hook runs (Claude Code does not expose a hook for that).
 - **Detection**: PostToolUse hooks run after every write to catch anything that slipped through — regex for deterministic laws, agent judgment for subjective ones.
 
 ## Law Format
