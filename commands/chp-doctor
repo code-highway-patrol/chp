@@ -1,0 +1,267 @@
+#!/bin/bash
+# CHP Doctor — Framework health check
+# Verifies law completeness, registry consistency, and enforcement readiness
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../core/common.sh"
+
+HOOKS_DIR="$CHP_BASE/hooks"
+REGISTRY_FILE="$CHP_BASE/.chp/hook-registry.json"
+LOGS_FILE="$CHP_BASE/.chp/citation.logs.jsonl"
+
+total_checks=0
+total_issues=0
+
+check_pass() {
+    total_checks=$((total_checks + 1))
+    echo "  PASS  $1"
+}
+
+check_fail() {
+    total_checks=$((total_checks + 1))
+    total_issues=$((total_issues + 1))
+    echo "  FAIL  $1"
+    [[ -n "$2" ]] && echo "        $2"
+}
+
+check_warn() {
+    total_checks=$((total_checks + 1))
+    echo "  WARN  $1"
+}
+
+# Check 1: Three-file completeness
+check_file_completeness() {
+    echo ""
+    echo "Check 1: Three-file completeness"
+
+    for law_dir in "$LAWS_DIR"/*; do
+        [[ ! -d "$law_dir" ]] && continue
+        local name
+        name=$(basename "$law_dir")
+        local missing=()
+
+        [[ ! -f "$law_dir/law.json" ]] && missing+=("law.json")
+        [[ ! -f "$law_dir/verify.sh" ]] && missing+=("verify.sh")
+        [[ ! -f "$law_dir/guidance.md" ]] && missing+=("guidance.md")
+
+        if [[ ${#missing[@]} -eq 0 ]]; then
+            check_pass "$name: all files present"
+        else
+            check_fail "$name: missing ${missing[*]}"
+        fi
+    done
+}
+
+# Check 2: Registry consistency
+check_registry_consistency() {
+    echo ""
+    echo "Check 2: Registry consistency"
+
+    if [[ ! -f "$REGISTRY_FILE" ]]; then
+        check_fail "hook-registry.json missing"
+        return
+    fi
+
+    if ! jq empty "$REGISTRY_FILE" 2>/dev/null; then
+        check_fail "hook-registry.json: invalid JSON"
+        return
+    fi
+
+    check_pass "hook-registry.json: valid JSON"
+
+    local registry_laws
+    registry_laws=$(jq -r '.hooks[] | select(.laws) | .laws[]' "$REGISTRY_FILE" 2>/dev/null | sort -u | tr -d '\r')
+
+    echo "$registry_laws" | while IFS= read -r law_name; do
+        [[ -z "$law_name" ]] && continue
+        if [[ -d "$LAWS_DIR/$law_name" ]]; then
+            check_pass "registry law $law_name: directory exists"
+        else
+            check_fail "registry law $law_name: directory missing"
+        fi
+    done
+
+    for law_dir in "$LAWS_DIR"/*; do
+        [[ ! -d "$law_dir" ]] && continue
+        local name
+        name=$(basename "$law_dir")
+        local in_registry
+        in_registry=$(jq -r --arg n "$name" '.hooks[] | select(.laws) | .laws[] | select(. == $n)' "$REGISTRY_FILE" 2>/dev/null)
+
+        if [[ -n "$in_registry" ]]; then
+            check_pass "law $name: registered"
+        else
+            local enabled
+            enabled=$(jq -r '.enabled // true' "$law_dir/law.json" 2>/dev/null)
+            if [[ "$enabled" == "false" ]]; then
+                check_warn "law $name: not registered (disabled)"
+            else
+                check_fail "$name: not registered in any hook"
+            fi
+        fi
+    done
+}
+
+# Check 3: Stale law detection
+check_stale_laws() {
+    echo ""
+    echo "Check 3: Stale law detection"
+
+    if [[ ! -f "$LOGS_FILE" ]]; then
+        check_warn "No citation logs found"
+        return
+    fi
+
+    for law_dir in "$LAWS_DIR"/*; do
+        [[ ! -d "$law_dir" ]] && continue
+        local name
+        name=$(basename "$law_dir")
+
+        local last_trigger
+        last_trigger=$(grep "\"$name\"" "$LOGS_FILE" 2>/dev/null | tail -1 | jq -r '.timestamp // empty' 2>/dev/null)
+
+        if [[ -z "$last_trigger" ]]; then
+            check_warn "$name: never triggered"
+        else
+            check_pass "$name: last triggered $last_trigger"
+        fi
+    done
+}
+
+# Check 4: High-failure laws
+check_high_failure_laws() {
+    echo ""
+    echo "Check 4: High-failure law detection"
+
+    for law_dir in "$LAWS_DIR"/*; do
+        [[ ! -d "$law_dir" ]] && continue
+        local name
+        name=$(basename "$law_dir")
+
+        local failures
+        failures=$(jq -r '.failures // 0' "$law_dir/law.json" 2>/dev/null)
+
+        if [[ "$failures" -gt 10 ]]; then
+            check_warn "$name: $failures failures - consider adjusting scope"
+        else
+            check_pass "$name: $failures failures"
+        fi
+    done
+}
+
+# Check 5: verify.sh executability
+check_verify_executable() {
+    echo ""
+    echo "Check 5: verify.sh executability"
+
+    for law_dir in "$LAWS_DIR"/*; do
+        [[ ! -d "$law_dir" ]] && continue
+        local name
+        name=$(basename "$law_dir")
+        local verify="$law_dir/verify.sh"
+
+        if [[ ! -f "$verify" ]]; then
+            check_fail "$name: verify.sh missing"
+            continue
+        fi
+
+        if [[ -x "$verify" ]]; then
+            check_pass "$name: verify.sh executable"
+        else
+            check_warn "$name: verify.sh not executable"
+        fi
+    done
+}
+
+# Check 6: JSON validity and required fields
+check_json_validity() {
+    echo ""
+    echo "Check 6: law.json validity"
+
+    for law_dir in "$LAWS_DIR"/*; do
+        [[ ! -d "$law_dir" ]] && continue
+        local name
+        name=$(basename "$law_dir")
+        local law_json="$law_dir/law.json"
+
+        if [[ ! -f "$law_json" ]]; then
+            check_fail "$name: law.json missing"
+            continue
+        fi
+
+        if jq empty "$law_json" 2>/dev/null; then
+            check_pass "$name: valid JSON"
+
+            local missing_fields=()
+            for field in id intent hooks enabled; do
+                local has_field
+                has_field=$(jq -r "has(\"$field\")" "$law_json" 2>/dev/null)
+                [[ "$has_field" != "true" ]] && missing_fields+=("$field")
+            done
+
+            if [[ ${#missing_fields[@]} -eq 0 ]]; then
+                check_pass "$name: required fields present"
+            else
+                check_fail "$name: missing fields: ${missing_fields[*]}"
+            fi
+        else
+            check_fail "$name: invalid JSON"
+        fi
+    done
+}
+
+# Check 7: Hook template existence
+check_hook_templates() {
+    echo ""
+    echo "Check 7: Hook template existence"
+
+    for law_dir in "$LAWS_DIR"/*; do
+        [[ ! -d "$law_dir" ]] && continue
+        local name
+        name=$(basename "$law_dir")
+
+        local hook_count
+        hook_count=$(jq -r '.hooks | length' "$law_dir/law.json" 2>/dev/null)
+        [[ "$hook_count" -eq 0 || -z "$hook_count" ]] && continue
+
+        for ((h=0; h<hook_count; h++)); do
+            local hook
+            hook=$(jq -r ".hooks[$h]" "$law_dir/law.json" 2>/dev/null | tr -d '\r')
+            [[ -z "$hook" ]] && continue
+
+            local template_git="$HOOKS_DIR/git/$hook"
+            local template_agent="$HOOKS_DIR/agent/$hook"
+
+            if [[ -f "$template_git" ]] || [[ -f "$template_agent" ]]; then
+                check_pass "$name ($hook): template exists"
+            else
+                check_warn "$name ($hook): no hook template found"
+            fi
+        done
+    done
+}
+
+# Run all checks
+echo ""
+echo "=================================="
+echo "  CHP Doctor - Health Check"
+echo "=================================="
+
+check_file_completeness
+check_registry_consistency
+check_stale_laws
+check_high_failure_laws
+check_verify_executable
+check_json_validity
+check_hook_templates
+
+# Summary
+echo ""
+echo "=================================="
+echo "  Results: $((total_checks - total_issues))/$total_checks checks passed"
+echo "  Issues: $total_issues"
+echo "=================================="
+echo ""
+
+[[ $total_issues -gt 0 ]] && exit 1
+exit 0
