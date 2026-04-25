@@ -32,9 +32,13 @@ Commands:
     help                                      Show this help message
 
 Options:
-    --hooks=<hooks>    Comma-separated list of hooks to install (e.g., pre-commit,pre-push)
-    --dry-run          Show preview without creating the law
-    --response=<text>  Pre-answer interactive prompts (can be used multiple times)
+    --hooks=<hooks>       Comma-separated list of hooks (e.g., pre-commit,pre-push)
+    --severity=<level>    Severity level (error|warn|info)
+    --pattern=<regex>     Custom detection pattern
+    --files=<extensions>  File types to check (comma-separated)
+    --exceptions=<list>   Exception patterns (comma-separated)
+    --dry-run             Show preview without creating the law
+    --response=<text>     Pre-answer interactive prompts (for testing)
 
 Examples:
     chp-law create no-debug-code --hooks=pre-commit
