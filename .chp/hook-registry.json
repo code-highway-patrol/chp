@@ -48,7 +48,11 @@
     },
     "post-tool": {
       "category": "agent",
-      "laws": []
+      "laws": [
+        "no-api-keys"
+      ],
+      "enabled": true,
+      "blocking": true
     },
     "pre-response": {
       "category": "agent",

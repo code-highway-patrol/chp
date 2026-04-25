@@ -2,12 +2,13 @@
   "name": "no-api-keys",
   "created": "2026-04-25T05:02:04Z",
   "severity": "error",
-  "failures": 33,
-  "tightening_level": 33,
+  "failures": 38,
+  "tightening_level": 38,
   "hooks": [
     "pre-commit",
     "pre-push",
-    "pre-tool"
+    "pre-tool",
+    "post-tool"
   ],
   "enabled": true
 }
