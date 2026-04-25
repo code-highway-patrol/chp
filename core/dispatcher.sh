@@ -55,16 +55,29 @@ dispatch_hook() {
         return 0
     fi
 
+    # Discover laws: prefer registry, fall back to scanning law.json files
+    local law_names=()
+
     local laws
     laws=$(get_hook_laws "$hook_type")
-
-    local law_names=()
-    if [ -n "$laws" ]; then
+    if [ -n "$laws" ] && [ "$laws" != "[]" ]; then
         mapfile -t law_names < <(jq -r '.[]' <<<"$laws" | tr -d '\r')
     fi
 
+    # If registry was empty/stale, discover from law.json files directly
     if [ ${#law_names[@]} -eq 0 ]; then
-        log_debug "No laws registered for hook '$hook_type'"
+        for law_dir in "$LAWS_DIR"/*; do
+            [ ! -d "$law_dir" ] && continue
+            local law_json="$law_dir/law.json"
+            [ ! -f "$law_json" ] && continue
+            if jq -r '.hooks[]?' "$law_json" 2>/dev/null | tr -d '\r' | grep -qx "$hook_type"; then
+                law_names+=("$(basename "$law_dir")")
+            fi
+        done
+    fi
+
+    if [ ${#law_names[@]} -eq 0 ]; then
+        log_debug "No laws found for hook '$hook_type'"
         return 0
     fi
 
@@ -130,11 +143,17 @@ dispatch_hook() {
     echo ""
     log_info "Hook '$hook_type' complete: passed: $passed, failed: $failed"
 
-    if is_hook_blocking "$hook_type"; then
-        if [ $failed -gt 0 ]; then
-            log_error "Blocking hook '$hook_type' had failures"
-            return 1
-        fi
+    # Pre-tool and pre-write hooks always block on failure
+    local should_block=false
+    if [[ "$hook_type" == "pre-tool" || "$hook_type" == "pre-write" ]]; then
+        should_block=true
+    elif is_hook_blocking "$hook_type"; then
+        should_block=true
+    fi
+
+    if $should_block && [ $failed -gt 0 ]; then
+        log_error "Blocking hook '$hook_type' had $failed failure(s)"
+        return 1
     fi
 
     return 0
