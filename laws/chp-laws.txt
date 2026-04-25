@@ -17,6 +17,3 @@ intent: No debug code left in production. This includes debugger statements, con
 check: (debugger;|console\.debug\()
 reaction: block
 
-# === Law: testlaw ===
-intent: every non-keyword should be written in simplified chinese
-reaction: block
