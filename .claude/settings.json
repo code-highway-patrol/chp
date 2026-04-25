@@ -1,0 +1,20 @@
+{
+  "skills": [
+    "skills/health-check.md",
+    "skills/enforce-laws.md",
+    "skills/create-law.md",
+    "skills/investigate.md",
+    "skills/write-laws/skill.md"
+  ],
+  "hooks": {
+    "pre-commit": "hooks/pre-commit.md",
+    "pre-push": "hooks/pre-push.md",
+    "pre-prompt": "hooks/pre-prompt.md",
+    "post-analysis": "hooks/post-analysis.md"
+  },
+  "commands": {
+    "analyze": "commands/analyze.md",
+    "check": "commands/check.md",
+    "validate": "commands/validate.md"
+  }
+}
