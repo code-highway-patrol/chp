@@ -1,6 +1,6 @@
 # CHP - Code Highway Patrol
 
-A hybrid code law enforcement plugin for Claude Code. Deterministic laws are checked automatically via regex. Subjective laws are reviewed by an AI agent. All violations are collected into a clean HTML report.
+A hybrid code law enforcement plugin for Claude Code. Deterministic laws are checked automatically via regex. Subjective laws are reviewed by an AI agent. All violations are collected into a report.
 
 ## Installation
 
@@ -60,12 +60,6 @@ By default, plugins install to **user scope** (available in all your projects). 
 Start a Claude Code session. On the first tool use you should see:
 
 ```
-CHP: ensuring dashboard is running...
-```
-
-Before **any** tool use (Read, Bash, Write, etc.):
-
-```
 CHP: loading active laws...
 ```
 
@@ -76,7 +70,7 @@ CHP: running deterministic checks...
 CHP: agent reviewing subjective laws...
 ```
 
-The dashboard opens automatically at **http://localhost:5177**.
+Before **any** tool use (Read, Bash, Write, Edit, etc.), active laws are injected into the agent's context.
 
 ### Set up laws for your project
 
@@ -113,8 +107,8 @@ Use the `chp:scan-repo` skill to scan every file in the codebase and generate an
 | `chp:scan-repo` | Full codebase scan with HTML report |
 | `chp:write-laws` | Create a new law (auto-classifies as deterministic or subjective) |
 | `chp:refine-laws` | Edit, delete, or tune existing laws |
-| `chp:dashboard` | Launch the web dashboard |
 | `chp:onboard` | Explain the project's guardrails to a new contributor |
+| `chp:setup` | Configure real-time law enforcement hook |
 
 ## How It Works
 
@@ -125,7 +119,6 @@ Use the `chp:scan-repo` skill to scan every file in the codebase and generate an
    - **Deterministic hook** (`bin/chp-check`) — scans the changed file against all `check:` regex patterns
    - **Agent hook** — a subagent reviews the file against all subjective law intents
 4. **Violations** are written to `.chp/report.json` and surfaced in the session
-5. **Dashboard** at `http://localhost:5177` — view laws, trigger scans, browse reports
 
 ### Prevention vs. Detection
 
@@ -161,28 +154,24 @@ chp/
 │   └── hooks.json               # PreToolUse + PostToolUse hooks
 ├── bin/
 │   ├── chp-check                # Deterministic regex scanner (PostToolUse)
-│   ├── chp-context              # Injects laws into agent context (PreToolUse)
-│   ├── chp-server               # Dashboard web server (port 5177)
-│   ├── chp-dashboard            # Ensures server is running
-│   └── chp-report               # HTML report generator
+│   └── chp-context              # Injects laws into agent context (PreToolUse)
 ├── skills/
-│   ├── dashboard/               # Launch the web UI
 │   ├── scan-repo/               # Full codebase scan
 │   ├── write-laws/              # Create new laws
 │   ├── refine-laws/             # Edit/delete laws
-│   └── onboard/                 # Explain guardrails
+│   ├── onboard/                 # Explain guardrails
+│   └── setup/                   # Configure real-time enforcement hook
 ├── laws/
 │   └── chp-laws.txt             # Law definitions (your rules go here)
 ├── .chp/                        # Runtime output (gitignored)
-│   ├── report.json              # Violation data
-│   └── report.html              # Static HTML report
+│   └── report.json              # Violation data
 ├── CLAUDE.md                    # Context for developing CHP itself
 └── README.md
 ```
 
 ## Requirements
 
-- **Python 3.8+** (for `chp-check`, `chp-server`, `chp-report`, `chp-dashboard`)
+- **Python 3.8+** (for `chp-check` and `chp-context`)
 - **Claude Code** (the CLI agent that supports plugins, hooks, and skills)
 
 No additional Python packages are required — all scripts use the standard library.

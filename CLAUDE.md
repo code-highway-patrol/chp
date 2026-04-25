@@ -15,7 +15,7 @@ Users define laws in `laws/chp-laws.txt` in their project root. Each law has an 
 - **Deterministic laws** (have `check:`): Scanned automatically via regex. Zero inference cost.
 - **Subjective laws** (no `check:`): Reviewed by an agent subagent using judgment against the law's intent.
 
-Violations are flagged in `.chp/report.json` and can be viewed as a clean HTML dashboard at `.chp/report.html`.
+Violations are flagged in `.chp/report.json` and can be viewed as a clean HTML report at `.chp/report.html`.
 
 ## How Laws Reach the Agent
 
@@ -31,15 +31,10 @@ check: <optional regex pattern for deterministic detection>
 reaction: block|warn
 ```
 
-## Dashboard
-
-The dashboard at `http://localhost:5177` auto-launches via hook on the first tool use of every session. It can also be started manually with `python bin/chp-server`.
-
 ## Skills
 
 | Skill | Purpose |
 |-------|---------|
-| `chp:dashboard` | Launch the web UI |
 | `chp:scan-repo` | Full codebase scan with HTML report |
 | `chp:write-laws` | Create new laws (auto-classifies as deterministic or subjective) |
 | `chp:refine-laws` | Adjust existing laws |
