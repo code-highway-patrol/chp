@@ -1,5 +1,5 @@
 ---
-name: chp:refine-laws
+name: refine-laws
 description: Tune existing CHP laws based on new requirements or feedback
 ---
 

@@ -535,3 +535,150 @@ _uninstall_cicd_hook() {
 
     return 0
 }
+
+# ============================================================================
+# CLAUDE CODE SETTINGS HOOKS
+# ============================================================================
+
+# Ensure a wrapper script exists in .claude/hooks/
+# Args: hook_type (pre-tool or post-tool)
+_ensure_wrapper_script() {
+    local hook_type="$1"
+    local wrapper_name="${hook_type}-wrapper.sh"
+    local hooks_dir=".claude/hooks"
+    local wrapper_path="$hooks_dir/$wrapper_name"
+    local dispatcher_arg="$hook_type"
+
+    mkdir -p "$hooks_dir"
+
+    if [[ -f "$wrapper_path" ]]; then
+        log_debug "Wrapper already exists: $wrapper_path"
+        return 0
+    fi
+
+    cat > "$wrapper_path" << 'WRAPPER'
+#!/bin/bash
+# CHP __HOOK_TYPE__ Hook Wrapper
+# Reads JSON input from Claude Code harness and calls the CHP dispatcher
+
+HOOK_INPUT=$(cat)
+
+TOOL_NAME=$(echo "$HOOK_INPUT" | jq -r '.tool_name // empty')
+FILE_PATH=$(echo "$HOOK_INPUT" | jq -r '.tool_input.file_path // empty')
+CONTENT=$(echo "$HOOK_INPUT" | jq -r '.tool_input.content // empty')
+WRAPPER
+
+    # Add tool_output extraction for post-tool
+    if [[ "$hook_type" == "post-tool" ]]; then
+        cat >> "$wrapper_path" << 'EXTRA'
+TOOL_OUTPUT=$(echo "$HOOK_INPUT" | jq -r '.tool_output // empty')
+EXTRA
+    fi
+
+    cat >> "$wrapper_path" << 'WRAPPER2'
+
+export CHP_HOOK_TYPE="__HOOK_TYPE__"
+export CHP_TOOL_NAME="$TOOL_NAME"
+export CHP_FILE_PATH="$FILE_PATH"
+export CHP_CONTENT="$CONTENT"
+WRAPPER2
+
+    if [[ "$hook_type" == "post-tool" ]]; then
+        cat >> "$wrapper_path" << 'EXTRA2'
+export CHP_TOOL_OUTPUT="$TOOL_OUTPUT"
+EXTRA2
+    fi
+
+    cat >> "$wrapper_path" << 'WRAPPER3'
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+
+exec "$PROJECT_ROOT/core/dispatcher.sh" __HOOK_TYPE__ "$TOOL_NAME" "$FILE_PATH" "$CONTENT"
+WRAPPER3
+
+    # Replace placeholders
+    sed -i "s/__HOOK_TYPE__/$hook_type/g" "$wrapper_path"
+    chmod +x "$wrapper_path"
+
+    log_info "Created wrapper script: $wrapper_path"
+}
+
+# Configure Claude Code settings.json with PreToolUse and PostToolUse hooks
+install_claude_hooks() {
+    local settings_file=".claude/settings.json"
+
+    # Check for jq
+    if ! command -v jq >/dev/null 2>&1; then
+        log_error "jq is required to configure Claude Code hooks"
+        return 1
+    fi
+
+    # Ensure .claude directory exists
+    mkdir -p .claude
+
+    # Create settings.json if it doesn't exist
+    if [[ ! -f "$settings_file" ]]; then
+        echo '{}' > "$settings_file"
+        log_info "Created $settings_file"
+    fi
+
+    # Ensure wrapper scripts exist
+    _ensure_wrapper_script "pre-tool"
+    _ensure_wrapper_script "post-tool"
+
+    # Build the hooks configuration
+    local tmp_file
+    tmp_file=$(mktemp)
+
+    # Use jq to add/update hooks in settings.json
+    jq '
+        .hooks = (.hooks // {}) |
+        .hooks.PreToolUse = [{
+            matcher: "Write|Edit",
+            hooks: [{
+                type: "command",
+                command: "bash .claude/hooks/pre-tool-wrapper.sh"
+            }]
+        }] |
+        .hooks.PostToolUse = [{
+            matcher: "Write|Edit",
+            hooks: [{
+                type: "command",
+                command: "bash .claude/hooks/post-tool-wrapper.sh"
+            }]
+        }]
+    ' "$settings_file" > "$tmp_file" && mv "$tmp_file" "$settings_file"
+
+    log_info "Configured PreToolUse and PostToolUse hooks in $settings_file"
+    return 0
+}
+
+# Remove Claude Code hooks from settings.json
+uninstall_claude_hooks() {
+    local settings_file=".claude/settings.json"
+
+    if [[ ! -f "$settings_file" ]]; then
+        log_debug "No settings.json found, nothing to uninstall"
+        return 0
+    fi
+
+    if ! command -v jq >/dev/null 2>&1; then
+        log_error "jq is required to update settings.json"
+        return 1
+    fi
+
+    local tmp_file
+    tmp_file=$(mktemp)
+
+    # Remove PreToolUse and PostToolUse entries
+    jq 'del(.hooks.PreToolUse) | del(.hooks.PostToolUse)' "$settings_file" > "$tmp_file" && mv "$tmp_file" "$settings_file"
+
+    log_info "Removed Claude Code hooks from $settings_file"
+
+    # Clean up wrapper scripts
+    rm -f ".claude/hooks/pre-tool-wrapper.sh"
+    rm -f ".claude/hooks/post-tool-wrapper.sh"
+
+    return 0
+}

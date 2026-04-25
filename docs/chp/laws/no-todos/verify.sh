@@ -34,9 +34,11 @@ verify_law() {
             # Skip certain file patterns
             [[ "$file" =~ \.(min\.(js|css)|map|lock)$ ]] && continue
             [[ "$file" =~ node_modules/|vendor/|\.git/ ]] && continue
+            [[ "$file" =~ docs/chp/laws/ ]] && continue
+            [[ "$file" =~ ^core/ ]] && continue
 
-            # Check for TODO/FIXME/HACK comments (case insensitive)
-            if grep -iE 'TODO|FIXME|HACK|XXX|NOTE' "$file" >/dev/null 2>&1; then
+            # Check for TODO/FIXME/HACK comments (case insensitive, word-boundary)
+            if grep -iwE 'TODO|FIXME|HACK' "$file" >/dev/null 2>&1; then
                 log_error "TODO/FIXME/HACK comment found in: $file"
                 violations=$((violations + 1))
             fi

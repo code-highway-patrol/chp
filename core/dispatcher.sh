@@ -35,6 +35,10 @@ get_hook_context() {
         commit-msg)
             echo ".git/COMMIT_EDITMSG"
             ;;
+        pre-tool)
+            # For pre-tool hooks, context comes from hook arguments (tool name, file path, content)
+            echo "tool_context"
+            ;;
         *)
             echo ""
             ;;

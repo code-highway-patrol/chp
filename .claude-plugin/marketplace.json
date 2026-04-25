@@ -1,6 +1,6 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
-  "name": "chp-local",
+  "name": "local",
   "description": "Local development marketplace for CHP - Code Health Protocol",
   "owner": {
     "name": "justi"
@@ -10,6 +10,7 @@
       "name": "chp",
       "description": "Code quality enforcement with traffic laws and automated violation detection",
       "version": "1.0.0",
+      "source": "./",
       "author": {
         "name": "CHP Contributors"
       }
