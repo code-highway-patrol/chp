@@ -242,6 +242,12 @@ Each pattern includes:
 3. Use the provided template
 4. Adapt to specific requirements
 
+**For the complete agent flow:**
+- See `docs/chp/AGENT-FLOW.md` for step-by-step walkthroughs
+- Shows how to match user requests to patterns
+- Includes real-world conversation examples
+- Explains when to clarify vs. implement directly
+
 ## Common Law Patterns
 
 **Security Laws:**
