@@ -68,15 +68,11 @@ dispatch_hook() {
     local laws
     laws=$(get_hook_laws "$hook_type")
 
-    # Parse laws from JSON array
+    # Parse laws into array efficiently
     local law_names=()
-    while IFS= read -r law_name; do
-        # Remove quotes and whitespace
-        law_name=$(echo "$law_name" | sed 's/["[:space:]]//g')
-        if [ -n "$law_name" ]; then
-            law_names+=("$law_name")
-        fi
-    done < <(echo "$laws" | jq -r '.[]')
+    if [ -n "$laws" ]; then
+        mapfile -t law_names < <(jq -r '.[]' <<<"$laws" | tr -d '\r')
+    fi
 
     # If no laws registered, nothing to do
     if [ ${#law_names[@]} -eq 0 ]; then
