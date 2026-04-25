@@ -1,15 +1,21 @@
 {
-  "description": "CHP law enforcement — subjective agent review after every file write",
+  "description": "CHP law enforcement — deterministic checks via script, subjective review via agent",
   "hooks": {
     "PostToolUse": [
       {
         "matcher": "Write|Edit",
         "hooks": [
           {
+            "type": "command",
+            "command": "python \"${CLAUDE_PLUGIN_ROOT}/bin/chp-check\"",
+            "timeout": 15,
+            "statusMessage": "CHP: running deterministic checks..."
+          },
+          {
             "type": "agent",
-            "prompt": "You are a CHP (Code Highway Patrol) law enforcement agent. A file was just written or edited.\n\nYour task:\n1. Read `laws/chp-laws.txt` in the project root to load the active laws.\n2. Examine the file that was just written (the path is in the hook input below).\n3. For each law, subjectively judge whether the written code violates the law's INTENT. This is a qualitative judgment — evaluate the spirit of the law, not just literal pattern matching.\n4. Skip laws/chp-laws.txt itself, README.md, CLAUDE.md, and non-code files.\n\nIf ANY law's intent is violated, respond with:\n{\"ok\": false, \"reason\": \"CHP VIOLATIONS FOUND:\\n- [law-id]: explanation of what violates the law\\n\\nACTION REQUIRED: Rewrite the file to fix all violations. Then open laws/chp-laws.txt and update each violated law's intent to be more strict and explicit based on what was caught — so this specific violation is harder to repeat.\"}\n\nIf no laws are violated, respond with:\n{\"ok\": true}\n\nHook input:\n$ARGUMENTS",
+            "prompt": "You are a CHP (Code Highway Patrol) law enforcement agent. A file was just written or edited.\n\nYour task:\n1. Read `laws/chp-laws.txt` in the project root.\n2. Identify laws that do NOT have a `check:` field — these are subjective laws that require your judgment.\n3. Read the file that was just written (path is in the hook input below).\n4. Skip non-code files, chp-laws.txt, README.md, CLAUDE.md, and anything in .chp/.\n5. For each subjective law, judge whether the written code violates its INTENT.\n\nIf violations are found, respond with:\n{\"ok\": false, \"reason\": \"CHP SUBJECTIVE REVIEW:\\n- [law-id]: explanation of the violation\\n\\nThese violations require manual fixes. See .chp/report.json for the full report.\"}\n\nIf no subjective laws are violated, respond with:\n{\"ok\": true}\n\nHook input:\n$ARGUMENTS",
             "timeout": 60,
-            "statusMessage": "CHP: checking for law violations..."
+            "statusMessage": "CHP: agent reviewing subjective laws..."
           }
         ]
       }

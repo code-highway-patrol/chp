@@ -13,30 +13,39 @@ description: Create new CHP enforcement laws
 ## Process
 
 1. Ask the user what they want to enforce (or infer from context)
-2. Draft a law with a unique id, a clear intent, and a reaction type
-3. Read `laws/chp-laws.txt` to check for duplicates or overlap
+2. Determine if the law is **deterministic** or **subjective**:
+   - Deterministic: can be checked with a regex pattern (e.g. "no console.log", "tabs not spaces", "no TODO comments")
+   - Subjective: requires judgment (e.g. "functions should have clear names", "no hardcoded secrets" where context matters)
+3. Read `laws/chp-laws.txt` to check for duplicates
 4. Append the new law block to `laws/chp-laws.txt`
 5. Confirm what was added
 
 ## Law Format
 
-Append to `laws/chp-laws.txt`:
-
+Deterministic law (has `check:` regex):
 ```
-# === Law: <unique-id> ===
-intent: <plain-language description of what this law prohibits — be specific and actionable>
-reaction: block|warn
+# === Law: no-console-log ===
+intent: No console.log statements in production code
+check: console\.log\(
+reaction: block
+```
+
+Subjective law (no `check:` field):
+```
+# === Law: no-hardcoded-secrets ===
+intent: No hardcoded API keys, passwords, tokens, or secrets in source code
+reaction: block
 ```
 
 ## Fields
 
-- **id**: Lowercase kebab-case, unique across all laws
-- **intent**: A clear, specific statement of what's not allowed and what to do instead. Write it like a rule you'd explain to a teammate. The more explicit, the better — this is what the agent evaluates against.
-- **reaction**: `block` (must fix before continuing) or `warn` (flag but allow)
+- **id**: Lowercase kebab-case, unique
+- **intent**: Plain-language description. For subjective laws, this is what the agent evaluates against.
+- **check**: Optional. A regex pattern (grep -E compatible). If present, violations are detected automatically. If absent, the agent uses judgment.
+- **reaction**: `block` (must fix) or `warn` (flag but allow)
 
 ## Guidelines
 
-- Write intents that are specific enough to act on — "no bad code" is too vague, "no raw SQL queries without parameterized inputs" is good
-- Prefer `block` for security and correctness laws, `warn` for style preferences
-- Check existing laws first to avoid overlap
-- Laws evolve over time — they get tightened automatically when violations are caught
+- Default to deterministic when possible — it's faster and has zero inference cost
+- Use subjective only when the check genuinely requires context or judgment
+- Write clear intents even for deterministic laws — the intent documents the "why"

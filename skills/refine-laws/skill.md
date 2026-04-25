@@ -7,35 +7,30 @@ description: Adjust existing CHP laws
 
 ## When to Use
 
-- A law is catching things it shouldn't (too broad)
-- A law is missing things it should catch (too narrow)
+- A law is flagging false positives
+- A law should be switched from subjective to deterministic (or vice versa)
 - User wants to change a reaction type
 - User wants to disable or delete a law
 
 ## Process
 
 1. Read `laws/chp-laws.txt`
-2. Identify the law to refine (by name or by the user's description of the problem)
-3. Discuss the change with the user if ambiguous
-4. Edit the law's `intent` in `laws/chp-laws.txt`
-5. Confirm what changed
+2. Identify the law to refine
+3. Edit the law block in `laws/chp-laws.txt`
+4. Confirm what changed
 
 ## Common Refinements
 
-**Make more specific** (reduce false positives):
-Narrow the intent to exclude legitimate patterns. Example: "No console.log in production code" → "No console.log in production code, except in dedicated logging utility files."
+**Add a deterministic check to a subjective law:**
+If you realize a subjective law can be checked with regex, add a `check:` field.
 
-**Make broader** (catch more cases):
-Expand the intent to cover additional patterns. Example: "No hardcoded passwords" → "No hardcoded passwords, API keys, tokens, connection strings, or any sensitive credentials."
+**Narrow a regex** (reduce false positives):
+Make the `check:` pattern more specific.
 
 **Change reaction**: Switch between `block` and `warn`.
 
-**Disable**: Comment out the entire law block with `#` on each line.
+**Convert to subjective**: Remove the `check:` field if regex can't capture the intent accurately.
 
-**Delete**: Remove the entire law block from the file.
+**Disable**: Comment out the entire law block with `#`.
 
-## Guidelines
-
-- Read the law's current intent first to understand its purpose
-- Prefer making the intent more specific over deleting the law
-- Laws tighten automatically over time — manual refinement is for course corrections
+**Delete**: Remove the entire law block.

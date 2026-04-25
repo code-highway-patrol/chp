@@ -1,32 +1,35 @@
 # CHP - Code Highway Patrol
 
-A self-improving code law enforcement plugin for Claude Code. CHP enforces project rules ("laws") through subjective AI judgment with automatic law tightening.
+A hybrid code law enforcement plugin for Claude Code. Laws are enforced through deterministic regex checks (fast, automatic) or subjective agent review (nuanced, AI-powered). All violations are collected into a report.
 
 ## Core Concept
 
-Users define laws as plain-language intents in `laws/chp-laws.txt`. A PostToolUse agent hook fires after every file write. A subagent reads the laws, reads the written file, and subjectively judges whether any law's intent was violated. If so:
-1. The main agent rewrites the file to fix the violation
-2. The main agent updates the violated law in `laws/chp-laws.txt` to be more strict and explicit
+Users define laws in `laws/chp-laws.txt`. Each law has an intent and optionally a `check:` regex pattern.
 
-Laws get sharper over time. The more violations caught, the more specific and enforceable the intents become.
+- **Deterministic laws** (have `check:`): Scanned automatically via regex. Zero inference cost.
+- **Subjective laws** (no `check:`): Reviewed by an agent subagent using judgment against the law's intent.
 
-## Law File
+Violations are flagged in `.chp/report.json` and can be viewed as a clean HTML dashboard at `.chp/report.html`.
 
-All laws live in `laws/chp-laws.txt` in the project root. Each law has an `intent` (the primary enforcement mechanism) and a `reaction` type:
+## Law Format
 
 ```
 # === Law: <id> ===
-intent: <plain-language description of what this law prohibits>
+intent: <plain-language description>
+check: <optional regex pattern for deterministic detection>
 reaction: block|warn
 ```
 
-The `intent` field is what the agent evaluates against. Write it like a rule you'd explain to a teammate.
+## Dashboard
+
+Run `python bin/chp-server` to launch a local web UI at `http://localhost:5177` for viewing laws, creating rules, running scans, and browsing violation reports.
 
 ## Skills
 
 | Skill | Purpose |
 |-------|---------|
-| `chp:scan-repo` | Scan full codebase for violations |
-| `chp:write-laws` | Create new laws |
+| `chp:dashboard` | Launch the web UI |
+| `chp:scan-repo` | Full codebase scan with HTML report |
+| `chp:write-laws` | Create new laws (auto-classifies as deterministic or subjective) |
 | `chp:refine-laws` | Adjust existing laws |
 | `chp:onboard` | Understand project guardrails |

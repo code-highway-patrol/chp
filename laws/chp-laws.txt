@@ -1,5 +1,6 @@
 # === Law: no-console-log ===
 intent: No console.log statements in production code. Use a proper logging library or remove debug output entirely.
+check: console\.log\(
 reaction: block
 
 # === Law: no-hardcoded-secrets ===
@@ -8,8 +9,10 @@ reaction: block
 
 # === Law: no-todo-comments ===
 intent: No TODO, FIXME, HACK, or XXX comments left in code. Resolve them or track them in an issue tracker.
+check: (TODO|FIXME|HACK|XXX)\s*:
 reaction: warn
 
 # === Law: no-debug-code ===
 intent: No debug code left in production. This includes debugger statements, console.debug calls, and any code that exists solely for debugging purposes.
+check: (debugger;|console\.debug\()
 reaction: block

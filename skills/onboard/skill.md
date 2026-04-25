@@ -8,46 +8,33 @@ description: Understand what CHP laws are enforced in this project
 ## When to Use
 
 - User is new to the project
-- User asks "what rules exist?", "what's enforced?", or "what guardrails are in place?"
-- Starting work on an unfamiliar codebase
+- User asks "what rules exist?" or "what guardrails are in place?"
 
 ## Process
 
 1. Read `laws/chp-laws.txt` in the project root
-2. Summarize each active law: name, intent, reaction type
-3. Group laws by category (security, quality, style)
-4. Highlight any `block`-level laws the user must know about
+2. Summarize each law: name, intent, reaction type, and whether it's deterministic or subjective
+3. Group by category (security, quality, style)
 
 ## How CHP Works
 
-CHP uses a `PostToolUse` agent hook. Every time a file is written or edited, a subagent:
-1. Reads `laws/chp-laws.txt`
-2. Reads the file that was just written
-3. Subjectively judges whether any law's **intent** was violated
-4. If violated, the main agent rewrites the code and tightens the law
+CHP uses two enforcement mechanisms that run after every file write:
 
-Laws improve over time — each violation makes the law's intent sharper and harder to break again.
+1. **Deterministic checks** — Laws with a `check:` regex pattern are scanned automatically by a script. Fast, zero inference cost. Violations are tagged AUTO in reports.
+2. **Subjective review** — Laws without a `check:` field are evaluated by an agent using judgment. Catches nuanced violations that regex can't. Tagged REVIEW in reports.
+
+All violations go into `.chp/report.json`. Run `/chp:scan-repo` to generate a full HTML report at `.chp/report.html`.
 
 ## Output Format
-
-Present a clear summary:
 
 ```
 This project enforces N laws:
 
-Security (block):
-  - no-hardcoded-secrets: No hardcoded API keys, passwords, tokens, or secrets
+Deterministic (auto-checked):
+  [block] no-console-log: No console.log in production code
+  [warn]  no-todo-comments: No TODO/FIXME/HACK comments
+  [block] no-debug-code: No debugger statements
 
-Quality (block):
-  - no-console-log: No console.log in production code
-  - no-debug-code: No debugger statements or debug-only code
-
-Style (warn):
-  - no-todo-comments: No TODO/FIXME/HACK comments
+Subjective (agent-reviewed):
+  [block] no-hardcoded-secrets: No hardcoded API keys, passwords, or tokens
 ```
-
-## Follow-Up
-
-- Suggest `/chp:scan-repo` to check current compliance
-- Suggest `/chp:write-laws` to add new rules
-- Suggest `/chp:refine-laws` to adjust existing rules

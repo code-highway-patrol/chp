@@ -1,41 +1,37 @@
 # CHP - Code Highway Patrol
 
-A self-improving code law enforcement plugin for Claude Code. Define laws as plain-language intents and CHP enforces them through subjective AI judgment — not regex. Laws get stricter over time as violations are caught.
+A hybrid code law enforcement plugin for Claude Code. Deterministic laws are checked automatically via regex. Subjective laws are reviewed by an AI agent. All violations are collected into a clean HTML report.
 
 ## How It Works
 
-1. Define laws in `laws/chp-laws.txt` in your project root
-2. An agent hook fires after every file write (`PostToolUse` on `Write|Edit`)
-3. A subagent reads your laws and subjectively judges whether the code violates any intent
-4. If violated: the code is rewritten and the law is tightened to be more explicit
-5. Laws sharpen with every violation — they evolve from general rules into precise guardrails
-
-## Installation
-
-```bash
-claude plugin add chp
-```
-
-Then create `laws/chp-laws.txt` in your project root (or use `/chp:write-laws`).
+1. Define laws in `laws/chp-laws.txt` with an intent and optional `check:` regex
+2. After every file write, two hooks fire in parallel:
+   - **Deterministic hook**: runs a script that greps for `check:` patterns — fast, zero inference cost
+   - **Agent hook**: a subagent reviews code against subjective law intents — catches what regex can't
+3. Violations are flagged (not auto-fixed) and written to `.chp/report.json`
+4. Run `/chp:scan-repo` for a full codebase scan and HTML dashboard
 
 ## Law Format
 
 ```
+# === Law: no-console-log ===
+intent: No console.log statements in production code
+check: console\.log\(
+reaction: block
+
 # === Law: no-hardcoded-secrets ===
-intent: No hardcoded API keys, passwords, tokens, or secrets in source code. All sensitive values must come from environment variables or a secrets manager.
+intent: No hardcoded API keys, passwords, tokens, or secrets
 reaction: block
 ```
 
-| Field | Purpose |
-|-------|---------|
-| `intent` | Plain-language rule the agent evaluates against — be specific |
-| `reaction` | `block` (must fix) or `warn` (flag but allow) |
+- Laws with `check:` are **deterministic** — detected by regex, tagged AUTO in reports
+- Laws without `check:` are **subjective** — reviewed by agent, tagged REVIEW in reports
 
 ## Skills
 
 | Skill | Purpose |
 |-------|---------|
-| `chp:scan-repo` | Scan full codebase for violations |
+| `chp:scan-repo` | Full scan with HTML report at `.chp/report.html` |
 | `chp:write-laws` | Create new laws |
 | `chp:refine-laws` | Adjust existing laws |
 | `chp:onboard` | Understand project guardrails |
@@ -44,13 +40,14 @@ reaction: block
 
 ```
 chp/
-├── .claude-plugin/plugin.json   # Plugin manifest
-├── hooks/hooks.json             # PostToolUse agent hook
+├── .claude-plugin/
+│   ├── plugin.json              # Plugin manifest
+│   └── marketplace.json         # Marketplace listing
+├── hooks/hooks.json             # Dual PostToolUse hooks
+├── bin/
+│   ├── chp-check                # Deterministic enforcement script
+│   └── chp-report               # HTML report generator
 ├── skills/                      # Skill definitions
-│   ├── scan-repo/skill.md
-│   ├── write-laws/skill.md
-│   ├── refine-laws/skill.md
-│   └── onboard/skill.md
 ├── laws/chp-laws.txt            # Example law definitions
 ├── CLAUDE.md
 └── README.md

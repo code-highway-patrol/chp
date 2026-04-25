@@ -1,0 +1,493 @@
+#!/usr/bin/env python3
+"""CHP Dashboard — local web server for viewing laws, creating rules, running checks, and viewing reports."""
+
+import http.server
+import json
+import os
+import re
+import subprocess
+import sys
+import threading
+import webbrowser
+from datetime import datetime, timezone
+from pathlib import Path
+from urllib.parse import parse_qs, urlparse
+
+PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 5177
+PROJECT_DIR = os.environ.get("CLAUDE_PROJECT_DIR", os.getcwd())
+PLUGIN_ROOT = os.environ.get("CLAUDE_PLUGIN_ROOT", str(Path(__file__).resolve().parent.parent))
+LAWS_FILE = Path(PROJECT_DIR) / "laws" / "chp-laws.txt"
+REPORT_FILE = Path(PROJECT_DIR) / ".chp" / "report.json"
+
+
+def parse_laws(text):
+    laws = []
+    current = None
+    for line in text.splitlines():
+        header = re.match(r"^#\s*===\s*Law:\s*(\S+)\s*===", line)
+        if header:
+            current = {"id": header.group(1)}
+            laws.append(current)
+            continue
+        if current is None or line.startswith("#"):
+            continue
+        if line.startswith("intent:"):
+            current["intent"] = line.split(":", 1)[1].strip()
+        elif line.startswith("check:"):
+            current["check"] = line.split(":", 1)[1].strip()
+        elif line.startswith("reaction:"):
+            current["reaction"] = line.split(":", 1)[1].strip()
+    return laws
+
+
+def serialize_law(law):
+    lines = [f"# === Law: {law['id']} ==="]
+    lines.append(f"intent: {law.get('intent', '')}")
+    if law.get("check"):
+        lines.append(f"check: {law['check']}")
+    lines.append(f"reaction: {law.get('reaction', 'warn')}")
+    return "\n".join(lines)
+
+
+DASHBOARD_HTML = r"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CHP Dashboard</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#09090b;color:#e4e4e7;min-height:100vh}
+.shell{display:flex;height:100vh}
+nav{width:220px;background:#0c0c0f;border-right:1px solid #1e1e24;padding:20px 0;flex-shrink:0;display:flex;flex-direction:column}
+nav .logo{padding:0 20px 24px;font-size:18px;font-weight:700;letter-spacing:-.5px;color:#fff}
+nav .logo span{color:#3b82f6}
+nav a{display:flex;align-items:center;gap:10px;padding:10px 20px;color:#71717a;text-decoration:none;font-size:14px;font-weight:500;transition:all .15s}
+nav a:hover{color:#e4e4e7;background:#111116}
+nav a.active{color:#3b82f6;background:#3b82f60d;border-right:2px solid #3b82f6}
+nav a .icon{width:18px;text-align:center;font-size:15px}
+nav .spacer{flex:1}
+nav .version{padding:10px 20px;color:#3f3f46;font-size:12px}
+main{flex:1;overflow-y:auto;padding:32px 40px}
+h2{font-size:22px;font-weight:700;color:#fff;margin-bottom:20px;letter-spacing:-.3px}
+.card{background:#111116;border:1px solid #1e1e24;border-radius:12px;padding:20px;margin-bottom:16px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:28px}
+.stat{background:#111116;border:1px solid #1e1e24;border-radius:12px;padding:18px}
+.stat .label{font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:#52525b;margin-bottom:6px}
+.stat .val{font-size:28px;font-weight:700}
+.stat .val.b{color:#3b82f6}.stat .val.r{color:#ef4444}.stat .val.y{color:#eab308}.stat .val.g{color:#22c55e}
+.law{display:flex;align-items:center;gap:14px;padding:16px 20px;background:#111116;border:1px solid #1e1e24;border-radius:10px;margin-bottom:8px;transition:border-color .15s}
+.law:hover{border-color:#27272a}
+.law .badge{font-size:10px;font-weight:700;padding:3px 10px;border-radius:100px;text-transform:uppercase;letter-spacing:.4px;flex-shrink:0}
+.badge.block{background:#ef44441a;color:#ef4444;border:1px solid #ef444433}
+.badge.warn{background:#eab3081a;color:#eab308;border:1px solid #eab30833}
+.law .name{font-weight:600;color:#fff;font-size:14px;min-width:160px}
+.law .intent{color:#71717a;font-size:13px;flex:1}
+.law .type{font-size:10px;padding:2px 8px;border-radius:4px;font-weight:600;flex-shrink:0}
+.type.auto{background:#3b82f61a;color:#3b82f6}.type.review{background:#a855f71a;color:#a855f7}
+.law .actions{display:flex;gap:6px;flex-shrink:0}
+.law .actions button{background:none;border:1px solid #27272a;color:#71717a;padding:4px 10px;border-radius:6px;cursor:pointer;font-size:12px;transition:all .15s}
+.law .actions button:hover{color:#e4e4e7;border-color:#3f3f46}
+.law .actions button.del:hover{color:#ef4444;border-color:#ef444466}
+.form-group{margin-bottom:16px}
+.form-group label{display:block;font-size:12px;font-weight:600;color:#a1a1aa;margin-bottom:6px;text-transform:uppercase;letter-spacing:.4px}
+input[type="text"],textarea,select{width:100%;padding:10px 14px;background:#0c0c0f;border:1px solid #27272a;border-radius:8px;color:#e4e4e7;font-size:14px;font-family:inherit;outline:none;transition:border-color .15s}
+input:focus,textarea:focus,select:focus{border-color:#3b82f6}
+textarea{resize:vertical;min-height:60px}
+select{appearance:none;cursor:pointer}
+.btn{padding:10px 20px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;border:none;transition:all .15s}
+.btn-primary{background:#3b82f6;color:#fff}.btn-primary:hover{background:#2563eb}
+.btn-secondary{background:#1e1e24;color:#e4e4e7;border:1px solid #27272a}.btn-secondary:hover{background:#27272a}
+.btn-danger{background:#ef44441a;color:#ef4444;border:1px solid #ef444433}.btn-danger:hover{background:#ef44442a}
+.btn-row{display:flex;gap:10px;margin-top:8px}
+.violation{display:flex;gap:14px;align-items:baseline;padding:10px 16px;border-bottom:1px solid #1a1a1f;font-size:13px}
+.violation:last-child{border-bottom:none}
+.violation:hover{background:#0c0c0f}
+.violation .loc{color:#3b82f6;font-family:'SF Mono','Fira Code',monospace;font-size:12px;min-width:200px;white-space:nowrap}
+.violation .snip{color:#71717a;font-family:'SF Mono','Fira Code',monospace;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.violation .vtag{font-size:9px;padding:2px 6px;border-radius:4px;font-weight:700;flex-shrink:0}
+.vtag.det{background:#3b82f61a;color:#3b82f6}.vtag.sub{background:#a855f71a;color:#a855f7}
+.group-header{display:flex;align-items:center;gap:12px;padding:14px 16px;background:#0f0f13;border-radius:10px 10px 0 0;border:1px solid #1e1e24;cursor:pointer;user-select:none}
+.group-header:hover{background:#131318}
+.group-header .gh-badge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:100px;text-transform:uppercase}
+.group-header .gh-name{font-weight:600;color:#fff;font-size:14px}
+.group-header .gh-count{margin-left:auto;color:#52525b;font-size:12px}
+.group-header .gh-arrow{color:#3f3f46;transition:transform .2s}
+.group-header.open .gh-arrow{transform:rotate(90deg)}
+.group-body{border:1px solid #1e1e24;border-top:none;border-radius:0 0 10px 10px;margin-bottom:12px;overflow:hidden}
+.empty-state{text-align:center;padding:60px 20px;color:#3f3f46}
+.empty-state .big{font-size:40px;margin-bottom:12px}
+.empty-state p{font-size:15px}
+.running{display:inline-flex;align-items:center;gap:8px;padding:8px 16px;background:#3b82f60d;border:1px solid #3b82f633;border-radius:8px;color:#3b82f6;font-size:13px;font-weight:500;margin-bottom:16px}
+.running .dot{width:8px;height:8px;background:#3b82f6;border-radius:50%;animation:pulse 1.5s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.hidden{display:none}
+.toast{position:fixed;bottom:24px;right:24px;padding:12px 20px;background:#22c55e;color:#fff;border-radius:8px;font-size:14px;font-weight:500;z-index:100;animation:fadeIn .2s}
+@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@media(max-width:768px){nav{width:60px}nav a span:not(.icon){display:none}nav .logo span{display:none}nav .logo::after{content:'C';color:#3b82f6}.stats{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<div class="shell">
+<nav>
+  <div class="logo"><span>CHP</span> Dashboard</div>
+  <a href="#" class="active" data-page="laws"><span class="icon">&#9881;</span><span>Laws</span></a>
+  <a href="#" data-page="create"><span class="icon">&#43;</span><span>Create Law</span></a>
+  <a href="#" data-page="scan"><span class="icon">&#9654;</span><span>Run Scan</span></a>
+  <a href="#" data-page="report"><span class="icon">&#9776;</span><span>Report</span></a>
+  <div class="spacer"></div>
+  <div class="version">CHP v1.0</div>
+</nav>
+<main>
+  <!-- LAWS PAGE -->
+  <div id="page-laws">
+    <h2>Active Laws</h2>
+    <div class="stats" id="law-stats"></div>
+    <div id="law-list"></div>
+  </div>
+
+  <!-- CREATE PAGE -->
+  <div id="page-create" class="hidden">
+    <h2>Create a Law</h2>
+    <div class="card">
+      <div class="form-group">
+        <label>Law ID</label>
+        <input type="text" id="new-id" placeholder="e.g. no-eval, max-line-length">
+      </div>
+      <div class="form-group">
+        <label>Intent</label>
+        <textarea id="new-intent" placeholder="Plain-language description of what this law prohibits"></textarea>
+      </div>
+      <div class="form-group">
+        <label>Check Pattern (leave blank for subjective/agent review)</label>
+        <input type="text" id="new-check" placeholder="e.g. console\.log\( or eval\(">
+      </div>
+      <div class="form-group">
+        <label>Reaction</label>
+        <select id="new-reaction">
+          <option value="block">Block — must fix</option>
+          <option value="warn">Warn — flag but allow</option>
+        </select>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="createLaw()">Create Law</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCAN PAGE -->
+  <div id="page-scan" class="hidden">
+    <h2>Run Scan</h2>
+    <p style="color:#71717a;margin-bottom:20px;font-size:14px">Run deterministic checks against the full codebase and generate a violation report.</p>
+    <button class="btn btn-primary" onclick="runScan()" id="scan-btn">Run Full Scan</button>
+    <div id="scan-status" class="hidden running" style="margin-top:16px"><span class="dot"></span>Scanning...</div>
+    <div id="scan-result" style="margin-top:20px"></div>
+  </div>
+
+  <!-- REPORT PAGE -->
+  <div id="page-report" class="hidden">
+    <h2>Violation Report</h2>
+    <div class="stats" id="report-stats"></div>
+    <div id="report-content"></div>
+  </div>
+</main>
+</div>
+<div id="toast" class="toast hidden"></div>
+<script>
+const API = '';
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.remove('hidden');
+  setTimeout(() => t.classList.add('hidden'), 2500);
+}
+
+document.querySelectorAll('nav a').forEach(a => {
+  a.addEventListener('click', e => {
+    e.preventDefault();
+    document.querySelectorAll('nav a').forEach(x => x.classList.remove('active'));
+    a.classList.add('active');
+    const page = a.dataset.page;
+    document.querySelectorAll('main > div').forEach(d => d.classList.add('hidden'));
+    document.getElementById('page-' + page).classList.remove('hidden');
+    if (page === 'laws') loadLaws();
+    if (page === 'report') loadReport();
+  });
+});
+
+async function loadLaws() {
+  const res = await fetch(API + '/api/laws');
+  const laws = await res.json();
+  const det = laws.filter(l => l.check);
+  const sub = laws.filter(l => !l.check);
+  const blk = laws.filter(l => l.reaction === 'block');
+
+  document.getElementById('law-stats').innerHTML = `
+    <div class="stat"><div class="label">Total Laws</div><div class="val b">${laws.length}</div></div>
+    <div class="stat"><div class="label">Deterministic</div><div class="val g">${det.length}</div></div>
+    <div class="stat"><div class="label">Subjective</div><div class="val y">${sub.length}</div></div>
+    <div class="stat"><div class="label">Blocking</div><div class="val r">${blk.length}</div></div>
+  `;
+
+  if (laws.length === 0) {
+    document.getElementById('law-list').innerHTML = '<div class="empty-state"><div class="big">&#9888;</div><p>No laws defined. Create one to get started.</p></div>';
+    return;
+  }
+
+  document.getElementById('law-list').innerHTML = laws.map(l => `
+    <div class="law">
+      <span class="badge ${l.reaction || 'warn'}">${l.reaction || 'warn'}</span>
+      <span class="name">${l.id}</span>
+      <span class="intent">${l.intent || ''}</span>
+      <span class="type ${l.check ? 'auto' : 'review'}">${l.check ? 'AUTO' : 'REVIEW'}</span>
+      <span class="actions"><button class="del" onclick="deleteLaw('${l.id}')">Delete</button></span>
+    </div>
+  `).join('');
+}
+
+async function createLaw() {
+  const id = document.getElementById('new-id').value.trim();
+  const intent = document.getElementById('new-intent').value.trim();
+  const check = document.getElementById('new-check').value.trim();
+  const reaction = document.getElementById('new-reaction').value;
+  if (!id || !intent) { alert('ID and Intent are required'); return; }
+
+  const body = { id, intent, reaction };
+  if (check) body.check = check;
+
+  const res = await fetch(API + '/api/laws', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
+  if (res.ok) {
+    showToast('Law created: ' + id);
+    document.getElementById('new-id').value = '';
+    document.getElementById('new-intent').value = '';
+    document.getElementById('new-check').value = '';
+  } else {
+    const err = await res.json();
+    alert(err.error || 'Failed to create law');
+  }
+}
+
+async function deleteLaw(id) {
+  if (!confirm('Delete law: ' + id + '?')) return;
+  const res = await fetch(API + '/api/laws/' + id, { method: 'DELETE' });
+  if (res.ok) { showToast('Deleted: ' + id); loadLaws(); }
+}
+
+async function runScan() {
+  document.getElementById('scan-btn').disabled = true;
+  document.getElementById('scan-status').classList.remove('hidden');
+  document.getElementById('scan-result').innerHTML = '';
+  try {
+    const res = await fetch(API + '/api/scan', { method: 'POST' });
+    const data = await res.json();
+    document.getElementById('scan-result').innerHTML = `
+      <div class="card">
+        <p style="color:#22c55e;font-weight:600;margin-bottom:8px">Scan complete</p>
+        <p style="color:#a1a1aa;font-size:14px">${data.files_checked} files checked &middot; ${data.total_violations} violations found</p>
+      </div>`;
+  } catch(e) {
+    document.getElementById('scan-result').innerHTML = '<div class="card"><p style="color:#ef4444">Scan failed: ' + e.message + '</p></div>';
+  }
+  document.getElementById('scan-btn').disabled = false;
+  document.getElementById('scan-status').classList.add('hidden');
+}
+
+async function loadReport() {
+  let data;
+  try {
+    const res = await fetch(API + '/api/report');
+    if (!res.ok) throw new Error();
+    data = await res.json();
+  } catch {
+    document.getElementById('report-stats').innerHTML = '';
+    document.getElementById('report-content').innerHTML = '<div class="empty-state"><div class="big">&#128269;</div><p>No report yet. Run a scan first.</p></div>';
+    return;
+  }
+
+  const t = data.total_violations || 0;
+  const b = data.total_block || 0;
+  const w = data.total_warn || 0;
+  const lv = Object.keys(data.summary || {}).length;
+  document.getElementById('report-stats').innerHTML = `
+    <div class="stat"><div class="label">Total</div><div class="val b">${t}</div></div>
+    <div class="stat"><div class="label">Blocked</div><div class="val r">${b}</div></div>
+    <div class="stat"><div class="label">Warnings</div><div class="val y">${w}</div></div>
+    <div class="stat"><div class="label">Laws Violated</div><div class="val ${lv===0?'g':'r'}">${lv}</div></div>
+  `;
+
+  const violations = data.violations || [];
+  if (violations.length === 0) {
+    document.getElementById('report-content').innerHTML = '<div class="empty-state"><div class="big">&#10003;</div><p>No violations. All clear.</p></div>';
+    return;
+  }
+
+  const groups = {};
+  violations.forEach(v => { if (!groups[v.law]) groups[v.law] = []; groups[v.law].push(v); });
+
+  let html = '';
+  for (const [lid, vlist] of Object.entries(groups).sort((a,b) => b[1].length - a[1].length)) {
+    const info = (data.summary||{})[lid] || vlist[0];
+    const reaction = info.reaction || 'warn';
+    const rows = vlist.map(v => {
+      const file = (v.file||'').split(/[/\\]/).slice(-2).join('/');
+      const vtypeClass = v.type === 'subjective' ? 'sub' : 'det';
+      const vtypeLabel = v.type === 'subjective' ? 'REVIEW' : 'AUTO';
+      return `<div class="violation"><span class="vtag ${vtypeClass}">${vtypeLabel}</span><span class="loc">${file}:${v.line||''}</span><span class="snip">${v.snippet||v.detail||''}</span></div>`;
+    }).join('');
+    html += `<div class="group-header open" onclick="this.classList.toggle('open');this.nextElementSibling.style.display=this.classList.contains('open')?'block':'none'">
+      <span class="gh-badge badge ${reaction}">${reaction}</span><span class="gh-name">${lid}</span><span class="gh-count">${vlist.length}</span><span class="gh-arrow">&#9654;</span>
+    </div><div class="group-body">${rows}</div>`;
+  }
+  document.getElementById('report-content').innerHTML = html;
+}
+
+loadLaws();
+</script>
+</body>
+</html>"""
+
+
+class CHPHandler(http.server.BaseHTTPRequestHandler):
+    def log_message(self, fmt, *args):
+        pass
+
+    def send_json(self, data, status=200):
+        body = json.dumps(data).encode()
+        self.send_response(status)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", len(body))
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.end_headers()
+        self.wfile.write(body)
+
+    def send_html(self, html):
+        body = html.encode()
+        self.send_response(200)
+        self.send_header("Content-Type", "text/html")
+        self.send_header("Content-Length", len(body))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def do_OPTIONS(self):
+        self.send_response(204)
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        self.end_headers()
+
+    def do_GET(self):
+        path = urlparse(self.path).path
+
+        if path == "/" or path == "":
+            self.send_html(DASHBOARD_HTML)
+
+        elif path == "/api/laws":
+            if LAWS_FILE.exists():
+                laws = parse_laws(LAWS_FILE.read_text(encoding="utf-8"))
+            else:
+                laws = []
+            self.send_json(laws)
+
+        elif path == "/api/report":
+            if REPORT_FILE.exists():
+                report = json.loads(REPORT_FILE.read_text(encoding="utf-8"))
+                self.send_json(report)
+            else:
+                self.send_json({"error": "No report found"}, 404)
+
+        else:
+            self.send_response(404)
+            self.end_headers()
+
+    def do_POST(self):
+        path = urlparse(self.path).path
+
+        if path == "/api/laws":
+            length = int(self.headers.get("Content-Length", 0))
+            body = json.loads(self.rfile.read(length))
+            law_id = body.get("id", "").strip()
+            intent = body.get("intent", "").strip()
+            reaction = body.get("reaction", "warn")
+            check = body.get("check", "").strip()
+
+            if not law_id or not intent:
+                self.send_json({"error": "id and intent are required"}, 400)
+                return
+
+            if LAWS_FILE.exists():
+                existing = LAWS_FILE.read_text(encoding="utf-8")
+                if f"Law: {law_id} ===" in existing:
+                    self.send_json({"error": f"Law '{law_id}' already exists"}, 409)
+                    return
+            else:
+                LAWS_FILE.parent.mkdir(parents=True, exist_ok=True)
+                existing = ""
+
+            new_law = {"id": law_id, "intent": intent, "reaction": reaction}
+            if check:
+                new_law["check"] = check
+
+            separator = "\n" if existing and not existing.endswith("\n") else ""
+            extra_newline = "\n" if existing.strip() else ""
+            LAWS_FILE.write_text(existing + separator + extra_newline + serialize_law(new_law) + "\n", encoding="utf-8")
+            self.send_json(new_law, 201)
+
+        elif path == "/api/scan":
+            check_script = Path(PLUGIN_ROOT) / "bin" / "chp-check"
+            env = {**os.environ, "CLAUDE_PROJECT_DIR": PROJECT_DIR}
+            try:
+                subprocess.run([sys.executable, str(check_script)], env=env, timeout=30, capture_output=True)
+            except Exception:
+                pass
+            if REPORT_FILE.exists():
+                report = json.loads(REPORT_FILE.read_text(encoding="utf-8"))
+                self.send_json(report)
+            else:
+                self.send_json({"files_checked": 0, "total_violations": 0})
+
+        else:
+            self.send_response(404)
+            self.end_headers()
+
+    def do_DELETE(self):
+        path = urlparse(self.path).path
+        if path.startswith("/api/laws/"):
+            law_id = path.split("/api/laws/")[1]
+            if not LAWS_FILE.exists():
+                self.send_json({"error": "Laws file not found"}, 404)
+                return
+
+            text = LAWS_FILE.read_text(encoding="utf-8")
+            blocks = re.split(r"(?=^# === Law:)", text, flags=re.MULTILINE)
+            new_blocks = [b for b in blocks if f"Law: {law_id} ===" not in b]
+
+            if len(new_blocks) == len(blocks):
+                self.send_json({"error": f"Law '{law_id}' not found"}, 404)
+                return
+
+            LAWS_FILE.write_text("".join(new_blocks).strip() + "\n", encoding="utf-8")
+            self.send_json({"deleted": law_id})
+        else:
+            self.send_response(404)
+            self.end_headers()
+
+
+class ThreadedServer(http.server.ThreadingHTTPServer):
+    allow_reuse_address = True
+
+
+def main():
+    server = ThreadedServer(("127.0.0.1", PORT), CHPHandler)
+    url = f"http://localhost:{PORT}"
+    print(f"CHP Dashboard running at {url}", flush=True)
+    threading.Timer(0.5, webbrowser.open, args=[url]).start()
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        pass
+    server.server_close()
+
+
+if __name__ == "__main__":
+    main()
