@@ -10,6 +10,7 @@ source "$SCRIPT_DIR/../core/verifier.sh"
 # Default values
 SPECIFIC_LAW=""
 SCAN_ALL_FILES=true
+RUN_COVERAGE=false
 
 # Display usage information
 show_usage() {
@@ -23,6 +24,7 @@ Usage:
 
 Options:
     --law=<law-name>    Scan only for violations of a specific law
+    --coverage          Analyze which files have no law coverage
     --help              Show this help message
 
 Examples:
@@ -47,6 +49,9 @@ parse_args() {
             --law=*)
                 SPECIFIC_LAW="${1#*=}"
                 SCAN_ALL_FILES=false
+                ;;
+            --coverage)
+                RUN_COVERAGE=true
                 ;;
             --help|-h)
                 show_usage
@@ -201,6 +206,112 @@ scan_law_files() {
     return 0
 }
 
+# Coverage gap analysis
+run_coverage_analysis() {
+    echo ""
+    echo "=================================="
+    echo "  CHP Coverage Analysis"
+    echo "=================================="
+    echo ""
+
+    # Collect include/exclude patterns from all enabled laws
+    local -A covered_extensions
+    local -A law_names
+
+    for law_dir in "$LAWS_DIR"/*; do
+        [[ ! -d "$law_dir" ]] && continue
+        local law_name
+        law_name=$(basename "$law_dir")
+        local law_json="$law_dir/law.json"
+
+        [[ ! -f "$law_json" ]] && continue
+
+        local enabled
+        enabled=$(jq -r '.enabled // true' "$law_json" 2>/dev/null)
+        [[ "$enabled" == "false" ]] && continue
+
+        law_names["$law_name"]=1
+
+        # Get include patterns
+        local includes
+        includes=$(jq -r '.include[]?' "$law_json" 2>/dev/null | tr -d '\r')
+
+        if [[ -n "$includes" ]]; then
+            while IFS= read -r pattern; do
+                [[ -z "$pattern" ]] && continue
+                # Extract extension from glob pattern
+                local ext
+                ext=$(echo "$pattern" | grep -oE '\*\.[a-zA-Z0-9]+$' | sed 's/\*\.//' | tr -d '\r')
+                if [[ -n "$ext" ]]; then
+                    covered_extensions["$ext"]="${covered_extensions[$ext]:-}:$law_name"
+                fi
+            done <<< "$includes"
+        else
+            # No include = all files covered
+            covered_extensions["*"]="all:$law_name"
+        fi
+    done
+
+    # Get all tracked files
+    local all_files
+    all_files=$(git ls-files | grep -vE '^(node_modules/|\.git/|\.chp/|dist/|build/|\.next/|coverage/)' || true)
+
+    local total_files=0
+    local covered_files=0
+    local uncovered_files=0
+    local -A uncovered_exts
+
+    while IFS= read -r file; do
+        [[ -z "$file" ]] && continue
+        total_files=$((total_files + 1))
+
+        local ext="${file##*.}"
+        local base="${file##*/}"
+        local is_covered=false
+
+        # Check if covered by wildcard (no include filter)
+        if [[ -n "${covered_extensions["*"]}" ]]; then
+            is_covered=true
+        fi
+
+        # Check extension-specific coverage
+        if [[ "$is_covered" == "false" && -n "${covered_extensions[$ext]}" ]]; then
+            is_covered=true
+        fi
+
+        if [[ "$is_covered" == "true" ]]; then
+            covered_files=$((covered_files + 1))
+        else
+            uncovered_files=$((uncovered_files + 1))
+            uncovered_exts["$ext"]=$((${uncovered_exts[$ext]:-0} + 1))
+        fi
+    done <<< "$all_files"
+
+    echo "  Files analyzed: $total_files"
+    echo "  Covered: $covered_files"
+    echo "  Uncovered: $uncovered_files"
+    echo ""
+
+    if [[ ${#uncovered_exts[@]} -gt 0 ]]; then
+        echo "  Uncovered file types:"
+        for ext in "${!uncovered_exts[@]}"; do
+            local count=${uncovered_exts[$ext]}
+            echo "    .$ext — $count file(s)"
+        done
+    else
+        echo "  All files are covered by at least one law."
+    fi
+
+    echo ""
+    echo "  Active laws: ${#law_names[@]}"
+    for law_name in "${!law_names[@]}"; do
+        echo "    - $law_name"
+    done
+
+    echo ""
+    return 0
+}
+
 # Main scan function
 run_scan() {
     echo ""
@@ -266,7 +377,11 @@ run_scan() {
 # Main entry point
 main() {
     parse_args "$@"
-    run_scan
+    if [[ "$RUN_COVERAGE" == "true" ]]; then
+        run_coverage_analysis
+    else
+        run_scan
+    fi
 }
 
 # Run main
