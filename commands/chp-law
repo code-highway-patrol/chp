@@ -23,6 +23,7 @@ Usage:
 
 Commands:
     create <law-name> [--hooks=<hook1,hook2>] [--dry-run] [--response=<text>]...  Create a new law
+    update <law-name> [options]               Update law configuration
     list                                      List all laws
     delete <law-name>                         Delete a law and uninstall hooks
     test <law-name>                           Test a law's verification script
@@ -40,10 +41,22 @@ Options:
     --dry-run             Show preview without creating the law
     --response=<text>     Pre-answer interactive prompts (for testing)
 
+Update Options:
+    --severity=<level>         Change severity
+    --hooks=<list>             Replace all hooks
+    --add-hook=<hook>          Add a hook
+    --remove-hook=<hook>       Remove a hook
+    --add-exception=<pattern>  Add exception pattern (not yet implemented)
+    --remove-exception=<pattern> Remove exception pattern (not yet implemented)
+    --set-guidance             Open guidance.md for editing
+
 Examples:
     chp-law create no-debug-code --hooks=pre-commit
     chp-law create test-coverage --hooks=pre-commit,pre-push
     chp-law create custom-law --response="Choose one: D" --response="Enter pattern: console.log"
+    chp-law update no-debug-code --severity=error
+    chp-law update test-coverage --add-hook=pre-push
+    chp-law update no-debug-code --set-guidance
     chp-law list
     chp-law test no-debug-code
     chp-law reset no-debug-code
@@ -629,6 +642,123 @@ enable_law() {
     return 0
 }
 
+# Update a law's configuration
+update_law() {
+    local law_name="$1"
+    shift
+
+    if [[ -z "$law_name" ]]; then
+        log_error "Law name is required"
+        echo "Usage: chp-law update <law-name> [options]"
+        return 1
+    fi
+
+    if ! law_exists "$law_name"; then
+        log_error "Law does not exist: $law_name"
+        return 1
+    fi
+
+    local law_dir="$LAWS_DIR/$law_name"
+    local law_json="$law_dir/law.json"
+
+    # Parse update options
+    local new_severity=""
+    local new_hooks=""
+    local add_hook=""
+    local remove_hook=""
+    local add_exception=""
+    local remove_exception=""
+    local set_guidance=false
+
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --severity=*)
+                new_severity="${1#*=}"
+                ;;
+            --hooks=*)
+                new_hooks="${1#*=}"
+                ;;
+            --add-hook=*)
+                add_hook="${1#*=}"
+                ;;
+            --remove-hook=*)
+                remove_hook="${1#*=}"
+                ;;
+            --add-exception=*)
+                add_exception="${1#*=}"
+                ;;
+            --remove-exception=*)
+                remove_exception="${1#*=}"
+                ;;
+            --set-guidance)
+                set_guidance=true
+                ;;
+            *)
+                log_error "Unknown option: $1"
+                return 1
+                ;;
+        esac
+        shift
+    done
+
+    # Apply updates
+    local updated=false
+
+    if [[ -n "$new_severity" ]]; then
+        jq ".severity = \"$new_severity\"" "$law_json" > "${law_json}.tmp" && \
+            mv "${law_json}.tmp" "$law_json"
+        log_info "Updated severity to: $new_severity"
+        updated=true
+    fi
+
+    if [[ -n "$new_hooks" ]]; then
+        local hooks_array=$(echo "$new_hooks" | jq -R . | jq -s -c .)
+        jq ".hooks = $hooks_array" "$law_json" > "${law_json}.tmp" && \
+            mv "${law_json}.tmp" "$law_json"
+        log_info "Updated hooks to: $new_hooks"
+        updated=true
+    fi
+
+    if [[ -n "$add_hook" ]]; then
+        jq ".hooks += [\"$add_hook\"]" "$law_json" > "${law_json}.tmp" && \
+            mv "${law_json}.tmp" "$law_json"
+        log_info "Added hook: $add_hook"
+        updated=true
+    fi
+
+    if [[ -n "$remove_hook" ]]; then
+        jq ".hooks -= [\"$remove_hook\"]" "$law_json" > "${law_json}.tmp" && \
+            mv "${law_json}.tmp" "$law_json"
+        log_info "Removed hook: $remove_hook"
+        updated=true
+    fi
+
+    if [[ -n "$add_exception" ]]; then
+        # Add to exceptions array in law.json (would need to be added to schema first)
+        log_info "Would add exception: $add_exception (not yet implemented)"
+        updated=true
+    fi
+
+    if [[ -n "$remove_exception" ]]; then
+        log_info "Would remove exception: $remove_exception (not yet implemented)"
+        updated=true
+    fi
+
+    if [[ "$set_guidance" = true ]]; then
+        log_info "Opening guidance.md for editing..."
+        "${EDITOR:-vim}" "$law_dir/guidance.md"
+        updated=true
+    fi
+
+    if [[ "$updated" = false ]]; then
+        log_warn "No updates specified"
+        return 0
+    fi
+
+    log_info "Law updated: $law_name"
+    return 0
+}
+
 # Main command routing
 main() {
     local command="$1"
@@ -698,6 +828,13 @@ main() {
                 exit 1
             fi
             enable_law "$1"
+            ;;
+        update)
+            if [[ $# -lt 1 ]]; then
+                log_error "Usage: chp-law update <law-name> [options]"
+                exit 1
+            fi
+            update_law "$@"
             ;;
         help|--help|-h)
             show_usage
