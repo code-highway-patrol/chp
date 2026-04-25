@@ -1,0 +1,194 @@
+#!/bin/bash
+# Law construction logic for CHP
+
+# Source common functions
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/common.sh"
+
+# Suggest law configuration based on law name
+# Usage: suggest_config <law-name>
+# Outputs: Suggested severity, hooks, pattern, files on separate lines
+suggest_config() {
+    local law_name="$1"
+
+    case "$law_name" in
+        *api-key*|*secret*|*credential*)
+            echo "error"
+            echo "pre-commit,pre-push"
+            echo "API key patterns (sk_*, AIza*, AKIA*, Bearer)"
+            echo "All files"
+            echo "none"
+            ;;
+        *console-log*|*debug*)
+            echo "error"
+            echo "pre-commit,pre-push"
+            echo "console\.log"
+            echo "*.js,*.ts,*.tsx,*.jsx"
+            echo "none"
+            ;;
+        *todo*|*fixme*)
+            echo "warn"
+            echo "pre-commit"
+            echo "(TODO|FIXME)"
+            echo "All source files"
+            echo "none"
+            ;;
+        *file-size*|*max-lines*)
+            echo "error"
+            echo "pre-commit"
+            echo "File line count > 300"
+            echo "All source files"
+            echo "none"
+            ;;
+        *test*|*coverage*)
+            echo "warn"
+            echo "pre-push"
+            echo "Test coverage < 80%"
+            echo "*.test.js,*.spec.js"
+            echo "none"
+            ;;
+        *)
+            echo "warn"
+            echo "pre-commit"
+            echo "Custom pattern"
+            echo "All files"
+            echo "none"
+            ;;
+    esac
+}
+
+# Check if law intent is clear enough to suggest defaults
+# Usage: is_intent_clear <law-name>
+# Returns: 0 if clear, 1 if unclear
+is_intent_clear() {
+    local law_name="$1"
+
+    # Clear patterns: well-known law types
+    if [[ "$law_name" =~ (api-key|secret|credential|console-log|debug|todo|fixme|test|coverage|file-size|max-lines) ]]; then
+        return 0
+    fi
+
+    # Unclear: vague terms
+    if [[ "$law_name" =~ (quality|enforce|standard|rule|best-practice) ]]; then
+        return 1
+    fi
+
+    # Default to unclear
+    return 1
+}
+
+# Build law.json content
+# Usage: build_law_json <name> <severity> <hooks> <enabled>
+build_law_json() {
+    local name="$1"
+    local severity="$2"
+    local hooks="$3"
+    local enabled="${4:-true}"
+
+    local hooks_array=$(echo "$hooks" | jq -R . | jq -s -c .)
+
+    cat <<EOF
+{
+  "name": "$name",
+  "created": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
+  "severity": "$severity",
+  "failures": 0,
+  "tightening_level": 0,
+  "hooks": $hooks_array,
+  "enabled": $enabled
+}
+EOF
+}
+
+# Build verify.sh template
+# Usage: build_verify_template <name> <pattern> <files> <exceptions>
+build_verify_template() {
+    local name="$1"
+    local pattern="$2"
+    local files="$3"
+    local exceptions="$4"
+
+    cat <<VERIFYEOF
+#!/bin/bash
+# Verification script for law: $name
+
+# Get the absolute path to CHP base directory
+LAW_DIR="\$(cd "\$(dirname "\${BASH_SOURCE[0]}")" && pwd)"
+CHP_BASE="\$(cd "\$LAW_DIR/../../../../" && pwd)"
+
+# Source CHP common functions
+source "\$CHP_BASE/core/common.sh"
+
+# Main verification logic
+verify_law() {
+    local law_name="$name"
+
+    log_info "Verifying law: $law_name"
+
+    # Pattern to detect: $pattern
+
+    # File types to check: $files
+
+    # Exceptions: $exceptions
+
+    # Add your verification logic here
+    # Return 0 if verification passes
+    # Return 1 if verification fails
+
+    log_info "Law verification passed: $law_name"
+    return 0
+}
+
+# Run verification
+verify_law
+exit \$?
+VERIFYEOF
+}
+
+# Build guidance.md template
+# Usage: build_guidance_template <name> <severity> <description>
+build_guidance_template() {
+    local name="$1"
+    local severity="$2"
+    local description="$3"
+
+    cat <<GUIDANCEEOF
+# Law: $name
+
+**Severity:** $severity
+**Created:** $(date -u +"%Y-%m-%dT%H:%M:%SZ")
+**Failures:** 0
+
+## Purpose
+
+This law enforces: $description
+
+## Guidance
+
+Describe what this law checks for and how to comply.
+
+### Examples
+
+#### Good Practice
+\`\`\`
+// Show examples of compliant code
+\`\`\`
+
+#### Bad Practice (will fail verification)
+\`\`\`
+// Show examples of non-compliant code
+\`\`\`
+
+## Remediation
+
+If this law fails, take these steps:
+1. Identify the violation
+2. Fix the issue
+3. Re-run the verification
+4. Commit your changes
+
+---
+
+*This guidance will be automatically strengthened if violations occur.*
+GUIDANCEEOF
+}
