@@ -420,3 +420,14 @@ When users describe what they want to enforce, match their language to patterns 
 **Security:** no-api-keys, no-hardcoded-credentials, no-debug-endpoints
 **Quality:** max-file-size, max-function-length, required-documentation
 **Style:** no-console-log, import-ordering, type-annotations
+
+## Post-Write Review
+
+After creating or editing a law, spawn a review agent to cross-check the law package for inconsistencies:
+
+```
+Use the Agent tool to spawn a background agent with this prompt:
+"Run the chp:review-law skill for the law '<law-name>'. Read all three files fresh from disk, run the full consistency checklist, apply confident fixes, and report proposals."
+```
+
+This runs in a separate agent context with fresh eyes — no assumptions from the writing process.
