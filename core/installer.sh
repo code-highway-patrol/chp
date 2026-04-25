@@ -8,6 +8,25 @@ source "$(dirname "${BASH_SOURCE[0]}")/detector.sh"
 # Marker to identify CHP-managed hooks
 readonly CHP_MANAGED_MARKER="# CHP-MANAGED"
 
+# ============================================================================
+# ENVIRONMENT DETECTION
+# ============================================================================
+
+# Check if git is installed and available
+is_git_installed() {
+    command -v git >/dev/null 2>&1
+}
+
+# Check if we're in a git repository
+is_git_repository() {
+    git rev-parse --git-dir >/dev/null 2>&1
+}
+
+# Check if git hooks can be installed (git installed + in a git repo)
+can_install_git_hooks() {
+    is_git_installed && is_git_repository
+}
+
 # Install a hook for a law
 install_hook() {
     local law_name="$1"
@@ -32,7 +51,17 @@ install_hook() {
         hook_dir=".git/pretool/hooks"
         hook_file="$hook_dir/pre-write"
     else
-        # Git hook
+        # Git hook - check if git is available first
+        if ! is_git_installed; then
+            log_warn "Git is not installed, skipping git hook: $hook_type for law: $law_name"
+            return 0
+        fi
+
+        if ! is_git_repository; then
+            log_warn "Not in a git repository, skipping git hook: $hook_type for law: $law_name"
+            return 0
+        fi
+
         hook_dir=".git/hooks"
         hook_file="$hook_dir/$hook_type"
     fi
@@ -268,6 +297,12 @@ install_law_hooks() {
             continue
         fi
 
+        # Skip git hooks if git is not available
+        if [[ "$hook_category" == "git" ]] && ! can_install_git_hooks; then
+            log_info "Git is not available, skipping git hook: $hook_type for law: $law_name"
+            continue
+        fi
+
         log_info "Installing $hook_category hook: $hook_type for law: $law_name"
         install_hook_template "$hook_type" "$hook_category"
     done
@@ -332,6 +367,19 @@ uninstall_law_hooks() {
 # Install a git hook
 _install_git_hook() {
     local hook_type="$1"
+
+    # Check if git is installed
+    if ! is_git_installed; then
+        log_warn "Git is not installed, skipping git hook: $hook_type"
+        return 0
+    fi
+
+    # Check if we're in a git repository
+    if ! is_git_repository; then
+        log_warn "Not in a git repository, skipping git hook: $hook_type"
+        return 0
+    fi
+
     local hook_dir=".git/hooks"
     local hook_file="$hook_dir/$hook_type"
     local template_file="$CHP_BASE/hooks/git/$hook_type.sh"

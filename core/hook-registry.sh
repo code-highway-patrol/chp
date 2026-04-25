@@ -51,7 +51,7 @@ _init_hook_registry_force() {
     fi
 
     # Create default registry structure (overwrite existing)
-    cat > "$HOOK_REGISTRY" << 'EOF'
+    cat > "$HOOK_REGISTRY" <<'EOF'
 {
   "hooks": {},
   "version": "1.0"
@@ -91,7 +91,7 @@ register_hook_law() {
     # Check if law already registered, avoid duplicates
     local existing_laws
     existing_laws=$(jq -r ".hooks[\"$hook_type\"].laws // []" "$HOOK_REGISTRY")
-    if echo "$existing_laws" | grep -q "\"$law_name\""; then
+    if [ "$existing_laws" != "[]" ] && echo "$existing_laws" | grep -q "\"$law_name\""; then
         log_debug "Law '$law_name' already registered to hook '$hook_type', skipping"
         return 0
     fi
@@ -170,10 +170,10 @@ is_hook_blocking() {
     local has_blocking
     has_blocking=$(jq ".hooks[\"$hook_type\"] | has(\"blocking\")" "$HOOK_REGISTRY" 2>/dev/null)
 
-    if [ "$has_blocking" = "true" ]; then
-        blocking=$(jq -r ".hooks[\"$hook_type\"].blocking" "$HOOK_REGISTRY")
-    else
+    if [ "$?" != "0" ] || [ "$has_blocking" != "true" ]; then
         blocking="true"
+    else
+        blocking=$(jq -r ".hooks[\"$hook_type\"].blocking" "$HOOK_REGISTRY")
     fi
 
     if [ "$blocking" = "true" ]; then
@@ -201,10 +201,10 @@ is_hook_enabled() {
     local has_enabled
     has_enabled=$(jq ".hooks[\"$hook_type\"] | has(\"enabled\")" "$HOOK_REGISTRY" 2>/dev/null)
 
-    if [ "$has_enabled" = "true" ]; then
-        enabled=$(jq -r ".hooks[\"$hook_type\"].enabled" "$HOOK_REGISTRY")
-    else
+    if [ "$?" != "0" ] || [ "$has_enabled" != "true" ]; then
         enabled="true"
+    else
+        enabled=$(jq -r ".hooks[\"$hook_type\"].enabled" "$HOOK_REGISTRY")
     fi
 
     if [ "$enabled" = "true" ]; then

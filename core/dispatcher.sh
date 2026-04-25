@@ -9,6 +9,7 @@
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/common.sh"
 source "$SCRIPT_DIR/hook-registry.sh"
+source "$SCRIPT_DIR/verifier.sh"
 
 # Source tightener.sh if available (for failure recording)
 if [ -f "$SCRIPT_DIR/tightener.sh" ]; then
@@ -24,7 +25,12 @@ get_hook_context() {
             echo "git diff --cached --name-only"
             ;;
         pre-push)
-            echo "git diff --name-only HEAD @{u}"
+            # Check if upstream branch exists, fall back to comparing against nothing
+            if git rev-parse @{u} >/dev/null 2>&1; then
+                echo "git diff --name-only HEAD @{u}"
+            else
+                echo "git diff --name-only HEAD^..HEAD"
+            fi
             ;;
         commit-msg)
             echo ".git/COMMIT_EDITMSG"
@@ -89,6 +95,7 @@ dispatch_hook() {
     # Execute each law's verify.sh
     for law_name in "${law_names[@]}"; do
         local law_dir="$LAWS_DIR/$law_name"
+        local law_json="$law_dir/law.json"
         local verify_script="$law_dir/verify.sh"
 
         log_debug "Processing law: $law_name"
@@ -96,6 +103,27 @@ dispatch_hook() {
         # Check if law directory exists
         if [ ! -d "$law_dir" ]; then
             log_warn "Law directory not found: $law_dir"
+            continue
+        fi
+
+        # Check if law.json exists
+        if [ ! -f "$law_json" ]; then
+            log_warn "law.json not found for law: $law_name"
+            continue
+        fi
+
+        # Check if law is enabled
+        local enabled
+        enabled=$(jq -r 'if has("enabled") then .enabled else "true" end' "$law_json" 2>/dev/null)
+
+        if [[ "$enabled" != "true" ]]; then
+            log_debug "Law '$law_name' is disabled, skipping"
+            continue
+        fi
+
+        # Check if any affected files are within the law's scope
+        if ! check_law_scope "$law_json" "$hook_type"; then
+            log_debug "Law '$law_name' has no affected files in scope, skipping"
             continue
         fi
 
