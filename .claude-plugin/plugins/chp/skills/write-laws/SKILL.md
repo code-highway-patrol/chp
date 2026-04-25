@@ -156,7 +156,34 @@ If a similar law exists, copy its structure. Change only the detection patterns 
 
 ---
 
-**Step 3: Research the detection method.**
+**Step 3: Check for overlap with existing laws.**
+
+Before implementing, grep the proposed detection patterns against all existing `verify.sh` scripts. If an existing law already checks for the same pattern, surface it to the user and ask whether to proceed.
+
+Run this for each proposed pattern:
+```bash
+grep -rn 'PROPOSED_PATTERN' docs/chp/laws/*/verify.sh
+```
+
+Also check `law.json` intent fields for semantic overlap:
+```bash
+jq -r '.intent' docs/chp/laws/*/law.json 2>/dev/null
+```
+
+**If overlap is found:**
+
+Present the overlapping law(s) to the user before continuing:
+> "This looks similar to the existing law `no-console-log`, which already checks for `console\.log`. Do you want to:
+> 1. Extend the existing law with additional patterns
+> 2. Create a separate law anyway"
+
+Wait for the user's decision. If they choose to extend, switch to [Refining Existing Laws](#refining-existing-laws). If they confirm the new law is different, proceed.
+
+**If no overlap:** move to Step 4.
+
+---
+
+**Step 4: Research the detection method.**
 
 This step is only needed if Steps 1 and 2 did not give you a working approach. If you are unsure about regex patterns, encoding, tool flags, or AST queries — you must research before implementing.
 
@@ -191,14 +218,15 @@ When in doubt, use a delegated tool (ESLint, Semgrep, tsc) instead of hand-rolli
 
 ---
 
-**Step 4: Confirm before writing.**
+**Step 5: Confirm before writing.**
 
-You must be able to answer YES to all four:
+You must be able to answer YES to all five:
 
 1. Did you read the relevant section of `docs/chp/LAW-PATTERNS.md`? (or confirm no section matches)
 2. Did you check existing laws with `bash commands/chp-law list`? (or confirm no similar law exists)
-3. Are you confident your detection method works? (or did you test it in Step 3)
-4. Can you explain WHY your detection method works — not just what it does?
+3. Did you grep proposed patterns against existing `verify.sh` scripts? (or user confirmed overlap is acceptable)
+4. Are you confident your detection method works? (or did you test it in Step 4)
+5. Can you explain WHY your detection method works — not just what it does?
 
 If any answer is NO — go back. Do not write verify.sh yet.
 
@@ -213,7 +241,7 @@ After completing the Research-First Protocol, read the law's generated verify.sh
 cat docs/chp/laws/<law-name>/verify.sh
 ```
 
-Then edit it. Use the structure from the closest existing law (Step 2) and the patterns from LAW-PATTERNS.md (Step 1). Do not write from a blank page — always start from a template or existing law.
+Then edit it. Use the structure from the closest existing law (Step 2) and the patterns from LAW-PATTERNS.md (Step 1). You should have already confirmed no overlap in Step 3. Do not write from a blank page — always start from a template or existing law.
 
 ### Writing the Guidance
 
@@ -421,13 +449,13 @@ When users describe what they want to enforce, match their language to patterns 
 **Quality:** max-file-size, max-function-length, required-documentation
 **Style:** no-console-log, import-ordering, type-annotations
 
-## Post-Write Review
+## Post-Write Fix
 
-After creating or editing a law, spawn a review agent to cross-check the law package for inconsistencies:
+After creating or editing a law, spawn a fix agent that reads the law fresh from disk and corrects any inconsistencies between `law.json`, `verify.sh`, and `guidance.md`:
 
 ```
 Use the Agent tool to spawn a background agent with this prompt:
-"Run the chp:review-law skill for the law '<law-name>'. Read all three files fresh from disk, run the full consistency checklist, apply confident fixes, and report proposals."
+"Run the chp:review-law skill for the law '<law-name>'. Read all three files fresh from disk, fix all inconsistencies, commit fixes, and report what you changed."
 ```
 
 This runs in a separate agent context with fresh eyes — no assumptions from the writing process.

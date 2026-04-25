@@ -1,32 +1,23 @@
 ---
 name: review-law
-description: Review a CHP law package for inconsistencies between law.json, verify.sh, and guidance.md. Triggers on "review law", "check law", "verify law", "law consistent", "law review".
+description: Fix inconsistencies in a CHP law package. Reads law.json, verify.sh, and guidance.md fresh from disk and corrects drift between them. Triggers on "review law", "fix law", "check law", "verify law".
 ---
 
-# CHP Law Review
+# CHP Law Fixer
 
-Review a CHP law package for inconsistencies across its three files: `law.json`, `verify.sh`, and `guidance.md`. Catches drift between what the law declares, what it detects, and what it documents.
+Fix inconsistencies in a CHP law package across its three files: `law.json`, `verify.sh`, and `guidance.md`. Reads everything fresh from disk — zero assumptions from the writing process.
+
+**Philosophy:** Fix it. Don't just report it. The only time to ask the user is when both options are equally valid and you genuinely can't decide.
 
 ## When to Invoke
 
-Invoke this skill when:
-- User says "review law", "check this law", "is this law consistent?"
 - After `chp:write-laws` finishes creating or editing a law
-- User wants to validate an existing law before relying on it
+- User says "review law", "fix this law", "is this law consistent?"
+- Before relying on an existing law
 
-## Review Process
+## Process
 
-### 1. Locate the law package
-
-The law must exist in `docs/chp/laws/<law-name>/`. If no law name is given, review all laws:
-
-```bash
-ls -d docs/chp/laws/*/
-```
-
-### 2. Read all three files from disk
-
-Read them fresh — do not rely on any context from a previous agent or conversation:
+### 1. Read all three files from disk
 
 ```bash
 cat docs/chp/laws/<law-name>/law.json
@@ -34,114 +25,95 @@ cat docs/chp/laws/<law-name>/verify.sh
 cat docs/chp/laws/<law-name>/guidance.md
 ```
 
-If any file is missing, that is an immediate finding. Report it and move on.
+No context from previous agents. Read from disk only.
 
-### 3. Run the consistency checks
+If any file is missing, create it:
+- Missing `law.json`: generate from `verify.sh` patterns and directory name
+- Missing `verify.sh`: generate from `law.json` violations using the closest existing law as template
+- Missing `guidance.md`: generate from `law.json` intent, violations, and fix descriptions
 
-For each check below, note the result as PASS, FIX (confident fix applied), or PROPOSAL (needs user decision).
+### 2. Run checks and fix everything
+
+Go through each check. Fix issues as you find them. Don't batch — fix immediately.
 
 #### Check A: law.json schema
 
-- Required fields present: `id`, `intent`, `violations`, `reaction`, `hooks`, `enabled`
+- Required fields: `id`, `intent`, `violations`, `reaction`, `hooks`, `enabled`
 - `reaction` is one of: `block`, `warn`, `auto_fix`
-- `severity` is one of: `error`, `warn`, `info` (if present)
+- `severity` is one of: `error`, `warn`, `info`
 - `violations` array is non-empty, each entry has `pattern` and `fix`
 - `id` matches the directory name
 
-**Confident fixes:** Missing `enabled: true`, wrong `reaction` value, `id` that doesn't match directory name.
+**Fix:** Add missing fields, correct invalid values, fix `id` to match directory.
 
-**Proposals:** Empty `violations` array (may be intentional stub), missing optional fields like `tags` or `severity`.
+#### Check B: law.json vs verify.sh — Patterns
 
-#### Check B: law.json vs verify.sh — Intent alignment
+- `violations[].pattern` in `law.json` should cover what `verify.sh` actually detects
+- `verify.sh` patterns should cover what `law.json` declares
+- `include`/`exclude` in `law.json` should match the file filtering in `verify.sh`
 
-- The `intent` field in `law.json` describes what `verify.sh` actually detects
-- Each `violations[].pattern` in `law.json` corresponds to an actual grep/regex in `verify.sh`
-- The `include`/`exclude` globs in `law.json` match the file filtering in `verify.sh`
+**Fix:** Sync the patterns — update whichever file is behind. If `verify.sh` detects more than `law.json` declares, update `law.json`. If `law.json` declares more than `verify.sh` checks, update `verify.sh`. Add missing exclude filters to `verify.sh` if `law.json` declares them.
 
-**Confident fixes:** `law.json` `exclude` lists patterns that `verify.sh` doesn't filter (add the filter to `verify.sh`).
+#### Check C: Exit behavior
 
-**Proposals:** `intent` doesn't match what `verify.sh` detects — this is a judgment call, present both readings to the user.
+- `block` reaction → `verify.sh` exits non-zero on violation
+- `warn` reaction → `verify.sh` exits zero on violation (logs warning)
+- `auto_fix` reaction → `verify.sh` attempts fix and reports outcome
 
-#### Check C: law.json vs verify.sh — Exit behavior
+**Fix:** Correct the exit code in `verify.sh` to match the declared `reaction`.
 
-- If `reaction` is `block`, `verify.sh` exits non-zero on violation
-- If `reaction` is `warn`, `verify.sh` exits zero even on violation (logs warning only)
-- If `reaction` is `auto_fix`, `verify.sh` attempts remediation and reports outcome
+#### Check D: law.json vs guidance.md
 
-**Confident fixes:** `block` reaction with exit-zero on violation (fix the exit code in `verify.sh`).
-
-**Proposals:** `auto_fix` reaction but `verify.sh` has no remediation logic — may need a new script or a reaction change.
-
-#### Check D: law.json vs guidance.md — Fix guidance
-
-- Each `violations[].fix` in `law.json` aligns with the remediation advice in `guidance.md`
+- `violations[].fix` matches the remediation advice in `guidance.md`
 - `guidance.md` covers all declared violations
-- `guidance.md` doesn't describe patterns not in `law.json` or `verify.sh`
+- `guidance.md` doesn't claim patterns not in the law
 
-**Confident fixes:** `guidance.md` mentions a pattern that was removed from the law — remove the stale section.
+**Fix:** Update `guidance.md` to match the actual law — add missing violations, remove stale ones, align fix advice.
 
-**Proposals:** `violations[].fix` says one thing, `guidance.md` recommends a different approach — present both to user.
+#### Check E: verify.sh vs guidance.md
 
-#### Check E: verify.sh vs guidance.md — Pattern coverage
+- Detection patterns in `verify.sh` are documented in `guidance.md`
+- `guidance.md` doesn't document patterns that `verify.sh` doesn't check
 
-- The detection patterns in `verify.sh` are documented in `guidance.md`
-- `guidance.md` doesn't claim detection of patterns not in `verify.sh`
-- The examples in `guidance.md` (good/bad) actually trigger/pass `verify.sh`
+**Fix:** Add missing patterns to `guidance.md`, remove patterns that aren't actually detected.
 
-**Confident fixes:** `guidance.md` lists a pattern that `verify.sh` doesn't check — add the pattern to both or remove from guidance.
+### 3. Ask only when genuinely stuck
 
-**Proposals:** Pattern in `verify.sh` not mentioned in `guidance.md` — may be intentional (internal implementation detail), ask user.
+The only time to propose instead of fix is when you face a true ambiguity where both options are valid:
 
-### 4. Apply fixes and report findings
+- `intent` could reasonably mean two different things — ask
+- Two patterns conflict and both seem intentional — ask
+- You're unsure if a pattern was removed on purpose — ask
 
-After running all checks:
+In these cases, present the two options with your recommendation. But default to fixing.
 
-1. **Apply confident fixes directly** — edit the files, explain what was changed and why
-2. **List proposals** — for each ambiguous finding, present:
-   - What the inconsistency is
-   - Which files are affected
-   - Two possible resolutions with trade-offs
-   - Your recommendation
-3. **Summary** — print a final count:
-   ```
-   Review complete for <law-name>:
-     PASS: 8 checks
-     FIXED: 2 issues (list them)
-     PROPOSALS: 1 issue (awaiting your decision)
-   ```
+### 4. Summary
 
-### 5. If reviewing all laws
-
-When no law name is specified, repeat steps 2-4 for each law in `docs/chp/laws/`. Print a summary table at the end:
+After all fixes:
 
 ```
-Law            PASS  FIXED  PROPOSALS
-no-api-keys      8      2          1
-no-console-log   9      0          0
-mandarin-only    7      1          2
+Fixed <law-name>:
+  - [list each fix: file, what changed, why]
+  PASSED: N checks
+  FIXED: N issues
+  ASKED: N questions (awaiting your input)
 ```
 
-## Fix Rules
+### 5. All-laws mode
 
-**Always fix without asking:**
-- Missing required fields in `law.json`
-- `id` doesn't match directory name
-- Exit code / reaction mismatch in `verify.sh`
-- Stale patterns in `guidance.md` that were removed from the law
+When no law name is given, fix every law in `docs/chp/laws/`. Summary table at the end:
 
-**Always propose (never auto-fix):**
-- `intent` field doesn't match detection logic
-- Scope disagreement between `law.json` and `verify.sh`
-- `guidance.md` recommends a different fix than `violations[].fix`
-- Adding new patterns not originally intended
+```
+Law            PASSED  FIXED  ASKED
+no-api-keys        2      3      0
+no-console-log     5      0      0
+mandarin-only      3      1      1
+```
 
 ## Integration with write-laws
 
-When `chp:write-laws` finishes creating or editing a law, it should spawn this skill as a background agent:
+`chp:write-laws` spawns this skill as a background agent after writing a law:
 
 ```
-Use the Agent tool to spawn a background agent with this prompt:
-"Run the chp:review-law skill for the law '<law-name>'. Read all three files fresh from disk, run the full consistency checklist, apply confident fixes, and report proposals."
+Agent prompt: "Run the chp:review-law skill for the law '<law-name>'. Read all three files fresh from disk, fix all inconsistencies, commit fixes, and report what you changed."
 ```
-
-This ensures the reviewer starts with zero assumptions from the writing process.
