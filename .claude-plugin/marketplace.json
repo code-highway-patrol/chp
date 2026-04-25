@@ -10,10 +10,6 @@
       "name": "chp",
       "description": "Code quality enforcement with traffic laws and automated violation detection",
       "version": "1.0.0",
-      "source": {
-        "source": "local",
-        "path": "./"
-      },
       "author": {
         "name": "CHP Contributors"
       }
