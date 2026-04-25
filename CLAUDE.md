@@ -10,7 +10,7 @@ If you are an AI agent working in this repository, these are hard rules. You wil
 
 - **DO NOT hardcode API keys, tokens, or secrets** — No `sk-`, `AIza`, `AKIA`, `ghp_`, `xoxb-`, `xoxp-` prefixes in source files. Use `process.env.*` or environment variables. The pre-commit hook catches these patterns.
 
-- **DO NOT leave pending-task, fix-me, hack, XXX, or NOTE comments** — This law has 15 failures. Either finish the work or create a ticket and reference it by number. `// See issue #42` is fine. `// fix this later` style comments are not.
+- **DO NOT leave pending-task, fix-me, workaround, XXX, or NOTE comments** — This law has 15 failures. Either finish the work or create a ticket and reference it by number. `// See issue #42` is fine. `// fix this later` style comments are not.
 
 - **DO NOT use `alert()`** — Use toast notifications, modal dialogs, or proper error boundaries instead.
 
