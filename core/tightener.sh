@@ -10,6 +10,7 @@ fi
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/common.sh"
 source "$SCRIPT_DIR/logger.sh"
+source "$SCRIPT_DIR/law-mutate.sh"
 
 record_failure() {
     local law_name="$1"
@@ -25,39 +26,12 @@ record_failure() {
         return 1
     fi
 
-    read -r law_dir law_json guidance_md < <(get_law_paths "$law_name")
+    mutate_failure "$law_name" "$check_id"
 
     local failures
     failures=$(get_law_meta "$law_name" "failures")
-    failures=$((failures + 1))
-
     local tightening_level
     tightening_level=$(get_law_meta "$law_name" "tightening_level")
-    tightening_level=$((tightening_level + 1))
-
-    jq --arg failures "$failures" \
-       --arg tightening_level "$tightening_level" \
-       '.failures = ($failures | tonumber) |
-        .tightening_level = ($tightening_level | tonumber)' \
-       "$law_json" > "${law_json}.tmp" && \
-    mv "${law_json}.tmp" "$law_json"
-
-    local timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-    local check_label=""
-    if [[ -n "$check_id" ]]; then
-        check_label=" (check: $check_id)"
-    fi
-
-    cat >> "$guidance_md" <<EOF
-
----
-
-**Violation recorded:** $timestamp (Total: $failures)${check_label}
-
-This law has been violated $failures time(s). The guidance has been automatically strengthened.
-
-**Previous violations indicate this pattern is easy to miss. Pay extra attention.**
-EOF
 
     if [[ -n "$check_id" ]]; then
         log_warn "Law '$law_name' check '$check_id' failed (failure #$failures, tightening level $tightening_level)"
@@ -84,16 +58,7 @@ reset_failures() {
         return 1
     fi
 
-    read -r law_dir law_json guidance_md < <(get_law_paths "$law_name")
-
-    jq '.failures = 0 | .tightening_level = 0' \
-       "$law_json" > "${law_json}.tmp" && \
-    mv "${law_json}.tmp" "$law_json"
-
-    if grep -q "^---" "$guidance_md"; then
-        sed -n '1,/^---$/p' "$guidance_md" > "$guidance_md.tmp"
-        mv "$guidance_md.tmp" "$guidance_md"
-    fi
+    mutate_reset "$law_name"
 
     log_info "Law '$law_name' reset (failures and tightening level cleared)"
 

@@ -25,6 +25,17 @@ cat > "$TEST_LAW_DIR/law.json" << 'EOF'
 }
 EOF
 
+# Create guidance.md
+cat > "$TEST_LAW_DIR/guidance.md" << 'EOF'
+# test-tightener-law
+
+**Severity:** error
+
+**Failures:** 0
+
+Guidance for test law.
+EOF
+
 # Test 1: record_failure increments failure count
 echo "Test 1: record_failure increments failure count"
 record_failure "test-tightener-law"
