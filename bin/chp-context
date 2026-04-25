@@ -1,0 +1,56 @@
+#!/usr/bin/env python3
+"""Emit active CHP laws as additionalContext so the agent sees them before writing code."""
+
+import json
+import os
+import re
+import sys
+from pathlib import Path
+
+
+def find_laws_file():
+    project_dir = os.environ.get("CLAUDE_PROJECT_DIR", os.getcwd())
+    laws_path = Path(project_dir) / "laws" / "chp-laws.txt"
+    if laws_path.exists():
+        return laws_path
+    return None
+
+
+def parse_laws(text):
+    laws = []
+    current = None
+    for line in text.splitlines():
+        header = re.match(r"^#\s*===\s*Law:\s*(\S+)\s*===", line)
+        if header:
+            current = {"id": header.group(1)}
+            laws.append(current)
+            continue
+        if current is None or line.startswith("#"):
+            continue
+        if line.startswith("intent:"):
+            current["intent"] = line.split(":", 1)[1].strip()
+        elif line.startswith("reaction:"):
+            current["reaction"] = line.split(":", 1)[1].strip()
+    return laws
+
+
+def main():
+    laws_path = find_laws_file()
+    if not laws_path:
+        return
+
+    laws = parse_laws(laws_path.read_text(encoding="utf-8"))
+    if not laws:
+        return
+
+    lines = ["CHP ACTIVE LAWS — you MUST follow these when writing code:"]
+    for law in laws:
+        reaction = law.get("reaction", "warn").upper()
+        intent = law.get("intent", "No description")
+        lines.append(f"  [{reaction}] {law['id']}: {intent}")
+
+    print(json.dumps({"additionalContext": "\n".join(lines)}))
+
+
+if __name__ == "__main__":
+    main()

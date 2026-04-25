@@ -18,7 +18,8 @@ description: Create new CHP enforcement laws
    - Subjective: requires judgment (e.g. "functions should have clear names", "no hardcoded secrets" where context matters)
 3. Read `laws/chp-laws.txt` to check for duplicates
 4. Append the new law block to `laws/chp-laws.txt`
-5. Confirm what was added
+5. Update the **Active Laws** table in `CLAUDE.md` to include the new law (keep the table in sync with the laws file)
+6. Confirm what was added
 
 ## Law Format
 

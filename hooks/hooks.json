@@ -12,6 +12,17 @@
             "statusMessage": "CHP: ensuring dashboard is running..."
           }
         ]
+      },
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"${CLAUDE_PLUGIN_ROOT}/bin/chp-context\"",
+            "timeout": 5,
+            "statusMessage": "CHP: loading active laws..."
+          }
+        ]
       }
     ],
     "PostToolUse": [

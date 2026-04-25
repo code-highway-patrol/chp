@@ -17,7 +17,8 @@ description: Adjust existing CHP laws
 1. Read `laws/chp-laws.txt`
 2. Identify the law to refine
 3. Edit the law block in `laws/chp-laws.txt`
-4. Confirm what changed
+4. Update the **Active Laws** table and the "you MUST" bullet list in `CLAUDE.md` to reflect the change (keep it in sync with the laws file)
+5. Confirm what changed
 
 ## Common Refinements
 
