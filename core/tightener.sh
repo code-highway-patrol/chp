@@ -19,6 +19,7 @@ record_failure() {
 
     local law_dir="$LAWS_DIR/$law_name"
     local law_json="$law_dir/law.json"
+    local guidance_md="$law_dir/guidance.md"
 
     # Increment failure count
     local failures
@@ -38,7 +39,54 @@ record_failure() {
        "$law_json" > "${law_json}.tmp" && \
     mv "${law_json}.tmp" "$law_json"
 
-    log_info "Law '$law_name' failed (failure #$failures, tightening level $tightening_level)"
+    # Append violation history to guidance file
+    local timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+    cat >> "$guidance_md" <<EOF
+
+---
+
+**Violation recorded:** $timestamp (Total: $failures)
+
+This law has been violated $failures time(s). The guidance has been automatically strengthened.
+
+**Previous violations indicate this pattern is easy to miss. Pay extra attention.**
+EOF
+
+    log_warn "Law '$law_name' failed (failure #$failures, tightening level $tightening_level)"
+
+    return 0
+}
+
+# Reset failures for a law
+reset_failures() {
+    local law_name="$1"
+
+    if [[ -z "$law_name" ]]; then
+        log_error "Law name is required"
+        return 1
+    fi
+
+    if ! law_exists "$law_name"; then
+        log_error "Law does not exist: $law_name"
+        return 1
+    fi
+
+    local law_dir="$LAWS_DIR/$law_name"
+    local law_json="$law_dir/law.json"
+    local guidance_md="$law_dir/guidance.md"
+
+    # Reset failure count and tightening level
+    jq '.failures = 0 | .tightening_level = 0' \
+       "$law_json" > "${law_json}.tmp" && \
+    mv "${law_json}.tmp" "$law_json"
+
+    # Truncate guidance file to remove violation history
+    if grep -q "^---" "$guidance_md"; then
+        sed -n '1,/^---$/p' "$guidance_md" > "$guidance_md.tmp"
+        mv "$guidance_md.tmp" "$guidance_md"
+    fi
+
+    log_info "Law '$law_name' reset (failures and tightening level cleared)"
 
     return 0
 }
