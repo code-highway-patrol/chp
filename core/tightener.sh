@@ -1,18 +1,15 @@
 #!/bin/bash
 # Tightening logic for law violations
 
-# Guard against direct execution
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     echo "Error: This file should be sourced, not executed directly." >&2
     echo "Usage: source core/tightener.sh" >&2
     exit 1
 fi
 
-# Source common functions after the guard
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/common.sh"
 
-# Record a failure for a law and trigger tightening
 record_failure() {
     local law_name="$1"
 
@@ -26,20 +23,16 @@ record_failure() {
         return 1
     fi
 
-    # Get all law paths in one call
     read -r law_dir law_json guidance_md < <(get_law_paths "$law_name")
 
-    # Increment failure count
     local failures
     failures=$(get_law_meta "$law_name" "failures")
     failures=$((failures + 1))
 
-    # Increment tightening level
     local tightening_level
     tightening_level=$(get_law_meta "$law_name" "tightening_level")
     tightening_level=$((tightening_level + 1))
 
-    # Update law.json
     jq --arg failures "$failures" \
        --arg tightening_level "$tightening_level" \
        '.failures = ($failures | tonumber) |
@@ -47,7 +40,6 @@ record_failure() {
        "$law_json" > "${law_json}.tmp" && \
     mv "${law_json}.tmp" "$law_json"
 
-    # Append violation history to guidance file
     local timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
     cat >> "$guidance_md" <<EOF
 
@@ -65,7 +57,6 @@ EOF
     return 0
 }
 
-# Reset failures for a law
 reset_failures() {
     local law_name="$1"
 
@@ -79,15 +70,12 @@ reset_failures() {
         return 1
     fi
 
-    # Get all law paths in one call
     read -r law_dir law_json guidance_md < <(get_law_paths "$law_name")
 
-    # Reset failure count and tightening level
     jq '.failures = 0 | .tightening_level = 0' \
        "$law_json" > "${law_json}.tmp" && \
     mv "${law_json}.tmp" "$law_json"
 
-    # Truncate guidance file to remove violation history
     if grep -q "^---" "$guidance_md"; then
         sed -n '1,/^---$/p' "$guidance_md" > "$guidance_md.tmp"
         mv "$guidance_md.tmp" "$guidance_md"
@@ -98,7 +86,6 @@ reset_failures() {
     return 0
 }
 
-# Main if run directly
 if [ "${BASH_SOURCE[0]}" = "$0" ]; then
     record_failure "$1"
 fi

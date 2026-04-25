@@ -1,7 +1,6 @@
 #!/bin/bash
 # core/logger.sh - CHP Logging System
 
-# Guard against direct execution - this file should be sourced
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     echo "Error: This file should be sourced, not executed directly." >&2
     echo "Usage: source core/logger.sh" >&2
@@ -11,28 +10,21 @@ fi
 CHP_LOG_DIR=".chp"
 CHP_LOG_FILE="$CHP_LOG_DIR/logs.jsonl"
 
-# Initialize log directory and file
 logger_init() {
     mkdir -p "$CHP_LOG_DIR" 2>/dev/null
     touch "$CHP_LOG_FILE" 2>/dev/null
 }
 
-# Escape special characters for JSON using jq
-# Args: string_to_escape
-# Outputs: Properly JSON-escaped string on stdout
 _json_escape() {
     local string="$1"
-    # Let jq handle proper JSON escaping (more secure and complete)
     jq -nr --arg v "$string" '$v'
 }
 
-# Log an event with arbitrary key-value pairs
 # Usage: logger_log "event_type" "key1" "value1" "key2" "value2" ...
 logger_log() {
     local event_type="$1"
     shift
 
-    # Skip if log file doesn't exist (logger_init not called)
     if [[ ! -f "$CHP_LOG_FILE" ]]; then
         return 0
     fi
@@ -40,11 +32,9 @@ logger_log() {
     local timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
     local entry="{\"timestamp\":\"$timestamp\",\"event_type\":\"$event_type\""
 
-    # Parse key-value pairs
     while [[ $# -gt 0 ]]; do
         local key="$1"
         local value="$2"
-        # Escape JSON special characters in value
         value=$(_json_escape "$value")
         entry="$entry,\"$key\":\"$value\""
         shift 2
@@ -54,7 +44,6 @@ logger_log() {
     echo "$entry" >> "$CHP_LOG_FILE" 2>/dev/null
 }
 
-# Log a violation event
 # Args: law_id, action, result, pattern, fix, files (optional), hook_type (optional)
 logger_violation() {
     local law_id="$1"
@@ -75,7 +64,6 @@ logger_violation() {
         "hook_type" "$hook_type"
 }
 
-# Log an evaluation event
 # Args: law_id, action, result, files (optional)
 logger_evaluation() {
     local law_id="$1"
@@ -90,7 +78,6 @@ logger_evaluation() {
         "files" "$files"
 }
 
-# Log a hook trigger event
 # Args: hook_type, laws (comma-separated list)
 logger_hook_trigger() {
     local hook_type="$1"
@@ -101,7 +88,6 @@ logger_hook_trigger() {
         "laws" "$laws"
 }
 
-# Log a hook installation event
 # Args: hook_type, laws (comma-separated list), action (install/uninstall)
 logger_hook_install() {
     local hook_type="$1"
@@ -114,7 +100,6 @@ logger_hook_install() {
         "action" "$action"
 }
 
-# Log a law change event
 # Args: law_id, details (JSON string with action, hooks, etc.)
 logger_law_change() {
     local law_id="$1"
