@@ -364,6 +364,7 @@ async function loadReport() {
 }
 
 loadLaws();
+fetch(API + '/api/heartbeat').catch(() => {});
 setInterval(() => fetch(API + '/api/heartbeat').catch(() => {}), 5000);
 </script>
 </body>
@@ -512,7 +513,7 @@ class CHPHandler(http.server.BaseHTTPRequestHandler):
 class ThreadedServer(http.server.ThreadingHTTPServer):
     allow_reuse_address = True
     last_heartbeat = 0.0
-    HEARTBEAT_TIMEOUT = 15
+    HEARTBEAT_TIMEOUT = 30
 
 
 def watchdog(server):
@@ -521,7 +522,9 @@ def watchdog(server):
     server.last_heartbeat = time.time()
     while True:
         time.sleep(5)
-        if time.time() - server.last_heartbeat > server.HEARTBEAT_TIMEOUT:
+        elapsed = time.time() - server.last_heartbeat
+        if elapsed > server.HEARTBEAT_TIMEOUT:
+            print("CHP Dashboard: no heartbeat received, shutting down.", flush=True)
             server.shutdown()
             break
 
