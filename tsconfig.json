@@ -13,7 +13,8 @@
     "moduleResolution": "node",
     "declaration": true,
     "declarationMap": true,
-    "sourceMap": true
+    "sourceMap": true,
+    "types": ["jest", "node"]
   },
   "include": ["core/**/*.ts", "tests/**/*.ts"],
   "exclude": ["node_modules", "dist"]
