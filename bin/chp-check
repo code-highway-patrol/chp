@@ -1,161 +1,184 @@
-#!/usr/bin/env python3
-"""CHP deterministic law checker. Scans files against laws that have a check: regex pattern."""
+#!/bin/bash
+# CHP deterministic law checker. Scans files against laws that have a check: regex pattern.
 
-import json
-import os
-import re
-import sys
-from datetime import datetime, timezone
-from pathlib import Path
+SKIP_DIRS="node_modules dist build .next __pycache__ .venv venv .chp .git"
+SKIP_EXT="png jpg jpeg gif webp ico svg woff woff2 ttf eot zip tar gz lock map min.js min.css pyc exe dll so dylib"
 
-SKIP_DIRS = {".git", "node_modules", "dist", "build", ".next", "__pycache__", ".venv", "venv", ".chp"}
-SKIP_EXT = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".ico", ".svg", ".woff", ".woff2",
-            ".ttf", ".eot", ".zip", ".tar", ".gz", ".lock", ".map", ".min.js", ".min.css",
-            ".pyc", ".exe", ".dll", ".so", ".dylib"}
-SKIP_FILES = {"chp-laws.txt", "package-lock.json", "yarn.lock"}
-
-
-def find_laws_file():
-    project_dir = os.environ.get("CLAUDE_PROJECT_DIR", os.getcwd())
-    laws_path = Path(project_dir) / "laws" / "chp-laws.txt"
-    if laws_path.exists():
-        return laws_path
-    plugin_root = os.environ.get("CLAUDE_PLUGIN_ROOT")
-    if plugin_root:
-        fallback = Path(plugin_root) / "laws" / "chp-laws.txt"
-        if fallback.exists():
-            return fallback
-    return None
-
-
-def parse_laws(text):
-    laws = []
-    current = None
-    for line in text.splitlines():
-        header = re.match(r"^#\s*===\s*Law:\s*(\S+)\s*===", line)
-        if header:
-            current = {"id": header.group(1)}
-            laws.append(current)
-            continue
-        if current is None or line.startswith("#"):
-            continue
-        if line.startswith("intent:"):
-            current["intent"] = line.split(":", 1)[1].strip()
-        elif line.startswith("check:"):
-            current["check"] = line.split(":", 1)[1].strip()
-        elif line.startswith("reaction:"):
-            current["reaction"] = line.split(":", 1)[1].strip()
-    return laws
-
-
-def collect_files(root, single_file=None):
-    if single_file:
-        p = Path(single_file)
-        if p.exists() and p.is_file():
-            return [p]
-        return []
-    files = []
-    for dirpath, dirnames, filenames in os.walk(root):
-        dirnames[:] = [d for d in dirnames if d not in SKIP_DIRS]
-        for f in filenames:
-            p = Path(dirpath) / f
-            if p.suffix.lower() in SKIP_EXT or p.name in SKIP_FILES:
-                continue
-            files.append(p)
-    return files
-
-
-def check_file(filepath, deterministic_laws):
-    violations = []
-    try:
-        content = filepath.read_text(encoding="utf-8", errors="ignore")
-    except OSError:
-        return violations
-    for i, line in enumerate(content.splitlines(), 1):
-        for law in deterministic_laws:
-            try:
-                if re.search(law["check"], line):
-                    violations.append({
-                        "law": law["id"],
-                        "reaction": law.get("reaction", "warn"),
-                        "intent": law.get("intent", ""),
-                        "type": "deterministic",
-                        "file": str(filepath),
-                        "line": i,
-                        "snippet": line.strip()[:120]
-                    })
-            except re.error:
-                continue
-    return violations
-
-
-def build_report(all_violations, files_checked):
-    summary = {}
-    for v in all_violations:
-        lid = v["law"]
-        if lid not in summary:
-            summary[lid] = {"count": 0, "reaction": v["reaction"], "intent": v["intent"], "type": v["type"]}
-        summary[lid]["count"] += 1
-
-    return {
-        "timestamp": datetime.now(timezone.utc).isoformat(),
-        "files_checked": files_checked,
-        "total_violations": len(all_violations),
-        "total_block": sum(1 for v in all_violations if v["reaction"] == "block"),
-        "total_warn": sum(1 for v in all_violations if v["reaction"] == "warn"),
-        "violations": all_violations,
-        "summary": summary
-    }
-
-
-def main():
-    single_file = None
-    is_hook = os.environ.get("CLAUDE_PLUGIN_ROOT") and len(sys.argv) == 1
-
-    if is_hook:
-        try:
-            raw = sys.stdin.read()
-            event = json.loads(raw)
-            tool_input = event.get("tool_input", {})
-            if isinstance(tool_input, str):
-                tool_input = json.loads(tool_input)
-            single_file = tool_input.get("path") or tool_input.get("file_path")
-        except (json.JSONDecodeError, AttributeError, EOFError):
-            pass
-
-    for arg in sys.argv[1:]:
-        if arg.startswith("--file="):
-            single_file = arg.split("=", 1)[1]
-
-    laws_path = find_laws_file()
-    if not laws_path:
+find_laws_file() {
+    local project_dir="${CLAUDE_PROJECT_DIR:-$(pwd)}"
+    local laws_path="$project_dir/laws/chp-laws.txt"
+    if [[ -f "$laws_path" ]]; then
+        echo "$laws_path"
         return
+    fi
+    local plugin_root="${CLAUDE_PLUGIN_ROOT:-}"
+    if [[ -n "$plugin_root" ]]; then
+        local fallback="$plugin_root/laws/chp-laws.txt"
+        if [[ -f "$fallback" ]]; then
+            echo "$fallback"
+            return
+        fi
+    fi
+    echo ""
+}
 
-    laws = parse_laws(laws_path.read_text(encoding="utf-8"))
-    deterministic = [l for l in laws if "check" in l]
-    if not deterministic:
-        return
+main() {
+    local single_file=""
+    local is_hook=false
 
-    project_dir = os.environ.get("CLAUDE_PROJECT_DIR", os.getcwd())
-    files = collect_files(project_dir, single_file)
-    all_violations = []
-    for f in files:
-        all_violations.extend(check_file(f, deterministic))
+    if [[ -n "$CLAUDE_PLUGIN_ROOT" && $# -eq 0 ]]; then
+        is_hook=true
+        local raw
+        raw=$(cat)
+        if [[ -n "$raw" ]]; then
+            single_file=$(echo "$raw" | grep -o '"path"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | grep -o '"[^"]*"$' | tr -d '"')
+            if [[ -z "$single_file" ]]; then
+                single_file=$(echo "$raw" | grep -o '"file_path"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | grep -o '"[^"]*"$' | tr -d '"')
+            fi
+        fi
+    fi
 
-    report = build_report(all_violations, len(files))
+    for arg in "$@"; do
+        if [[ "$arg" =~ --file=(.+) ]]; then
+            single_file="${BASH_REMATCH[1]}"
+        fi
+    done
 
-    report_dir = Path(project_dir) / ".chp"
-    report_dir.mkdir(exist_ok=True)
-    report_path = report_dir / "report.json"
-    report_path.write_text(json.dumps(report, indent=2), encoding="utf-8")
+    local laws_path
+    laws_path=$(find_laws_file)
+    if [[ -z "$laws_path" ]]; then
+        exit 0
+    fi
 
-    if all_violations:
-        lines = [f"CHP: {len(all_violations)} violation(s) found by deterministic checks:"]
-        for v in all_violations:
-            lines.append(f"  [{v['reaction'].upper()}] {v['law']} — {Path(v['file']).name}:{v['line']}: {v['snippet']}")
-        lines.append(f"\nFull report: .chp/report.json")
-        print(json.dumps({"additionalContext": "\n".join(lines)}))
+    local project_dir="${CLAUDE_PROJECT_DIR:-$(pwd)}"
 
+    local files=()
+    if [[ -n "$single_file" && -f "$single_file" ]]; then
+        files=("$single_file")
+    else
+        while IFS= read -r file; do
+            local ext="${file##*.}"
+            local basename="$(basename "$file")"
+            if [[ " $SKIP_EXT " != *" $ext "* ]] && [[ " $SKIP_FILES " != *" $basename "* ]]; then
+                files+=("$file")
+            fi
+        done < <(find "$project_dir" -type f 2>/dev/null | grep -v -E "/($SKIP_DIRS)/" | grep -v '/node_modules/' | grep -v '/.git/')
+    fi
 
-if __name__ == "__main__":
-    main()
+    local laws_data=""
+    local in_law=false
+    local current_law=""
+    local current_pattern=""
+    local current_reaction="warn"
+    local current_intent=""
+
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        line="${line//$'\r'/}"
+        case "$line" in
+            "# === Law:"*)
+                if $in_law && [[ -n "$current_law" && -n "$current_pattern" ]]; then
+                    laws_data="$laws_data${current_law}|${current_pattern}|${current_reaction}|${current_intent}"$'\n'
+                fi
+                current_law=$(echo "$line" | sed 's/^# === Law: //;s/ ===$//')
+                current_pattern=""
+                current_reaction="warn"
+                current_intent=""
+                in_law=true
+                ;;
+            "intent: "*)
+                current_intent="${line#intent: }"
+                ;;
+            "reaction: "*)
+                current_reaction="${line#reaction: }"
+                ;;
+            "check: "*)
+                current_pattern="${line#check: }"
+                ;;
+        esac
+    done < "$laws_path"
+
+    if $in_law && [[ -n "$current_law" && -n "$current_pattern" ]]; then
+        laws_data="$laws_data${current_law}|${current_pattern}|${current_reaction}|${current_intent}"$'\n'
+    fi
+
+    if [[ -z "$laws_data" ]]; then
+        exit 0
+    fi
+
+    local all_violations=""
+    for file in "${files[@]}"; do
+        [[ ! -f "$file" ]] && continue
+        local line_num=0
+        while IFS= read -r line || [[ -n "$line" ]]; do
+            line_num=$((line_num + 1))
+            while IFS='|' read -r law_id pattern reaction intent; do
+                if [[ -z "$pattern" ]]; then
+                    continue
+                fi
+                if grep -qE "$pattern" <<< "$line" 2>/dev/null; then
+                    local snippet="${line:0:120}"
+                    all_violations="$all_violations${law_id}|${reaction}|${intent}|${file}|${line_num}|${snippet}"$'\n'
+                fi
+            done <<< "$laws_data"
+        done < "$file"
+    done
+
+    local total=0
+    local total_block=0
+    local total_warn=0
+    while IFS='|' read -r law reaction intent file line snippet; do
+        [[ -z "$law" ]] && continue
+        total=$((total + 1))
+        [[ "$reaction" == "block" ]] && total_block=$((total_block + 1))
+        [[ "$reaction" == "warn" ]] && total_warn=$((total_warn + 1))
+    done <<< "$all_violations"
+
+    local timestamp
+    timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+    local report_dir="$project_dir/.chp"
+    mkdir -p "$report_dir"
+    local report_path="$report_dir/report.json"
+
+    local violations_json="["
+    local first=true
+    while IFS='|' read -r law reaction intent file line snippet; do
+        [[ -z "$law" ]] && continue
+        if $first; then
+            first=false
+        else
+            violations_json="${violations_json},"
+        fi
+        violations_json="${violations_json}{\"law\": \"$law\", \"reaction\": \"$reaction\", \"intent\": \"$intent\", \"file\": \"$file\", \"line\": $line, \"snippet\": \"$snippet\"}"
+    done <<< "$all_violations"
+    violations_json="${violations_json}]"
+
+    cat > "$report_path" << EOF
+{
+  "timestamp": "$timestamp",
+  "files_checked": ${#files[@]},
+  "total_violations": $total,
+  "total_block": $total_block,
+  "total_warn": $total_warn,
+  "violations": $violations_json,
+  "summary": {}
+}
+EOF
+
+    local violation_count=0
+    violation_count=$(echo "$all_violations" | grep -c '|' || echo "0")
+
+    if [[ "$violation_count" -gt 0 ]]; then
+        local lines="CHP: $violation_count violation(s) found by deterministic checks:"
+        while IFS='|' read -r law reaction intent file line snippet; do
+            [[ -z "$law" ]] && continue
+            local filename
+            filename=$(basename "$file")
+            lines="$lines"$'\n'"  [${reaction^^}] $law — ${filename}:${line}: ${snippet}"
+        done <<< "$all_violations"
+        lines="$lines"$'\n'"Full report: .chp/report.json"
+        echo "{\"additionalContext\": \"$lines\"}"
+    fi
+}
+
+main "$@"

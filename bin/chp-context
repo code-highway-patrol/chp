@@ -1,61 +1,59 @@
-#!/usr/bin/env python3
-"""Emit active CHP laws as additionalContext so the agent sees them before writing code."""
+#!/bin/bash
+# Emit active CHP laws as additionalContext so the agent sees them before writing code.
 
-import json
-import os
-import re
-import sys
-from pathlib import Path
-
-
-def find_laws_file():
-    project_dir = os.environ.get("CLAUDE_PROJECT_DIR", os.getcwd())
-    laws_path = Path(project_dir) / "laws" / "chp-laws.txt"
-    if laws_path.exists():
-        return laws_path
-    plugin_root = os.environ.get("CLAUDE_PLUGIN_ROOT")
-    if plugin_root:
-        fallback = Path(plugin_root) / "laws" / "chp-laws.txt"
-        if fallback.exists():
-            return fallback
-    return None
-
-
-def parse_laws(text):
-    laws = []
-    current = None
-    for line in text.splitlines():
-        header = re.match(r"^#\s*===\s*Law:\s*(\S+)\s*===", line)
-        if header:
-            current = {"id": header.group(1)}
-            laws.append(current)
-            continue
-        if current is None or line.startswith("#"):
-            continue
-        if line.startswith("intent:"):
-            current["intent"] = line.split(":", 1)[1].strip()
-        elif line.startswith("reaction:"):
-            current["reaction"] = line.split(":", 1)[1].strip()
-    return laws
-
-
-def main():
-    laws_path = find_laws_file()
-    if not laws_path:
+find_laws_file() {
+    local project_dir="${CLAUDE_PROJECT_DIR:-$(pwd)}"
+    local laws_path="$project_dir/laws/chp-laws.txt"
+    if [[ -f "$laws_path" ]]; then
+        echo "$laws_path"
         return
+    fi
+    local plugin_root="${CLAUDE_PLUGIN_ROOT:-}"
+    if [[ -n "$plugin_root" ]]; then
+        local fallback="$plugin_root/laws/chp-laws.txt"
+        if [[ -f "$fallback" ]]; then
+            echo "$fallback"
+            return
+        fi
+    fi
+    echo ""
+}
 
-    laws = parse_laws(laws_path.read_text(encoding="utf-8"))
-    if not laws:
-        return
+main() {
+    local laws_path
+    laws_path=$(find_laws_file)
+    if [[ -z "$laws_path" ]]; then
+        exit 0
+    fi
 
-    lines = ["CHP ACTIVE LAWS — you MUST follow these when writing code:"]
-    for law in laws:
-        reaction = law.get("reaction", "warn").upper()
-        intent = law.get("intent", "No description")
-        lines.append(f"  [{reaction}] {law['id']}: {intent}")
+    local law_name=""
+    local intent=""
+    local reaction=""
 
-    print(json.dumps({"additionalContext": "\n".join(lines)}))
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        line="${line//$'\r'/}"
+        case "$line" in
+            "# === Law:"*)
+                if [[ -n "$law_name" && -n "$intent" ]]; then
+                    echo "  [${reaction^^}] $law_name: $intent"
+                fi
+                law_name=$(echo "$line" | sed 's/^# === Law: //;s/ ===$//')
+                intent=""
+                reaction=""
+                ;;
+            intent:" "*)
+                intent="${line#intent: }"
+                ;;
+            reaction:" "*)
+                reaction="${line#reaction: }"
+                ;;
+        esac
+    done < "$laws_path"
 
+    if [[ -n "$law_name" && -n "$intent" ]]; then
+        echo "  [${reaction^^}] $law_name: $intent"
+    fi
+}
 
-if __name__ == "__main__":
-    main()
+output=$(main "$@")
+echo "{\"additionalContext\": \"CHP ACTIVE LAWS — you MUST follow these when writing code:$output\"}"
