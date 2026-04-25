@@ -25,6 +25,12 @@ log_warn() {
     echo -e "${YELLOW}[WARN]${NC} $1"
 }
 
+log_debug() {
+    if [ "${CHP_DEBUG:-false}" = "true" ]; then
+        echo -e "${YELLOW}[DEBUG]${NC} $1" >&2
+    fi
+}
+
 # Check if a law exists
 law_exists() {
     local law_name="$1"
