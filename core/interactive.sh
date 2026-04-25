@@ -109,3 +109,35 @@ display_preview() {
     done
     echo ""
 }
+
+# Display a preview of checks for a law
+# Usage: display_checks_preview <law_name> <checks_json>
+display_checks_preview() {
+    local law_name="$1"
+    local checks_json="$2"
+
+    echo ""
+    echo "=================================="
+    echo "  Law Preview: $law_name"
+    echo "=================================="
+    echo ""
+    echo "  Atomic Checks:"
+
+    local count
+    count=$(echo "$checks_json" | jq 'length')
+
+    for ((i=0; i<count; i++)); do
+        local id type severity
+        id=$(echo "$checks_json" | jq -r ".[$i].id")
+        type=$(echo "$checks_json" | jq -r ".[$i].type")
+        severity=$(echo "$checks_json" | jq -r ".[$i].severity")
+
+        if [[ $i -eq $((count-1)) ]]; then
+            echo "  └─ $type:$id [$severity]"
+        else
+            echo "  ├─ $type:$id [$severity]"
+        fi
+    done
+
+    echo ""
+}

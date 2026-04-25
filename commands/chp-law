@@ -49,6 +49,9 @@ Update Options:
     --add-exception=<pattern>  Add exception pattern (not yet implemented)
     --remove-exception=<pattern> Remove exception pattern (not yet implemented)
     --set-guidance             Open guidance.md for editing
+    --add-check=<json>         Add atomic check (JSON object)
+    --check=<id>               Target check ID for --check-severity
+    --check-severity=<level>   Change severity of targeted check
 
 Examples:
     chp-law create no-debug-code --hooks=pre-commit
@@ -296,58 +299,27 @@ create_law() {
     # Create law directory
     mkdir -p "$law_dir"
 
-    # Create law.json with metadata
-    cat > "$law_dir/law.json" <<EOF
-{
-  "name": "$law_name",
-  "created": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
-  "severity": "$severity",
-  "failures": 0,
-  "tightening_level": 0,
-  "hooks": $(printf '%s\n' "${hooks[@]}" | jq -R . | jq -s -c .),
-  "enabled": true
-}
-EOF
+    # Build checks array based on detected pattern
+    local checks='[]'
 
-    # Create verify.sh (verification script template)
-    cat > "$law_dir/verify.sh" <<EOF
-#!/bin/bash
-# Verification script for law: $law_name
+    if [[ -n "$pattern" && "$pattern" != "Custom pattern" ]]; then
+        local check_id="${law_name//-/_}"
+        local check_config
+        check_config=$(jq -n --arg p "$pattern" '{"pattern": $p}')
 
-# Get the absolute path to CHP base directory
-LAW_DIR="\$(cd "\$(dirname "\${BASH_SOURCE[0]}")" && pwd)"
-CHP_BASE="\$(cd "\$LAW_DIR/../../../../" && pwd)"
-
-# Source CHP common functions
-source "\$CHP_BASE/core/common.sh"
-
-# Main verification logic
-verify_law() {
-    local law_name="$law_name"
-
-    log_info "Verifying law: $law_name"
-
-    # Add your verification logic here
-    # Return 0 if verification passes
-    # Return 1 if verification fails
-
-    # Example: Check for debug statements
-    if git diff --cached --name-only | grep -q '\.js$\|\.ts$\|\.py$'; then
-        if git diff --cached | grep -i 'console\.debug\|debugger'; then
-            log_error "Debug statements found in staged files"
-            return 1
-        fi
+        checks=$(build_check "$check_id" "pattern" "$check_config" "$severity" "$pattern")
+        checks="[$checks]"
     fi
 
-    log_info "Law verification passed: $law_name"
-    return 0
-}
+    # Create law.json with checks
+    if [[ "$checks" != "[]" ]]; then
+        build_law_json_with_checks "$law_name" "$severity" "$hooks_str" "$checks" > "$law_dir/law.json"
+    else
+        build_law_json "$law_name" "$severity" "$hooks_str" > "$law_dir/law.json"
+    fi
 
-# Run verification
-verify_law
-exit $?
-EOF
-
+    # Create verify.sh (auto-generated using check-runner)
+    build_verify_with_checks "$law_name" > "$law_dir/verify.sh"
     chmod +x "$law_dir/verify.sh"
 
     # Register law in hook registry
@@ -467,13 +439,37 @@ list_laws_cmd() {
             local severity=$(get_law_meta "$name" "severity")
             local failures=$(get_law_meta "$name" "failures")
             local enabled=$(get_law_meta "$name" "enabled")
+            local law_json="$law_dir/law.json"
 
             local status="enabled"
             if [[ "$enabled" == "false" ]]; then
                 status="disabled"
             fi
 
-            echo "  $name | severity: $severity | failures: $failures | $status"
+            echo "  $name [$severity] ($status, $failures failures)"
+
+            # Show per-check breakdown if checks exist
+            if command -v jq >/dev/null 2>&1 && [[ -f "$law_json" ]]; then
+                local checks_json
+                checks_json=$(jq -c '.checks // []' "$law_json" 2>/dev/null)
+                local check_count
+                check_count=$(echo "$checks_json" | jq 'length' 2>/dev/null)
+
+                if [[ "$check_count" -gt 0 ]]; then
+                    for ((i=0; i<check_count; i++)); do
+                        local cid ctype cseverity
+                        cid=$(echo "$checks_json" | jq -r ".[$i].id // \"check-$i\"")
+                        ctype=$(echo "$checks_json" | jq -r ".[$i].type // \"?\"")
+                        cseverity=$(echo "$checks_json" | jq -r ".[$i].severity // \"warn\"")
+
+                        if [[ $i -eq $((check_count-1)) ]]; then
+                            echo "    └─ $ctype:$cid [$cseverity]"
+                        else
+                            echo "    ├─ $ctype:$cid [$cseverity]"
+                        fi
+                    done
+                fi
+            fi
         fi
     done
 
@@ -704,6 +700,9 @@ update_law() {
     local add_exception=""
     local remove_exception=""
     local set_guidance=false
+    local new_check_json=""
+    local target_check=""
+    local target_check_severity=""
 
     while [[ $# -gt 0 ]]; do
         case "$1" in
@@ -727,6 +726,15 @@ update_law() {
                 ;;
             --set-guidance)
                 set_guidance=true
+                ;;
+            --add-check=*)
+                new_check_json="${1#*=}"
+                ;;
+            --check=*)
+                target_check="${1#*=}"
+                ;;
+            --check-severity=*)
+                target_check_severity="${1#*=}"
                 ;;
             *)
                 log_error "Unknown option: $1"
@@ -782,6 +790,24 @@ update_law() {
     if [[ "$set_guidance" = true ]]; then
         log_info "Opening guidance.md for editing..."
         "${EDITOR:-vim}" "$law_dir/guidance.md"
+        updated=true
+    fi
+
+    if [[ -n "$new_check_json" ]]; then
+        jq --argjson check "$new_check_json" '.checks += [$check]' "$law_json" > "${law_json}.tmp" && \
+            mv "${law_json}.tmp" "$law_json"
+        build_verify_with_checks "$law_name" > "$law_dir/verify.sh"
+        chmod +x "$law_dir/verify.sh"
+        log_info "Added check to law: $law_name"
+        updated=true
+    fi
+
+    if [[ -n "$target_check" && -n "$target_check_severity" ]]; then
+        jq --arg cid "$target_check" --arg sev "$target_check_severity" \
+            '(.checks[] | select(.id == $cid)).severity = $sev' \
+            "$law_json" > "${law_json}.tmp" && \
+            mv "${law_json}.tmp" "$law_json"
+        log_info "Updated check '$target_check' severity to: $target_check_severity"
         updated=true
     fi
 
