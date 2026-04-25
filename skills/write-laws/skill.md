@@ -27,7 +27,7 @@ chp-law create no-api-keys --hooks=pre-commit,pre-push
 # This creates:
 # - docs/chp/laws/no-api-keys/law.json (metadata)
 # - docs/chp/laws/no-api-keys/verify.sh (verification script)
-# - docs/chp/no-api-keys.md (suggestive context)
+# - docs/chp/laws/no-api-keys/guidance.md (suggestive context)
 ```
 
 ### Implementing the Verification

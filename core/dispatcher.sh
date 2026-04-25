@@ -10,6 +10,11 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/common.sh"
 source "$SCRIPT_DIR/hook-registry.sh"
 
+# Source tightener.sh if available (for failure recording)
+if [ -f "$SCRIPT_DIR/tightener.sh" ]; then
+    source "$SCRIPT_DIR/tightener.sh"
+fi
+
 # Get the git command for retrieving context based on hook type
 get_hook_context() {
     local hook_type="$1"
@@ -119,9 +124,8 @@ dispatch_hook() {
             log_error "Law '$law_name' failed with exit code $exit_code"
             ((failed++))
 
-            # Record failure if tightener.sh is available
-            if [ -f "$SCRIPT_DIR/tightener.sh" ]; then
-                source "$SCRIPT_DIR/tightener.sh"
+            # Record failure if tightener is available
+            if command -v record_failure >/dev/null 2>&1; then
                 record_failure "$law_name"
             fi
         fi
