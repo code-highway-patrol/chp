@@ -1,5 +1,4 @@
 {
-  "id": "mandarin-only",
   "name": "mandarin-only",
   "intent": "All text output, file content, and responses must be in simplified Mandarin Chinese",
   "severity": "error",

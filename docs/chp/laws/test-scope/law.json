@@ -1,5 +1,4 @@
 {
-  "id": "test-scope",
   "name": "test-scope",
   "intent": "Test law for scope filtering - only applies to TypeScript files",
   "severity": "warn",

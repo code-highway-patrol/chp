@@ -86,3 +86,164 @@ list_laws() {
         fi
     done
 }
+
+# Valid values for law fields
+_CHP_VALID_SEVERITIES="error warn info"
+_CHP_VALID_HOOKS="pre-commit pre-push post-commit commit-msg pre-tool post-tool pre-write post-response"
+_CHP_VALID_CHECK_TYPES="pattern agent structural metric"
+_CHP_VALID_CHECK_SEVERITIES="block warn log"
+
+# Validate a law.json file against the CHP schema
+# Usage: validate_law_json <law_json_path>
+# Returns: 0 if valid, 1 if issues found
+# Output: one issue per line to stderr
+validate_law_json() {
+    local law_json="$1"
+    local -a issues=()
+
+    # Must exist and be valid JSON
+    if [[ ! -f "$law_json" ]]; then
+        echo "law.json not found" >&2
+        return 1
+    fi
+
+    if ! jq empty "$law_json" 2>/dev/null; then
+        echo "invalid JSON" >&2
+        return 1
+    fi
+
+    # Required fields
+    local field
+    for field in name severity hooks enabled; do
+        local has
+        has=$(jq -r "has(\"$field\")" "$law_json" 2>/dev/null)
+        if [[ "$has" != "true" ]]; then
+            issues+=("missing required field: $field")
+        fi
+    done
+
+    # name: must be a non-empty string matching ^[a-z][a-z0-9-]{2,31}$
+    local name_val
+    name_val=$(jq -r '.name // empty' "$law_json" 2>/dev/null)
+    if [[ -z "$name_val" ]]; then
+        : # already caught by required check
+    elif [[ ! "$name_val" =~ ^[a-z][a-z0-9-]{2,31}$ ]]; then
+        issues+=("name must be 3-32 chars, lowercase letters/numbers/hyphens, start with letter: '$name_val'")
+    fi
+
+    # severity: must be one of the valid values
+    local sev_val
+    sev_val=$(jq -r '.severity // empty' "$law_json" 2>/dev/null)
+    if [[ -n "$sev_val" ]]; then
+        local sev_ok=false
+        local v
+        for v in $_CHP_VALID_SEVERITIES; do
+            [[ "$sev_val" == "$v" ]] && sev_ok=true
+        done
+        if ! $sev_ok; then
+            issues+=("severity must be one of: $_CHP_VALID_SEVERITIES (got: '$sev_val')")
+        fi
+    fi
+
+    # hooks: must be a non-empty array of valid hook names
+    local hooks_type
+    hooks_type=$(jq -r '.hooks | type' "$law_json" 2>/dev/null)
+    if [[ "$hooks_type" == "array" ]]; then
+        local hook_count
+        hook_count=$(jq '.hooks | length' "$law_json" 2>/dev/null)
+        if [[ "$hook_count" -eq 0 ]]; then
+            issues+=("hooks array must not be empty")
+        fi
+        local i
+        for ((i=0; i<hook_count; i++)); do
+            local hook_val
+            hook_val=$(jq -r ".hooks[$i]" "$law_json" 2>/dev/null)
+            local hook_ok=false
+            for v in $_CHP_VALID_HOOKS; do
+                [[ "$hook_val" == "$v" ]] && hook_ok=true
+            done
+            if ! $hook_ok && [[ -n "$hook_val" ]]; then
+                issues+=("invalid hook: '$hook_val'")
+            fi
+        done
+    elif [[ "$hooks_type" != "null" && -n "$hooks_type" ]]; then
+        issues+=("hooks must be an array (got: $hooks_type)")
+    fi
+
+    # enabled: must be boolean
+    local enabled_type
+    enabled_type=$(jq -r '.enabled | type' "$law_json" 2>/dev/null)
+    if [[ -n "$enabled_type" && "$enabled_type" != "boolean" && "$enabled_type" != "null" ]]; then
+        issues+=("enabled must be a boolean (got: $enabled_type)")
+    fi
+
+    # checks: if present, must be an array with valid structure
+    local checks_type
+    checks_type=$(jq -r '.checks | type' "$law_json" 2>/dev/null)
+    if [[ "$checks_type" == "array" ]]; then
+        local check_count
+        check_count=$(jq '.checks | length' "$law_json" 2>/dev/null)
+        local i
+        for ((i=0; i<check_count; i++)); do
+            local prefix="checks[$i]"
+
+            # Required check fields
+            for field in id type config severity message; do
+                local has
+                has=$(jq -r ".checks[$i] | has(\"$field\")" "$law_json" 2>/dev/null)
+                if [[ "$has" != "true" ]]; then
+                    issues+=("$prefix: missing required field: $field")
+                fi
+            done
+
+            # Check type must be valid
+            local ctype
+            ctype=$(jq -r ".checks[$i].type // empty" "$law_json" 2>/dev/null)
+            if [[ -n "$ctype" ]]; then
+                local ctype_ok=false
+                for v in $_CHP_VALID_CHECK_TYPES; do
+                    [[ "$ctype" == "$v" ]] && ctype_ok=true
+                done
+                if ! $ctype_ok; then
+                    issues+=("$prefix: invalid type: '$ctype'")
+                fi
+            fi
+
+            # Check severity must be valid
+            local csev
+            csev=$(jq -r ".checks[$i].severity // empty" "$law_json" 2>/dev/null)
+            if [[ -n "$csev" ]]; then
+                local csev_ok=false
+                for v in $_CHP_VALID_CHECK_SEVERITIES; do
+                    [[ "$csev" == "$v" ]] && csev_ok=true
+                done
+                if ! $csev_ok; then
+                    issues+=("$prefix: invalid severity: '$csev'")
+                fi
+            fi
+
+            # config must be an object
+            local config_type
+            config_type=$(jq -r ".checks[$i].config | type" "$law_json" 2>/dev/null)
+            if [[ -n "$config_type" && "$config_type" != "object" && "$config_type" != "null" ]]; then
+                issues+=("$prefix: config must be an object (got: $config_type)")
+            fi
+
+            # message must be a non-trivial string
+            local msg
+            msg=$(jq -r ".checks[$i].message // empty" "$law_json" 2>/dev/null)
+            if [[ -n "$msg" && ${#msg} -lt 5 ]]; then
+                issues+=("$prefix: message too short (minimum 5 chars)")
+            fi
+        done
+    elif [[ -n "$checks_type" && "$checks_type" != "null" ]]; then
+        issues+=("checks must be an array (got: $checks_type)")
+    fi
+
+    # Output issues
+    if [[ ${#issues[@]} -gt 0 ]]; then
+        printf '%s\n' "${issues[@]}" >&2
+        return 1
+    fi
+    return 0
+}

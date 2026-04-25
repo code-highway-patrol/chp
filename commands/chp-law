@@ -12,6 +12,7 @@ source "$SCRIPT_DIR/../core/tightener.sh"
 # Source interactive and builder modules
 source "$SCRIPT_DIR/../core/interactive.sh"
 source "$SCRIPT_DIR/../core/law-builder.sh"
+source "$SCRIPT_DIR/../core/probe.sh"
 
 # Display usage information
 show_usage() {
@@ -27,6 +28,8 @@ Commands:
     list                                      List all laws
     delete <law-name>                         Delete a law and uninstall hooks
     test <law-name>                           Test a law's verification script
+    probe <law-name>                          Probe a law for detection gaps
+    probe-all                                 Probe all enabled laws
     reset <law-name>                          Reset failure count for a law
     disable <law-name>                        Disable a law (keep but don't enforce)
     enable <law-name>                         Enable a disabled law
@@ -332,6 +335,16 @@ create_law() {
             register_hook_law "$hook" "$law_name"
         done
         log_info "Registered '$law_name' with hooks: $(IFS=', '; echo "${hooks[*]}")"
+    fi
+
+    # Validate the generated law.json
+    local validation_output
+    validation_output=$(validate_law_json "$law_dir/law.json" 2>&1)
+    if [[ $? -ne 0 ]]; then
+        log_warn "Generated law.json has validation issues:"
+        while IFS= read -r issue; do
+            [[ -n "$issue" ]] && log_warn "  $issue"
+        done <<< "$validation_output"
     fi
 
     # Create guidance.md (guidance documentation template)
@@ -816,6 +829,17 @@ update_law() {
         return 0
     fi
 
+    # Validate the updated law.json
+    local validation_output
+    validation_output=$(validate_law_json "$law_json" 2>&1)
+    if [[ $? -ne 0 ]]; then
+        log_warn "Validation issues after update:"
+        while IFS= read -r issue; do
+            [[ -n "$issue" ]] && log_warn "  $issue"
+        done <<< "$validation_output"
+        return 1
+    fi
+
     log_info "Law updated: $law_name"
     return 0
 }
@@ -896,6 +920,20 @@ main() {
                 exit 1
             fi
             update_law "$@"
+            ;;
+        probe)
+            if [[ $# -lt 1 ]]; then
+                log_error "Usage: chp-law probe <law-name>"
+                exit 1
+            fi
+            if ! law_exists "$1"; then
+                log_error "Law does not exist: $1"
+                exit 1
+            fi
+            probe_law "$1"
+            ;;
+        probe-all)
+            probe_all
             ;;
         help|--help|-h)
             show_usage

@@ -1,7 +1,6 @@
 {
-  "id": "no-api-keys",
   "name": "no-api-keys",
-  "intent": "Prevent API keys, tokens, and secrets from being committed",
+  "intent": "Prevent API keys, tokens, and secrets from being committed to source",
   "severity": "error",
   "failures": 1,
   "tightening_level": 1,
