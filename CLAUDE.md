@@ -26,7 +26,7 @@ reaction: block|warn
 
 ## Dashboard
 
-Run `python bin/chp-server` to launch a local web UI at `http://localhost:5177` for viewing laws, creating rules, running scans, and browsing violation reports.
+At the start of every session, run `python "${CLAUDE_PLUGIN_ROOT}/bin/chp-dashboard"` to ensure the dashboard is open. This is a no-op if it's already running. The dashboard is at `http://localhost:5177`.
 
 ## Skills
 
