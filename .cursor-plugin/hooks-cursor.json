@@ -1,0 +1,14 @@
+{
+  "hooks": {
+    "pre-prompt": [
+      {
+        "file": "./.claude/hooks/pre-prompt.md"
+      }
+    ],
+    "post-response": [
+      {
+        "file": "./.claude/hooks/post-analysis.md"
+      }
+    ]
+  }
+}

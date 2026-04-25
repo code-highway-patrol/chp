@@ -1,0 +1,23 @@
+{
+  "name": "chp",
+  "displayName": "CHP - Codebeat Highway Patrol",
+  "description": "Code quality enforcement with traffic laws and automated violation detection",
+  "version": "1.0.0",
+  "author": {
+    "name": "CHP Contributors"
+  },
+  "homepage": "https://github.com/yourusername/chp",
+  "repository": "https://github.com/yourusername/chp",
+  "license": "MIT",
+  "keywords": [
+    "code-quality",
+    "linting",
+    "enforcement",
+    "traffic-laws",
+    "pre-commit",
+    "hooks"
+  ],
+  "skills": "./.claude/skills/",
+  "commands": "./.claude/commands/",
+  "hooks": "./.claude/hooks/hooks-cursor.json"
+}
