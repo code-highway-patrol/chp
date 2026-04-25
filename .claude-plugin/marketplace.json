@@ -1,0 +1,13 @@
+{
+  "name": "chp",
+  "owner": {
+    "name": "CHP Contributors"
+  },
+  "plugins": [
+    {
+      "name": "chp",
+      "source": "./",
+      "description": "Define and enforce code laws with subjective AI judgment. Laws get stricter over time."
+    }
+  ]
+}
