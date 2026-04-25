@@ -1,14 +1,11 @@
 #!/bin/bash
-# CHP-MANAGED: Do not edit this line
-# CHP Git Hook Template: pre-push
+# CHP Pre-Push Hook
+# Installed to .git/hooks/pre-push
+# Runs before pushes are sent to remote
 
-# Source CHP common functions
-CHP_BASE="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-source "$CHP_BASE/core/common.sh"
+# CHP-MANAGED
 
-log_info "Running pre-push hook..."
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../../core/dispatcher.sh" pre-push "$@"
 
-# Run CHP law enforcement here
-# This template will be enhanced with specific law logic
-
-exit 0
+exit $?
