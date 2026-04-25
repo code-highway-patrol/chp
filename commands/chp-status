@@ -75,3 +75,17 @@ else
 fi
 
 echo ""
+
+# Show hook registry
+echo "🔗 Hook Registry:"
+if [ -f "$CHP_BASE/.chp/hook-registry.json" ]; then
+    hook_count=$(jq '.hooks | length' "$CHP_BASE/.chp/hook-registry.json")
+    echo "   $hook_count hook types registered"
+    echo ""
+    echo "   Registered mappings:"
+    jq -r '.hooks | to_entries[] | "   \(.key): \(.value.laws | length) law(s)"' "$CHP_BASE/.chp/hook-registry.json"
+else
+    echo "   No hook registry found"
+fi
+
+echo ""
