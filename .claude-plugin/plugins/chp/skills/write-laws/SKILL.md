@@ -119,88 +119,101 @@ A law file contains the following fields:
 
 #### Research-First Protocol
 
-Before writing a single line of verify.sh, you MUST complete these steps in order:
+Before writing a single line of verify.sh, you MUST complete these steps **in this exact order**.
 
-**Step 1: Check existing patterns.**
+---
 
-Search `docs/chp/LAW-PATTERNS.md` for a matching pattern. Read the relevant section fully. If a template exists, use it as your starting point — do not reinvent from scratch.
+**Step 1: Read `docs/chp/LAW-PATTERNS.md`.**
 
-**Step 2: Search for prior art.**
+This file contains ready-made templates organized by detection type. You must read the relevant section before writing anything.
 
-Run these searches before implementing:
+| If the law involves... | Read this section | Lines to jump to |
+|------------------------|-------------------|-------------------|
+| String matching (secrets, debug statements, keywords) | Section 1: Regex/Shell | `docs/chp/LAW-PATTERNS.md` line 27 |
+| Code structure (nesting, complexity, unused imports) | Section 2: AST-Based | `docs/chp/LAW-PATTERNS.md` line 252 |
+| Existing tools (ESLint, Prettier, Semgrep, tsc) | Section 3: Delegated Tools | `docs/chp/LAW-PATTERNS.md` line 416 |
+| Context-aware rules (allow in tests, conditional enforcement) | Section 4: Hybrid Patterns | `docs/chp/LAW-PATTERNS.md` line 539 |
+
+If you find a matching template, stop here — use it. Do not write your own logic when a tested template exists.
+
+---
+
+**Step 2: Read existing laws for prior art.**
+
+Run this to see what already exists:
 ```bash
-# Check if a similar law already exists
 bash commands/chp-law list
-
-# Search existing verify.sh scripts for similar patterns
-grep -r "similar_keyword" docs/chp/laws/*/verify.sh
 ```
 
-If you find a similar law, read its verify.sh and adapt it rather than writing from zero.
+Then read the closest match. Here are the current production laws you can learn from:
+
+| Law | What it demonstrates | File to read |
+|-----|----------------------|-------------|
+| `no-api-keys` | Multi-pattern regex, git staged + pre-tool contexts, temp file handling | `docs/chp/laws/no-api-keys/verify.sh` |
+| `no-console-log` | Git diff filtering, file type exclusion, violation reporting | `docs/chp/laws/no-console-log/verify.sh` |
+
+If a similar law exists, copy its structure. Change only the detection patterns — not the boilerplate around them.
+
+---
 
 **Step 3: Research the detection method.**
 
-If the law requires patterns you're not confident about (regex for secrets, character encoding ranges, AST queries, tool flags):
+This step is only needed if Steps 1 and 2 did not give you a working approach. If you are unsure about regex patterns, encoding, tool flags, or AST queries — you must research before implementing.
 
+**For regex/encoding questions**, test against real input:
 ```bash
-# Search for detection approaches online or in docs
-grep -r "pattern_or_keyword" node_modules/.eslintplugin/ 2>/dev/null
-# Check what tools exist for this type of detection
-which semgrep eslint tsc 2>/dev/null
+# Test if a regex actually matches what you think it does
+echo "sample text HERE" | grep -P 'YOUR_REGEX'
+
+# For Unicode ranges (Chinese, emoji, RTL), use perl — grep -P Unicode support varies by platform
+echo "中文内容" | perl -ne 'while (/[\x{4e00}-\x{9fff}]/g) { print "$&\n" }'
+
+# Check what tools are available before depending on them
+which perl jq grep sed 2>/dev/null
 ```
 
-You are FORBIDDEN from guessing at regex patterns, encoding ranges, or tool flags. If you are unsure:
-- Search the codebase for existing examples
-- Consult `docs/chp/LAW-PATTERNS.md` for the correct approach
-- Test your detection logic against sample input BEFORE writing verify.sh
-- When in doubt, use a delegated tool (ESLint, Semgrep, tsc) instead of hand-rolling detection
+**For tool delegation questions**, check what's installed:
+```bash
+# Does this project have ESLint/Prettier/TypeScript?
+ls -1 package.json .eslintrc* .prettierrc* tsconfig.json 2>/dev/null
 
-**Step 4: Validate your approach.**
+# What ESLint rules are available?
+npx eslint --print-config src/index.ts 2>/dev/null | jq '.rules | keys'
+```
 
-Before writing verify.sh, confirm:
-- [ ] You found and read the relevant LAW-PATTERNS.md section (or confirmed none exists)
-- [ ] You checked existing laws for similar implementations
-- [ ] You are confident in your detection method (regex, tool, or AST) — if not, you researched it
-- [ ] You can explain WHY your detection method works, not just what it does
+**You are FORBIDDEN from guessing at:**
+- Regex patterns for things you haven't tested
+- Unicode character ranges
+- Tool CLI flags you haven't verified
+- File paths or extensions that might not exist
 
-Only after all four checks pass may you write the verify.sh.
+When in doubt, use a delegated tool (ESLint, Semgrep, tsc) instead of hand-rolling detection.
 
-#### Common Research Traps
+---
 
-These are situations where agents typically skip research and produce broken verify.sh scripts. You MUST research in each case:
+**Step 4: Confirm before writing.**
 
-| Situation | Wrong (guessing) | Right (researching) |
-|-----------|-------------------|---------------------|
-| Unicode detection (Chinese, emoji, RTL) | `grep -P '[\x{4e00}]'` | Check if `perl` or `grep -P` is available; test the range against real input |
-| Secret patterns | `sk_.*` | Look up actual key formats (lengths, character sets) from LAW-PATTERNS.md |
-| Encoding checks | Assume UTF-8 | Check `file --mime-encoding` availability; test with `iconv` |
-| Tool delegation | Guess ESLint flags | Run `eslint --help` or check the project's eslint config for available rules |
-| File type filtering | Hardcode extensions | Check project file types with `find . -type f \| sed 's/.*\.//' \| sort -u` |
+You must be able to answer YES to all four:
 
-#### Research Confidence Levels
+1. Did you read the relevant section of `docs/chp/LAW-PATTERNS.md`? (or confirm no section matches)
+2. Did you check existing laws with `bash commands/chp-law list`? (or confirm no similar law exists)
+3. Are you confident your detection method works? (or did you test it in Step 3)
+4. Can you explain WHY your detection method works — not just what it does?
 
-Before writing, rate your confidence:
+If any answer is NO — go back. Do not write verify.sh yet.
 
-- **High confidence** — Pattern exists in LAW-PATTERNS.md, or you've verified the detection method works. Proceed directly.
-- **Medium confidence** — You found a similar pattern but need to adapt it. Write a test case first, then implement.
-- **Low confidence** — You're unsure about the detection method, regex, or tool usage. **STOP. Research first.** Search the web, read tool docs, or test against sample input. Do NOT write verify.sh until confidence reaches medium or higher.
+If you cannot reach confidence after research, ask the user for guidance. Shipping a broken check is worse than shipping no check.
 
-**If confidence is low and you cannot find the answer after research, ask the user for guidance rather than shipping a broken check.**
+---
 
 #### Now implement
 
-After completing research, edit the `verify.sh` script:
-
+After completing the Research-First Protocol, read the law's generated verify.sh template:
 ```bash
-#!/bin/bash
-# Check for API keys in staged files
-
-if git diff --cached --name-only | xargs grep -l "sk_\|AIza\|AKIA" 2>/dev/null; then
-    echo "API key detected in staged files"
-    exit 1  # Block the commit
-fi
-exit 0
+cat docs/chp/laws/<law-name>/verify.sh
 ```
+
+Then edit it. Use the structure from the closest existing law (Step 2) and the patterns from LAW-PATTERNS.md (Step 1). Do not write from a blank page — always start from a template or existing law.
 
 ### Writing the Guidance
 

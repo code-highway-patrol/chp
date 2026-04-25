@@ -31,36 +31,11 @@ detect_all_agent_hooks() {
     fi
 }
 
-detect_all_cicd_hooks() {
-    local has_cicd=false
-
-    if [ -d .github/workflows ] && [ -n "$(ls -A .github/workflows/*.yml 2>/dev/null || ls -A .github/workflows/*.yaml 2>/dev/null)" ]; then
-        has_cicd=true
-    fi
-
-    if [ -f .gitlab-ci.yml ]; then
-        has_cicd=true
-    fi
-
-    if [ -f Jenkinsfile ]; then
-        has_cicd=true
-    fi
-
-    if [ -f .chp/cicd-enabled ]; then
-        has_cicd=true
-    fi
-
-    if [ "$has_cicd" = "true" ]; then
-        echo "pre-build post-build pre-deploy post-deploy"
-    fi
-}
-
 detect_all_hooks() {
     local all_hooks=""
 
     all_hooks="$all_hooks $(detect_all_git_hooks)"
     all_hooks="$all_hooks $(detect_all_agent_hooks)"
-    all_hooks="$all_hooks $(detect_all_cicd_hooks)"
 
     echo "$all_hooks" | tr ' ' '\n' | sort -u | tr '\n' ' ' | xargs
 }
@@ -77,12 +52,6 @@ get_hook_category() {
     local agent_hooks="pre-prompt post-prompt pre-tool post-tool pre-response post-response"
     if echo "$agent_hooks" | grep -qw "$hook_type"; then
         echo "agent"
-        return
-    fi
-
-    local cicd_hooks="pre-build post-build pre-deploy post-deploy"
-    if echo "$cicd_hooks" | grep -qw "$hook_type"; then
-        echo "cicd"
         return
     fi
 

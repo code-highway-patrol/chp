@@ -14,7 +14,7 @@ echo ""
 # Setup test environment
 TEST_DIR="$(mktemp -d)"
 cd "$TEST_DIR"
-mkdir -p .git/hooks .claude/hooks .chp/cicd-hooks
+mkdir -p .git/hooks .claude/hooks
 
 # Cleanup function
 cleanup() {
@@ -113,26 +113,7 @@ else
 fi
 
 echo ""
-echo "Test 5: install_hook_template for cicd hooks"
-echo "#!/bin/bash" > "$CHP_BASE/hooks/cicd/pre-build.sh"
-echo "# CHP-MANAGED: Do not edit this line" >> "$CHP_BASE/hooks/cicd/pre-build.sh"
-echo "# CHP template for pre-build" >> "$CHP_BASE/hooks/cicd/pre-build.sh"
-echo "echo 'pre-build hook running'" >> "$CHP_BASE/hooks/cicd/pre-build.sh"
-
-if install_hook_template "pre-build" "cicd" > /dev/null 2>&1; then
-    if [ -f ".chp/cicd-hooks/pre-build" ]; then
-        echo "  ✓ CI/CD hook installed"
-    else
-        echo "  ✗ CI/CD hook not installed"
-        exit 1
-    fi
-else
-    echo "  ✗ install_hook_template failed for cicd"
-    exit 1
-fi
-
-echo ""
-echo "Test 6: uninstall_hook_template removes CHP hooks"
+echo "Test 5: uninstall_hook_template removes CHP hooks"
 if uninstall_hook_template "pre-commit" "git" > /dev/null 2>&1; then
     if [ ! -f ".git/hooks/pre-commit" ]; then
         echo "  ✓ Git hook uninstalled"
@@ -146,7 +127,7 @@ else
 fi
 
 echo ""
-echo "Test 7: install_law_hooks installs all hooks from law.json"
+echo "Test 6: install_law_hooks installs all hooks from law.json"
 # Create a test law
 TEST_LAW_DIR="$CHP_BASE/docs/chp/laws/test-law"
 mkdir -p "$TEST_LAW_DIR"
@@ -175,7 +156,7 @@ else
 fi
 
 echo ""
-echo "Test 8: uninstall_law_hooks removes all hooks for a law"
+echo "Test 7: uninstall_law_hooks removes all hooks for a law"
 if uninstall_law_hooks "test-law" > /dev/null 2>&1; then
     if [ ! -f ".git/hooks/pre-commit" ] && [ ! -f ".git/hooks/pre-push" ] && [ ! -f ".claude/hooks/pre-prompt" ]; then
         echo "  ✓ All hooks uninstalled for law"
@@ -189,7 +170,7 @@ else
 fi
 
 echo ""
-echo "Test 9: Backwards compatibility - install_hook still works"
+echo "Test 8: Backwards compatibility - install_hook still works"
 if install_hook "test-law" "pre-commit" > /dev/null 2>&1; then
     if [ -f ".git/hooks/pre-commit" ]; then
         echo "  ✓ Legacy install_hook still works"
@@ -203,7 +184,7 @@ else
 fi
 
 echo ""
-echo "Test 10: Backwards compatibility - uninstall_hook still works"
+echo "Test 9: Backwards compatibility - uninstall_hook still works"
 if uninstall_hook "test-law" "pre-commit" > /dev/null 2>&1; then
     if [ ! -f ".git/hooks/pre-commit" ]; then
         echo "  ✓ Legacy uninstall_hook still works"
@@ -217,7 +198,7 @@ else
 fi
 
 echo ""
-echo "Test 11: Graceful handling of missing templates"
+echo "Test 10: Graceful handling of missing templates"
 # Remove the template file
 rm -f "$CHP_BASE/hooks/git/commit-msg.sh"
 
@@ -229,7 +210,7 @@ else
 fi
 
 echo ""
-echo "Test 12: _install_git_hook helper function"
+echo "Test 11: _install_git_hook helper function"
 echo "#!/bin/bash" > "$CHP_BASE/hooks/git/commit-msg.sh"
 echo "# CHP-MANAGED: Do not edit this line" >> "$CHP_BASE/hooks/git/commit-msg.sh"
 echo "# CHP template" >> "$CHP_BASE/hooks/git/commit-msg.sh"
@@ -247,7 +228,7 @@ else
 fi
 
 echo ""
-echo "Test 13: _uninstall_git_hook helper function"
+echo "Test 12: _uninstall_git_hook helper function"
 if _uninstall_git_hook "commit-msg" > /dev/null 2>&1; then
     if [ ! -f ".git/hooks/commit-msg" ]; then
         echo "  ✓ _uninstall_git_hook works"
@@ -261,7 +242,7 @@ else
 fi
 
 echo ""
-echo "Test 14: _install_agent_hook helper function"
+echo "Test 13: _install_agent_hook helper function"
 echo "#!/bin/bash" > "$CHP_BASE/hooks/agent/post-prompt.sh"
 echo "# CHP-MANAGED: Do not edit this line" >> "$CHP_BASE/hooks/agent/post-prompt.sh"
 echo "# CHP template" >> "$CHP_BASE/hooks/agent/post-prompt.sh"
@@ -279,7 +260,7 @@ else
 fi
 
 echo ""
-echo "Test 15: _uninstall_agent_hook helper function"
+echo "Test 14: _uninstall_agent_hook helper function"
 if _uninstall_agent_hook "post-prompt" > /dev/null 2>&1; then
     if [ ! -f ".claude/hooks/post-prompt" ]; then
         echo "  ✓ _uninstall_agent_hook works"
@@ -289,38 +270,6 @@ if _uninstall_agent_hook "post-prompt" > /dev/null 2>&1; then
     fi
 else
     echo "  ✗ _uninstall_agent_hook failed"
-    exit 1
-fi
-
-echo ""
-echo "Test 16: _install_cicd_hook helper function"
-echo "#!/bin/bash" > "$CHP_BASE/hooks/cicd/post-build.sh"
-echo "# CHP-MANAGED: Do not edit this line" >> "$CHP_BASE/hooks/cicd/post-build.sh"
-echo "# CHP template" >> "$CHP_BASE/hooks/cicd/post-build.sh"
-
-if _install_cicd_hook "post-build" > /dev/null 2>&1; then
-    if [ -f ".chp/cicd-hooks/post-build" ]; then
-        echo "  ✓ _install_cicd_hook works"
-    else
-        echo "  ✗ _install_cicd_hook failed"
-        exit 1
-    fi
-else
-    echo "  ✗ _install_cicd_hook failed"
-    exit 1
-fi
-
-echo ""
-echo "Test 17: _uninstall_cicd_hook helper function"
-if _uninstall_cicd_hook "post-build" > /dev/null 2>&1; then
-    if [ ! -f ".chp/cicd-hooks/post-build" ]; then
-        echo "  ✓ _uninstall_cicd_hook works"
-    else
-        echo "  ✗ _uninstall_cicd_hook failed"
-        exit 1
-    fi
-else
-    echo "  ✗ _uninstall_cicd_hook failed"
     exit 1
 fi
 

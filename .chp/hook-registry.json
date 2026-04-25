@@ -1,90 +1,30 @@
 {
-  "version": "1.0.0",
   "hooks": {
+    "post-commit": {
+      "laws": ["commit-metrics"],
+      "enabled": true,
+      "blocking": false
+    },
+    "pre-tool": {
+      "laws": ["mandarin-only", "no-api-keys", "no-todos"],
+      "enabled": true,
+      "blocking": true
+    },
     "pre-commit": {
-      "category": "git",
-      "laws": [
-        "no-console-log",
-        "no-api-keys",
-        "no-todos",
-        "test-scope",
-        "no-alerts"
-      ],
+      "laws": ["no-alerts", "no-api-keys", "no-console-log", "no-todos", "test-scope"],
       "enabled": true,
       "blocking": true
     },
     "pre-push": {
-      "category": "git",
-      "laws": [
-        "no-api-keys",
-        "no-todos",
-        "no-alerts"
-      ],
-      "enabled": true,
-      "blocking": true
-    },
-    "post-commit": {
-      "category": "git",
-      "laws": [
-        "commit-metrics"
-      ]
-    },
-    "pre-prompt": {
-      "category": "agent",
-      "laws": []
-    },
-    "post-prompt": {
-      "category": "agent",
-      "laws": []
-    },
-    "pre-tool": {
-      "category": "agent",
-      "laws": [
-        "no-api-keys",
-        "no-todos"
-      ],
+      "laws": ["no-alerts", "no-api-keys", "no-todos"],
       "enabled": true,
       "blocking": true
     },
     "post-tool": {
-      "category": "agent",
-      "laws": [
-        "no-api-keys"
-      ],
+      "laws": ["no-api-keys"],
       "enabled": true,
-      "blocking": true
-    },
-    "pre-response": {
-      "category": "agent",
-      "laws": []
-    },
-    "post-response": {
-      "category": "agent",
-      "laws": []
-    },
-    "pre-build": {
-      "category": "cicd",
-      "laws": []
-    },
-    "post-build": {
-      "category": "cicd",
-      "laws": []
-    },
-    "pre-deploy": {
-      "category": "cicd",
-      "laws": []
-    },
-    "post-deploy": {
-      "category": "cicd",
-      "laws": []
-    },
-    "test-scope": {
-      "laws": [
-        "pre-commit"
-      ],
-      "enabled": true,
-      "blocking": true
+      "blocking": false
     }
   },
-  "lastUpdated": "2026-04-24T22:00:00Z"
+  "version": "1.0"
 }

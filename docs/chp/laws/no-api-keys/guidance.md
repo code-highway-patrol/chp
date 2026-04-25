@@ -50,3 +50,11 @@ If this law fails:
 2. Move the secret to an environment variable or secret manager
 3. Rotate the compromised key immediately
 4. Re-run the verification
+
+---
+
+**Violation recorded:** 2026-04-25T18:35:58Z (Total: 1)
+
+This law has been violated 1 time(s). The guidance has been automatically strengthened.
+
+**Previous violations indicate this pattern is easy to miss. Pay extra attention.**

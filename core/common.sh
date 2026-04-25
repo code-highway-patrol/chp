@@ -21,26 +21,28 @@ CHP_BASE="${CHP_BASE:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 LAWS_DIR="${LAWS_DIR:-$CHP_BASE/docs/chp/laws}"
 GUIDANCE_DIR="${GUIDANCE_DIR:-$CHP_BASE/docs/chp}"
 
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
+# Highlight tag style: bold white text on colored background
+BG_RED='\033[41m\033[1m'
+BG_GREEN='\033[42m\033[1m'
+BG_ORANGE='\033[48;5;202m\033[1m'
+BG_YELLOW='\033[43m\033[1m'
 NC='\033[0m'
 
 log_info() {
-    echo -e "${GREEN}[INFO]${NC} $1"
+    echo -e " ${BG_GREEN} INFO ${NC}  $1"
 }
 
 log_error() {
-    echo -e "${RED}[ERROR]${NC} $1" >&2
+    echo -e " ${BG_RED} ERROR ${NC}  $1" >&2
 }
 
 log_warn() {
-    echo -e "${YELLOW}[WARN]${NC} $1"
+    echo -e " ${BG_ORANGE} WARN ${NC}  $1"
 }
 
 log_debug() {
     if [ "${CHP_DEBUG:-false}" = "true" ]; then
-        echo -e "${YELLOW}[DEBUG]${NC} $1" >&2
+        echo -e " ${BG_YELLOW} DEBUG ${NC}  $1" >&2
     fi
 }
 

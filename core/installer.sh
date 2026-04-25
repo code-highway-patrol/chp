@@ -69,14 +69,9 @@ install_hook() {
         echo "# CHP Law: $law_name"
         echo "# Hook type: $hook_type"
         echo ""
-        echo "# Source CHP common functions"
-        echo "source \"\$(dirname \"\$0\")/../core/common.sh\""
-        echo ""
-        echo "# Run the law"
-        echo "chp run \"$law_name\""
-        echo ""
-        echo "# Exit with hook's exit code"
-        echo "exit \$?"
+        echo "SCRIPT_DIR=\"\$(cd \"\$(dirname \"\${BASH_SOURCE[0]}\")\" && pwd)\""
+        echo "PROJECT_ROOT=\"\$(cd \"\$SCRIPT_DIR/../..\" && pwd)\""
+        echo "exec \"\$PROJECT_ROOT/core/dispatcher.sh\" $hook_type \"\$@\""
     } > "$hook_file"
 
     chmod +x "$hook_file"
@@ -179,9 +174,6 @@ install_hook_template() {
         agent)
             _install_agent_hook "$hook_type"
             ;;
-        cicd)
-            _install_cicd_hook "$hook_type"
-            ;;
         *)
             log_error "Unknown hook category: $hook_category"
             return 1
@@ -209,9 +201,6 @@ uninstall_hook_template() {
             ;;
         agent)
             _uninstall_agent_hook "$hook_type"
-            ;;
-        cicd)
-            _uninstall_cicd_hook "$hook_type"
             ;;
         *)
             log_error "Unknown hook category: $hook_category"
@@ -408,46 +397,6 @@ _uninstall_agent_hook() {
     return 0
 }
 
-_install_cicd_hook() {
-    local hook_type="$1"
-    local hook_dir=".chp/cicd-hooks"
-    local hook_file="$hook_dir/$hook_type"
-    local template_file="$CHP_BASE/hooks/cicd/$hook_type.sh"
-
-    if [[ ! -f "$template_file" ]]; then
-        log_warn "Template not found: $template_file"
-        return 1
-    fi
-
-    mkdir -p "$hook_dir"
-    backup_existing_hook "$hook_file"
-    cp "$template_file" "$hook_file"
-    chmod +x "$hook_file"
-
-    log_info "Installed CI/CD hook: $hook_file"
-    return 0
-}
-
-_uninstall_cicd_hook() {
-    local hook_type="$1"
-    local hook_file=".chp/cicd-hooks/$hook_type"
-
-    if [[ ! -f "$hook_file" ]]; then
-        log_debug "Hook file does not exist: $hook_file"
-        return 0
-    fi
-
-    if ! grep -q "$CHP_MANAGED_MARKER" "$hook_file"; then
-        log_warn "Hook is not CHP-managed, skipping: $hook_file"
-        return 0
-    fi
-
-    rm -f "$hook_file"
-    log_info "Uninstalled CI/CD hook: $hook_file"
-
-    return 0
-}
-
 # Claude Code Settings Hooks
 
 # Args: hook_type (pre-tool or post-tool)
@@ -575,6 +524,133 @@ uninstall_claude_hooks() {
 
     rm -f ".claude/hooks/pre-tool-wrapper.sh"
     rm -f ".claude/hooks/post-tool-wrapper.sh"
+
+    return 0
+}
+
+# Hook Ensure / Sync
+
+# Check if a hook file is already installed at its expected location
+_is_hook_installed() {
+    local hook_type="$1"
+    local hook_category="$2"
+
+    case "$hook_category" in
+        git)
+            [[ -f ".git/hooks/$hook_type" ]]
+            ;;
+        agent)
+            [[ -f ".claude/hooks/$hook_type" ]]
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+}
+
+# Ensure Claude Code settings.json has hooks configured
+_ensure_claude_settings() {
+    local settings_file=".claude/settings.json"
+
+    if [[ ! -f "$settings_file" ]]; then
+        mkdir -p .claude
+        echo '{}' > "$settings_file"
+        log_info "Created $settings_file"
+    fi
+
+    if jq -e '.hooks.PreToolUse' "$settings_file" >/dev/null 2>&1; then
+        log_debug "Claude Code hooks already configured in settings.json"
+        return 0
+    fi
+
+    if ! command -v jq >/dev/null 2>&1; then
+        log_warn "jq is required to configure Claude Code agent hooks"
+        return 1
+    fi
+
+    _ensure_wrapper_script "pre-tool"
+    _ensure_wrapper_script "post-tool"
+
+    local tmp_file
+    tmp_file=$(mktemp)
+
+    jq '
+        .hooks = (.hooks // {}) |
+        .hooks.PreToolUse = [{
+            matcher: "Write|Edit",
+            hooks: [{
+                type: "command",
+                command: "bash .claude/hooks/pre-tool-wrapper.sh"
+            }]
+        }] |
+        .hooks.PostToolUse = [{
+            matcher: "Write|Edit",
+            hooks: [{
+                type: "command",
+                command: "bash .claude/hooks/post-tool-wrapper.sh"
+            }]
+        }]
+    ' "$settings_file" > "$tmp_file" && mv "$tmp_file" "$settings_file"
+
+    log_info "Configured Claude Code hooks in $settings_file"
+    return 0
+}
+
+# Ensure all registered hooks have their files installed.
+# Reads the registry and installs any missing hook templates.
+# Requires: hook-registry.sh and detector.sh to be sourced by the caller.
+ensure_hooks_installed() {
+    _ensure_registry
+
+    local registered_hooks
+    registered_hooks=$(jq -r '.hooks | keys[]' "$HOOK_REGISTRY" 2>/dev/null)
+
+    if [[ -z "$registered_hooks" ]]; then
+        log_debug "No hooks registered, nothing to ensure"
+        return 0
+    fi
+
+    local installed=0
+    local needs_claude_settings=false
+
+    while IFS= read -r hook_type; do
+        hook_type=$(echo "$hook_type" | tr -d '\r')
+        [[ -z "$hook_type" ]] && continue
+
+        local hook_category
+        hook_category=$(get_hook_category "$hook_type")
+
+        if [[ "$hook_category" == "unknown" ]]; then
+            log_warn "Unknown hook type in registry: $hook_type"
+            continue
+        fi
+
+        if _is_hook_installed "$hook_type" "$hook_category"; then
+            log_debug "Hook already installed: $hook_type ($hook_category)"
+            continue
+        fi
+
+        log_info "Hook missing, installing: $hook_type ($hook_category)"
+        if install_hook_template "$hook_type" "$hook_category"; then
+            installed=$((installed + 1))
+        else
+            log_warn "Failed to install hook: $hook_type ($hook_category)"
+        fi
+
+        if [[ "$hook_category" == "agent" ]]; then
+            needs_claude_settings=true
+        fi
+    done <<< "$registered_hooks"
+
+    if [[ "$needs_claude_settings" == true ]]; then
+        _ensure_claude_settings
+    fi
+
+    if [[ $installed -gt 0 ]]; then
+        log_info "Ensured $installed hook(s) installed"
+    else
+        log_info "All registered hooks already installed"
+    fi
 
     return 0
 }

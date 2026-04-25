@@ -25,6 +25,7 @@ Usage: chp-hooks <subcommand> [options]
 
 Subcommands:
   list                          List all hooks with their status
+  ensure                        Ensure all registered hooks are installed
   enable <hook-type>            Enable a hook type
   disable <hook-type>           Disable a hook type
   blocking <hook-type> [true]   Set blocking behavior (default: true)
@@ -35,6 +36,7 @@ Subcommands:
 
 Examples:
   chp-hooks list                           # List all hooks and their status
+  chp-hooks ensure                         # Ensure all registered hooks are installed
   chp-hooks enable pre-commit              # Enable pre-commit hook
   chp-hooks disable pre-push               # Disable pre-push hook
   chp-hooks blocking commit-msg false      # Set commit-msg to non-blocking
@@ -91,6 +93,12 @@ cmd_list() {
         # Print row
         printf "%-20s %-10s %-10s %-10s\n" "$hook_type" "$enabled" "$blocking" "$law_count"
     done
+}
+
+# Ensure all registered hooks are installed
+cmd_ensure() {
+    init_hook_registry
+    ensure_hooks_installed
 }
 
 # Enable a hook type
@@ -256,20 +264,6 @@ cmd_detect() {
     fi
 
     echo ""
-    echo "CI/CD Hooks:"
-    local cicd_hooks="pre-build post-build pre-deploy post-deploy"
-    local found_cicd=false
-    for hook in $hooks; do
-        if echo "$cicd_hooks" | grep -qw "$hook"; then
-            echo "  - $hook"
-            found_cicd=true
-        fi
-    done
-    if [ "$found_cicd" = "false" ]; then
-        echo "  (none - requires CI/CD configuration)"
-    fi
-
-    echo ""
     log_info "Total available hooks: $(echo "$hooks" | wc -w | tr -d ' ')"
 }
 
@@ -296,6 +290,9 @@ main() {
     case "$subcommand" in
         list)
             cmd_list
+            ;;
+        ensure)
+            cmd_ensure
             ;;
         enable)
             cmd_enable "$@"

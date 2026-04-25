@@ -17,12 +17,15 @@
     "**/*.lock",
     "**/*.min.js"
   ],
-  "tags": ["security", "secrets"],
+  "tags": [
+    "security",
+    "secrets"
+  ],
   "priority": 100,
   "created": "2026-04-25T05:02:04Z",
   "severity": "error",
-  "failures": 0,
-  "tightening_level": 0,
+  "failures": 1,
+  "tightening_level": 1,
   "hooks": [
     "pre-commit",
     "pre-push",

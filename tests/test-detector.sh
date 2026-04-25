@@ -62,85 +62,10 @@ else
     exit 1
 fi
 
-# Test detect_all_cicd_hooks with .github/workflows
-echo ""
-echo "Test 4: detect_all_cicd_hooks with .github/workflows"
-mkdir -p .github/workflows
-touch .github/workflows/test.yml
-all_cicd_hooks=$(detect_all_cicd_hooks)
-expected_cicd_hooks="pre-build post-build pre-deploy post-deploy"
-
-for hook in $expected_cicd_hooks; do
-    if echo "$all_cicd_hooks" | grep -qw "$hook"; then
-        echo "  ✓ $hook found"
-    else
-        echo "  ✗ $hook NOT found"
-        rm -rf .github
-        exit 1
-    fi
-done
-rm -rf .github
-
-# Test detect_all_cicd_hooks with .gitlab-ci.yml
-echo ""
-echo "Test 5: detect_all_cicd_hooks with .gitlab-ci.yml"
-touch .gitlab-ci.yml
-all_cicd_hooks=$(detect_all_cicd_hooks)
-if echo "$all_cicd_hooks" | grep -qw "pre-build"; then
-    echo "  ✓ CI/CD hooks detected with .gitlab-ci.yml"
-else
-    echo "  ✗ CI/CD hooks NOT detected with .gitlab-ci.yml"
-    rm .gitlab-ci.yml
-    exit 1
-fi
-rm .gitlab-ci.yml
-
-# Test detect_all_cicd_hooks with Jenkinsfile
-echo ""
-echo "Test 6: detect_all_cicd_hooks with Jenkinsfile"
-touch Jenkinsfile
-all_cicd_hooks=$(detect_all_cicd_hooks)
-if echo "$all_cicd_hooks" | grep -qw "pre-build"; then
-    echo "  ✓ CI/CD hooks detected with Jenkinsfile"
-else
-    echo "  ✗ CI/CD hooks NOT detected with Jenkinsfile"
-    rm Jenkinsfile
-    exit 1
-fi
-rm Jenkinsfile
-
-# Test detect_all_cicd_hooks with .chp/cicd-enabled
-echo ""
-echo "Test 7: detect_all_cicd_hooks with .chp/cicd-enabled"
-mkdir -p .chp
-touch .chp/cicd-enabled
-all_cicd_hooks=$(detect_all_cicd_hooks)
-if echo "$all_cicd_hooks" | grep -qw "pre-build"; then
-    echo "  ✓ CI/CD hooks detected with .chp/cicd-enabled"
-else
-    echo "  ✗ CI/CD hooks NOT detected with .chp/cicd-enabled"
-    rm -rf .chp
-    exit 1
-fi
-rm -rf .chp
-
-# Test detect_all_cicd_hooks without any CI/CD config
-echo ""
-echo "Test 8: detect_all_cicd_hooks without any CI/CD config"
-all_cicd_hooks=$(detect_all_cicd_hooks)
-if [ -z "$all_cicd_hooks" ]; then
-    echo "  ✓ No CI/CD hooks when no config exists"
-else
-    echo "  ✗ Should return empty when no CI/CD config exists"
-    exit 1
-fi
-
 # Test detect_all_hooks
 echo ""
-echo "Test 9: detect_all_hooks combines all hook types"
+echo "Test 4: detect_all_hooks combines all hook types"
 mkdir -p .claude
-mkdir -p .github/workflows
-touch .github/workflows/test.yml
 
 all_hooks=$(detect_all_hooks)
 
@@ -149,7 +74,7 @@ if echo "$all_hooks" | grep -qw "pre-commit"; then
     echo "  ✓ Git hooks included"
 else
     echo "  ✗ Git hooks NOT included"
-    rm -rf .claude .github
+    rm -rf .claude
     exit 1
 fi
 
@@ -158,24 +83,15 @@ if echo "$all_hooks" | grep -qw "pre-prompt"; then
     echo "  ✓ Agent hooks included"
 else
     echo "  ✗ Agent hooks NOT included"
-    rm -rf .claude .github
+    rm -rf .claude
     exit 1
 fi
 
-# Should contain CI/CD hooks
-if echo "$all_hooks" | grep -qw "pre-build"; then
-    echo "  ✓ CI/CD hooks included"
-else
-    echo "  ✗ CI/CD hooks NOT included"
-    rm -rf .claude .github
-    exit 1
-fi
-
-rm -rf .claude .github
+rm -rf .claude
 
 # Test deduplication in detect_all_hooks
 echo ""
-echo "Test 10: detect_all_hooks deduplicates hooks"
+echo "Test 5: detect_all_hooks deduplicates hooks"
 hook_count=$(echo "$all_hooks" | wc -w)
 unique_count=$(echo "$all_hooks" | tr ' ' '\n' | sort -u | wc -l)
 if [ "$hook_count" -eq "$unique_count" ]; then
@@ -187,7 +103,7 @@ fi
 
 # Test get_hook_category
 echo ""
-echo "Test 11: get_hook_category for various hook types"
+echo "Test 6: get_hook_category for various hook types"
 
 category=$(get_hook_category "pre-commit")
 if [ "$category" = "git" ]; then
@@ -205,14 +121,6 @@ else
     exit 1
 fi
 
-category=$(get_hook_category "pre-build")
-if [ "$category" = "cicd" ]; then
-    echo "  ✓ pre-build category: cicd"
-else
-    echo "  ✗ pre-build category should be 'cicd', got '$category'"
-    exit 1
-fi
-
 category=$(get_hook_category "unknown-hook")
 if [ "$category" = "unknown" ]; then
     echo "  ✓ unknown-hook category: unknown"
@@ -223,7 +131,7 @@ fi
 
 # Test is_hook_available
 echo ""
-echo "Test 12: is_hook_available for various scenarios"
+echo "Test 7: is_hook_available for various scenarios"
 
 # Test with git hook (always available)
 if is_hook_available "pre-commit"; then
@@ -272,29 +180,9 @@ else
 fi
 rm -rf .claude
 
-# Test with CI/CD hook when no config exists
-if is_hook_available "pre-build"; then
-    echo "  ✗ pre-build should NOT be available without CI/CD config"
-    exit 1
-else
-    echo "  ✓ pre-build not available without CI/CD config"
-fi
-
-# Test with CI/CD hook when config exists
-mkdir -p .chp
-touch .chp/cicd-enabled
-if is_hook_available "pre-build"; then
-    echo "  ✓ pre-build is available with CI/CD config"
-else
-    echo "  ✗ pre-build should be available with CI/CD config"
-    rm -rf .chp
-    exit 1
-fi
-rm -rf .chp
-
 # Test backwards compatibility
 echo ""
-echo "Test 13: backwards compatibility - detect_git_hooks"
+echo "Test 8: backwards compatibility - detect_git_hooks"
 old_git_hooks=$(detect_git_hooks)
 if [ -n "$old_git_hooks" ]; then
     echo "  ✓ detect_git_hooks still works"
@@ -304,7 +192,7 @@ else
 fi
 
 echo ""
-echo "Test 14: backwards compatibility - detect_pretool_hooks"
+echo "Test 9: backwards compatibility - detect_pretool_hooks"
 touch .pretool
 old_pretool_hooks=$(detect_pretool_hooks)
 rm .pretool
@@ -316,7 +204,7 @@ else
 fi
 
 echo ""
-echo "Test 15: backwards compatibility - detect_available_hooks"
+echo "Test 10: backwards compatibility - detect_available_hooks"
 available_hooks=$(detect_available_hooks)
 if [ -n "$available_hooks" ]; then
     echo "  ✓ detect_available_hooks still works"

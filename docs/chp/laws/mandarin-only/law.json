@@ -1,0 +1,23 @@
+{
+  "id": "mandarin-only",
+  "name": "mandarin-only",
+  "intent": "All text output, file content, and responses must be in simplified Mandarin Chinese (简体中文)",
+  "violations": [
+    {
+      "pattern": "outputNotInSimplifiedMandarin()",
+      "fix": "Rewrite everything in simplified Mandarin Chinese (简体中文). Code identifiers stay English, all prose/comments/messages must be Chinese.",
+      "satisfies": "All prose text is in simplified Mandarin Chinese"
+    }
+  ],
+  "reaction": "block",
+  "include": [],
+  "exclude": ["docs/chp/**", ".claude/**", "*.json", "*.sh", "*.lock"],
+  "tags": ["style", "language"],
+  "priority": 50,
+  "severity": "error",
+  "hooks": ["pre-tool"],
+  "created": "2026-04-25T05:30:00Z",
+  "failures": 0,
+  "tightening_level": 0,
+  "enabled": true
+}

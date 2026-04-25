@@ -72,31 +72,6 @@ for hook in "${agent_hooks[@]}"; do
     fi
 done
 
-# Test CI/CD hook templates
-echo ""
-echo "Testing CI/CD hook templates..."
-cicd_hooks=(
-    "pre-build"
-    "post-build"
-    "pre-deploy"
-    "post-deploy"
-)
-
-for hook in "${cicd_hooks[@]}"; do
-    template="$CHP_BASE/hooks/cicd/$hook.sh"
-    if [ -f "$template" ]; then
-        if grep -q "# CHP-MANAGED" "$template" && grep -q "dispatcher.sh" "$template"; then
-            echo "  ✓ $hook"
-        else
-            echo "  ✗ $hook (missing CHP markers)"
-            all_tests_passed=false
-        fi
-    else
-        echo "  ✗ $hook (not found)"
-        all_tests_passed=false
-    fi
-done
-
 echo ""
 echo "====================="
 if [ "$all_tests_passed" = true ]; then

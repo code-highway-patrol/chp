@@ -11,9 +11,11 @@
     "chp-validate": "./scripts/validate.js"
   },
   "scripts": {
+    "test": "bash scripts/run-tests.sh",
     "analyze": "node scripts/analyze.js",
     "check": "node scripts/check.js",
-    "validate": "node scripts/validate.js"
+    "validate": "node scripts/validate.js",
+    "setup": "bash scripts/setup.sh"
   },
   "keywords": [
     "static-analysis",
