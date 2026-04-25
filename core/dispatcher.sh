@@ -37,6 +37,31 @@ get_hook_context() {
     esac
 }
 
+# Record failures per check from JSONL output, falling back to law-level
+_record_check_failures() {
+    local law_name="$1"
+    local stdout="$2"
+
+    local has_check_results=false
+    if [[ -n "$stdout" ]]; then
+        while IFS= read -r line; do
+            local check_id status
+            check_id=$(echo "$line" | jq -r '.check_id // empty' 2>/dev/null)
+            status=$(echo "$line" | jq -r '.status // empty' 2>/dev/null)
+            if [[ -n "$check_id" ]]; then
+                has_check_results=true
+                if [[ "$status" == "FAIL" ]]; then
+                    record_failure "$law_name" "$check_id"
+                fi
+            fi
+        done <<< "$stdout"
+    fi
+
+    if ! $has_check_results; then
+        record_failure "$law_name"
+    fi
+}
+
 # Args: $1=hook_type, $@=hook_args
 # Returns: 0=all passed, 1=blocking failure, 2=dispatcher error
 dispatch_hook() {
@@ -151,14 +176,15 @@ dispatch_hook() {
             # For pre-tool hooks, output only the block JSON and stop
             if [[ "$hook_type" == "pre-tool" || "$hook_type" == "pre-write" ]]; then
                 echo "$verify_stdout"
-                # record failure after outputting block JSON so stdout stays clean
                 if command -v record_failure >/dev/null 2>&1; then
-                    record_failure "$law_name" >&2
+                    _record_check_failures "$law_name" "$verify_stdout" >&2
                 fi
                 return 1
             fi
 
-            if command -v record_failure >/dev/null 2>&1; then
+            if command -v _record_check_failures >/dev/null 2>&1; then
+                _record_check_failures "$law_name" "$verify_stdout"
+            elif command -v record_failure >/dev/null 2>&1; then
                 record_failure "$law_name"
             fi
         fi
