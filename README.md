@@ -1,4 +1,4 @@
-# CHP - Code Health Protocol
+# CHP - Code Highway Patrol
 
 A static analysis framework for enforcing rules, standards, and best practices across your codebase.
 
