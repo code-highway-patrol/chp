@@ -1,0 +1,9 @@
+{
+  "name": "test-law",
+  "created": "2026-04-24T00:00:00Z",
+  "severity": "error",
+  "failures": 0,
+  "tightening_level": 0,
+  "hooks": ["pre-commit", "pre-push", "pre-prompt"],
+  "enabled": true
+}

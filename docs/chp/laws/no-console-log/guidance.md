@@ -155,3 +155,35 @@ The principle applies to many similar patterns:
 **Context:** Found console.log in src/components/Header.jsx line 78
 **Pattern:** `console.log('Header mounted');`
 **Remediation:** Removed debug statement
+
+---
+
+**Violation recorded:** 2026-04-25T04:19:16Z (Total: 4)
+
+This law has been violated 4 time(s). The guidance has been automatically strengthened.
+
+**Previous violations indicate this pattern is easy to miss. Pay extra attention.**
+
+---
+
+**Violation recorded:** 2026-04-25T04:19:55Z (Total: 5)
+
+This law has been violated 5 time(s). The guidance has been automatically strengthened.
+
+**Previous violations indicate this pattern is easy to miss. Pay extra attention.**
+
+---
+
+**Violation recorded:** 2026-04-25T04:23:34Z (Total: 6)
+
+This law has been violated 6 time(s). The guidance has been automatically strengthened.
+
+**Previous violations indicate this pattern is easy to miss. Pay extra attention.**
+
+---
+
+**Violation recorded:** 2026-04-25T04:27:06Z (Total: 7)
+
+This law has been violated 7 time(s). The guidance has been automatically strengthened.
+
+**Previous violations indicate this pattern is easy to miss. Pay extra attention.**

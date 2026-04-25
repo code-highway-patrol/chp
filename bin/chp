@@ -1,13 +1,37 @@
 #!/bin/sh
+# CHP - Code Highway Patrol
+# POSIX shell wrapper for the CHP CLI
 
-basedir=$(dirname "$(echo "$0" | sed -e 's,\\,/,g')")
+set -e
 
-case `uname` in
-  *CYGWIN*|*MINGW*|*MSYS*) basedir=`cygpath -w "$basedir"`;;
-esac
+# Get the absolute path to this script
+SCRIPT_PATH="$0"
 
-if [ -x "$basedir/node" ]; then
-  exec "$basedir/node" "$basedir/../lib/cli.js" "$@"
-else
-  exec node "$basedir/../lib/cli.js" "$@"
+# Resolve symlinks
+while [ -h "$SCRIPT_PATH" ]; do
+    DIR=$(cd -P "$(dirname "$SCRIPT_PATH")" && pwd)
+    SYM=$(readlink "$SCRIPT_PATH")
+    SCRIPT_PATH=$(cd "$DIR" && cd "$(dirname "$SYM")" && pwd)/$(basename "$SYM")
+done
+
+# Get the directory containing this script
+BIN_DIR=$(cd -P "$(dirname "$SCRIPT_PATH")" && pwd)
+
+# Path to the CLI entry point
+CLI_FILE="$BIN_DIR/../lib/cli.js"
+
+# Check if CLI file exists
+if [ ! -f "$CLI_FILE" ]; then
+    echo "Error: CHP CLI not found at $CLI_FILE" >&2
+    exit 1
 fi
+
+# Try to use node from the same directory first (for local installs)
+if [ -x "$BIN_DIR/node" ]; then
+    NODE_EXE="$BIN_DIR/node"
+else
+    NODE_EXE=node
+fi
+
+# Execute
+exec "$NODE_EXE" "$CLI_FILE" "$@"
