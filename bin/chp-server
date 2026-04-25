@@ -19,7 +19,19 @@ PLUGIN_ROOT = os.environ.get("CLAUDE_PLUGIN_ROOT", str(Path(__file__).resolve().
 
 
 def get_laws_file():
+    """Primary laws file in the user's project (also used for writes)."""
     return Path(PROJECT_DIR) / "laws" / "chp-laws.txt"
+
+
+def find_laws_file():
+    """Find a readable laws file: project first, plugin bundled laws as fallback."""
+    primary = get_laws_file()
+    if primary.exists():
+        return primary
+    fallback = Path(PLUGIN_ROOT) / "laws" / "chp-laws.txt"
+    if fallback.exists():
+        return fallback
+    return None
 
 
 def get_report_file():
@@ -393,8 +405,9 @@ class CHPHandler(http.server.BaseHTTPRequestHandler):
             self.send_html(DASHBOARD_HTML)
 
         elif path == "/api/laws":
-            if get_laws_file().exists():
-                laws = parse_laws(get_laws_file().read_text(encoding="utf-8"))
+            found = find_laws_file()
+            if found:
+                laws = parse_laws(found.read_text(encoding="utf-8"))
             else:
                 laws = []
             self.send_json(laws)
@@ -407,8 +420,8 @@ class CHPHandler(http.server.BaseHTTPRequestHandler):
         elif path == "/api/status":
             self.send_json({
                 "project_dir": PROJECT_DIR,
-                "laws_file": str(get_laws_file()),
-                "laws_exists": get_laws_file().exists(),
+                "laws_file": str(find_laws_file() or get_laws_file()),
+                "laws_exists": find_laws_file() is not None,
                 "report_file": str(get_report_file()),
             })
 

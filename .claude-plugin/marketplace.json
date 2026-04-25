@@ -1,5 +1,5 @@
 {
-  "name": "chp",
+  "name": "chp-marketplace",
   "owner": {
     "name": "CHP Contributors"
   },
@@ -7,7 +7,7 @@
     {
       "name": "chp",
       "source": "./",
-      "description": "Define and enforce code laws with subjective AI judgment. Laws get stricter over time."
+      "description": "Define and enforce code laws with hybrid regex + AI judgment. Deterministic checks for speed, subjective review for nuance."
     }
   ]
 }

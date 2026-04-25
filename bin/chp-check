@@ -20,6 +20,11 @@ def find_laws_file():
     laws_path = Path(project_dir) / "laws" / "chp-laws.txt"
     if laws_path.exists():
         return laws_path
+    plugin_root = os.environ.get("CLAUDE_PLUGIN_ROOT")
+    if plugin_root:
+        fallback = Path(plugin_root) / "laws" / "chp-laws.txt"
+        if fallback.exists():
+            return fallback
     return None
 
 

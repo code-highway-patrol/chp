@@ -4,13 +4,56 @@ A hybrid code law enforcement plugin for Claude Code. Deterministic laws are che
 
 ## Installation
 
-### Install from the Claude Marketplace
+### Option A: Install from a GitHub marketplace
 
-```bash
-claude install chp
+If CHP is hosted in a GitHub repository (e.g. `your-org/chp`):
+
+```shell
+# 1. Add the marketplace
+/plugin marketplace add your-org/chp
+
+# 2. Install the plugin
+/plugin install chp@your-org-chp
 ```
 
-That's it. CHP is now active in your project.
+Or from the CLI outside a session:
+
+```bash
+claude plugin install chp@your-org-chp
+```
+
+### Option B: Install from a local directory
+
+If you have the CHP source locally:
+
+```shell
+# 1. Add the local marketplace
+/plugin marketplace add ./path/to/chp
+
+# 2. Install the plugin
+/plugin install chp@chp-marketplace
+```
+
+### Option C: Test during development
+
+Load the plugin directly without installing:
+
+```bash
+claude --plugin-dir ./path/to/chp
+```
+
+### Choose an installation scope
+
+By default, plugins install to **user scope** (available in all your projects). You can also install to:
+
+- **Project scope** — shared with all collaborators via `.claude/settings.json`:
+  ```shell
+  /plugin install chp@your-org-chp --scope project
+  ```
+- **Local scope** — just for you in this repo (gitignored):
+  ```shell
+  /plugin install chp@your-org-chp --scope local
+  ```
 
 ### Verify it's working
 
@@ -20,7 +63,13 @@ Start a Claude Code session. On the first tool use you should see:
 CHP: ensuring dashboard is running...
 ```
 
-After any file write or edit:
+Before any file write or edit:
+
+```
+CHP: loading active laws...
+```
+
+After the write:
 
 ```
 CHP: running deterministic checks...
@@ -28,6 +77,10 @@ CHP: agent reviewing subjective laws...
 ```
 
 The dashboard opens automatically at **http://localhost:5177**.
+
+### Set up laws for your project
+
+CHP looks for laws at `laws/chp-laws.txt` in your project root. Create this file manually or use the `chp:write-laws` skill to add laws interactively. See **Law Format** below.
 
 ## Quick Start
 
@@ -66,19 +119,20 @@ Use the `chp:scan-repo` skill to scan every file in the codebase and generate an
 ## How It Works
 
 1. **Define** laws in `laws/chp-laws.txt` — each has an intent, optional regex, and a reaction level
-2. **On every file write/edit**, two PostToolUse hooks fire:
+2. **Before every file write/edit**, a PreToolUse hook fires:
+   - **Context injection** (`bin/chp-context`) — reads all laws and injects them into the agent's context as `additionalContext`, so the agent knows the rules before writing code
+3. **After every file write/edit**, two PostToolUse hooks fire:
    - **Deterministic hook** (`bin/chp-check`) — scans the changed file against all `check:` regex patterns
    - **Agent hook** — a subagent reviews the file against all subjective law intents
-3. **Violations** are written to `.chp/report.json` and surfaced in the session
-4. **Laws as context** — `CLAUDE.md` inlines the active laws so the agent avoids violations at authoring time, not just post-hoc
+4. **Violations** are written to `.chp/report.json` and surfaced in the session
 5. **Dashboard** at `http://localhost:5177` — view laws, trigger scans, browse reports
 
 ### Prevention vs. Detection
 
 CHP works on two levels:
 
-- **Prevention**: The laws are embedded in `CLAUDE.md`, which Claude Code reads before writing any code. The agent knows the rules and avoids violations proactively.
-- **Detection**: Hooks run after every write to catch anything that slipped through — regex for deterministic laws, agent judgment for subjective ones.
+- **Prevention**: A PreToolUse hook (`bin/chp-context`) injects all active laws into the agent's context before every Write/Edit. The agent sees the rules and avoids violations proactively.
+- **Detection**: PostToolUse hooks run after every write to catch anything that slipped through — regex for deterministic laws, agent judgment for subjective ones.
 
 ## Law Format
 
@@ -122,7 +176,7 @@ chp/
 ├── .chp/                        # Runtime output (gitignored)
 │   ├── report.json              # Violation data
 │   └── report.html              # Static HTML report
-├── CLAUDE.md                    # Agent context — inlines active laws
+├── CLAUDE.md                    # Context for developing CHP itself
 └── README.md
 ```
 

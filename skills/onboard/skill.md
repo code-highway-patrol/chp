@@ -12,9 +12,10 @@ description: Understand what CHP laws are enforced in this project
 
 ## Process
 
-1. Read `laws/chp-laws.txt` in the project root
-2. Summarize each law: name, intent, reaction type, and whether it's deterministic or subjective
-3. Group by category (security, quality, style)
+1. Check for `laws/chp-laws.txt` in the project root
+2. If the file doesn't exist, tell the user they need to create it (either manually or via `/chp:write-laws`) and show the law format
+3. If it exists, summarize each law: name, intent, reaction type, and whether it's deterministic or subjective
+4. Group by category (security, quality, style)
 
 ## How CHP Works
 
