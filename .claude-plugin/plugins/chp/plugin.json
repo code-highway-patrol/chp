@@ -23,6 +23,6 @@
     "./skills/status",
     "./skills/write-laws",
     "./skills/review-laws",
-    "./skills/decompose-law"
+    "./skills/decompose-laws"
   ]
 }
