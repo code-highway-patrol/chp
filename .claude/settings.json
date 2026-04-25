@@ -9,7 +9,7 @@
   },
   "enabledPlugins": {
     "skill-creator@claude-plugins-official": true,
-    "chp@local": true
+    "chp@chp-local": true
   },
   "hooks": {
     "PreToolUse": [
