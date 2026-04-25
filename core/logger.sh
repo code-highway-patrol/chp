@@ -1,6 +1,13 @@
 #!/bin/bash
 # core/logger.sh - CHP Logging System
 
+# Guard against direct execution - this file should be sourced
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+    echo "Error: This file should be sourced, not executed directly." >&2
+    echo "Usage: source core/logger.sh" >&2
+    exit 1
+fi
+
 CHP_LOG_DIR=".chp"
 CHP_LOG_FILE="$CHP_LOG_DIR/logs.jsonl"
 
@@ -10,18 +17,13 @@ logger_init() {
     touch "$CHP_LOG_FILE" 2>/dev/null
 }
 
-# Escape special characters for JSON
+# Escape special characters for JSON using jq
 # Args: string_to_escape
-# Outputs: Escaped string on stdout
+# Outputs: Properly JSON-escaped string on stdout
 _json_escape() {
     local string="$1"
-    # Escape backslashes first, then double quotes, then newlines
-    string="${string//\\/\\\\}"
-    string="${string//\"/\\\"}"
-    string="${string//$'\n'/\\n}"
-    string="${string//$'\r'/\\r}"
-    string="${string//$'\t'/\\t}"
-    echo "$string"
+    # Let jq handle proper JSON escaping (more secure and complete)
+    jq -nr --arg v "$string" '$v'
 }
 
 # Log an event with arbitrary key-value pairs

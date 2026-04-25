@@ -28,8 +28,7 @@ prompt_choice() {
         done
         echo ""
 
-        local choice
-        read -p "Choose one: " choice
+        read -rp "Choose one: " choice
 
         # Validate choice is a number
         if [[ ! "$choice" =~ ^[0-9]+$ ]]; then
@@ -56,7 +55,7 @@ prompt_yes_no() {
     local response
     
     while true; do
-        read -p "$question (y/n): " response
+        read -rp "$question (y/n): " response
         case "$response" in
             y|Y|yes|YES) return 0 ;;
             n|N|no|NO) return 1 ;;
@@ -73,10 +72,10 @@ prompt_text() {
     local response
     
     if [[ -n "$default" ]]; then
-        read -p "$question [$default]: " response
+        read -rp "$question [$default]: " response
         echo "${response:-$default}"
     else
-        read -p "$question: " response
+        read -rp "$question: " response
         echo "$response"
     fi
 }

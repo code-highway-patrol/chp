@@ -1,7 +1,16 @@
 #!/bin/bash
 # Tightening logic for law violations
 
-source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
+# Guard against direct execution
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+    echo "Error: This file should be sourced, not executed directly." >&2
+    echo "Usage: source core/tightener.sh" >&2
+    exit 1
+fi
+
+# Source common functions after the guard
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/common.sh"
 
 # Record a failure for a law and trigger tightening
 record_failure() {
@@ -17,9 +26,8 @@ record_failure() {
         return 1
     fi
 
-    local law_dir="$LAWS_DIR/$law_name"
-    local law_json="$law_dir/law.json"
-    local guidance_md="$law_dir/guidance.md"
+    # Get all law paths in one call
+    read -r law_dir law_json guidance_md < <(get_law_paths "$law_name")
 
     # Increment failure count
     local failures
@@ -71,9 +79,8 @@ reset_failures() {
         return 1
     fi
 
-    local law_dir="$LAWS_DIR/$law_name"
-    local law_json="$law_dir/law.json"
-    local guidance_md="$law_dir/guidance.md"
+    # Get all law paths in one call
+    read -r law_dir law_json guidance_md < <(get_law_paths "$law_name")
 
     # Reset failure count and tightening level
     jq '.failures = 0 | .tightening_level = 0' \

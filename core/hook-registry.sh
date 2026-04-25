@@ -4,6 +4,13 @@
 # This module provides functions to register and manage which laws should be
 # executed when specific hook types are triggered.
 
+# Guard against direct execution
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+    echo "Error: This file should be sourced, not executed directly." >&2
+    echo "Usage: source core/hook-registry.sh" >&2
+    exit 1
+fi
+
 # Source common utilities
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/common.sh"

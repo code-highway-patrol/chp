@@ -1,7 +1,14 @@
 #!/bin/bash
 # Law construction logic for CHP
 
-# Source common functions
+# Guard against direct execution
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+    echo "Error: This file should be sourced, not executed directly." >&2
+    echo "Usage: source core/law-builder.sh" >&2
+    exit 1
+fi
+
+# Source common functions after the guard
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/common.sh"
 
@@ -85,7 +92,8 @@ build_law_json() {
     local hooks="$3"
     local enabled="${4:-true}"
 
-    local hooks_array=$(echo "$hooks" | jq -R . | jq -s -c .)
+    # Build hooks array from comma-separated string using single jq call
+    local hooks_array=$(jq -nR --arg h "$hooks" '$h | split(",") | map(select(length > 0))')
 
     cat <<EOF
 {
