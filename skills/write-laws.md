@@ -24,27 +24,6 @@ bash commands/chp-hooks install
 
 **Auto-install:** When using this skill, hooks will be auto-installed if not present.
 
-## Decompose Before Writing
-
-Before creating a law, assess whether the user's request is clear enough to implement directly:
-
-**Clear and specific** — proceed to Creating a Law below. Examples:
-- "no console.log" → single pattern, obvious check
-- "no API keys" → well-known patterns, existing templates
-
-**Vague but tractable** — invoke `chp:decompose-laws` first. Examples:
-- "no secrets" → could mean API keys, passwords, private keys, tokens...
-- "code quality for payments" → what aspects? complexity? coverage? style?
-- "GDPR compliance" → multi-faceted, needs decomposition into atomic checks
-
-**When in doubt, decompose.** It's faster to decompose and discard unnecessary checks than to write a law that misses cases.
-
-To decompose:
-```
-Invoke the chp:decompose-laws skill with the user's concept.
-After decomposition is approved, continue here with the resulting checks.
-```
-
 ## Creating a Law
 
 When you need to enforce a rule or standard in the repository, use the `chp-law` CLI:
@@ -609,13 +588,13 @@ When users describe what they want to enforce, match their language to patterns 
 **Quality:** max-file-size, max-function-length, required-documentation
 **Style:** no-console-log, import-ordering, type-annotations
 
-## Post-Write Review
+## Post-Write Fix
 
-After creating, editing, or refining a law, **always** spawn a review agent:
+After creating or editing a law, spawn a fix agent that reads the law fresh from disk and corrects any inconsistencies between `law.json`, `verify.sh`, and `guidance.md`:
 
 ```
 Use the Agent tool to spawn a background agent with this prompt:
 "Run the chp:review-laws skill for the law '<law-name>'. Read all three files fresh from disk, fix all inconsistencies, commit fixes, and report what you changed."
 ```
 
-This runs in a separate agent context with fresh eyes — no assumptions from the writing process. Review catches drift between law.json, verify.sh, and guidance.md that the writer (you) cannot see because you made the changes.
+This runs in a separate agent context with fresh eyes — no assumptions from the writing process.

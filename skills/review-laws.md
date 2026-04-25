@@ -1,6 +1,6 @@
 ---
 name: review-laws
-description: Fix inconsistencies in CHP law packages. Reads law.json, verify.sh, and guidance.md fresh from disk and corrects drift between them. Triggers on "review laws", "fix laws", "check laws", "verify laws".
+description: Fix inconsistencies in a CHP law package. Reads law.json, verify.sh, and guidance.md fresh from disk and corrects drift between them. Triggers on "review laws", "fix laws", "check laws", "verify laws".
 ---
 
 # CHP Law Fixer
@@ -11,20 +11,9 @@ Fix inconsistencies in a CHP law package across its three files: `law.json`, `ve
 
 ## When to Invoke
 
-Review should run after **most** law operations. Specifically:
-
-- After `chp:write-laws` creates or edits a law (always)
-- After `chp:decompose-laws` produces checks that get implemented (always)
-- After refining an existing law — adding patterns, changing severity, adjusting hooks (always)
-- After manually editing any of the three files (law.json, verify.sh, guidance.md)
-- User explicitly says "review law", "fix this law", "is this law consistent?"
-- Before relying on an existing law for enforcement
-
-**When to skip:** The only time to skip review is when you've made a trivial single-file change like toggling `enabled: false` or bumping a version number — changes that can't cause cross-file drift.
-
-## Why Review After Every Change
-
-Any edit to one file (law.json, verify.sh, or guidance.md) risks drift with the other two. Adding a pattern to verify.sh without updating law.json means the law metadata lies about what it checks. Updating guidance.md without syncing verify.sh means developers read rules that aren't enforced. Review catches this immediately.
+- After `chp:write-laws` finishes creating or editing a law
+- User says "review law", "fix this law", "is this law consistent?"
+- Before relying on an existing law
 
 ## Process
 
@@ -121,21 +110,10 @@ no-console-log     5      0      0
 mandarin-only      3      1      1
 ```
 
-## Integration with Other Skills
+## Integration with write-laws
 
-Other CHP skills should invoke review after completing their work:
+`chp:write-laws` spawns this skill as a background agent after writing a law:
 
-**After `chp:write-laws`** (always):
 ```
 Agent prompt: "Run the chp:review-laws skill for the law '<law-name>'. Read all three files fresh from disk, fix all inconsistencies, commit fixes, and report what you changed."
-```
-
-**After `chp:decompose-laws`** (once checks are implemented):
-```
-Agent prompt: "Run the chp:review-laws skill for the law '<law-name>'. Read all three files fresh from disk, fix all inconsistencies, commit fixes, and report what you changed."
-```
-
-**After refining an existing law** (any edit to law.json, verify.sh, or guidance.md):
-```
-Invoke chp:review-laws directly for the changed law.
 ```

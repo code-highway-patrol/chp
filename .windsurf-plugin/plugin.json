@@ -22,7 +22,7 @@
   ],
   "windsurf": {
     "cascade": {
-      "skills": "./.claude/skills/",
+      "skills": "./skills/",
       "commands": "./.claude/commands/",
       "agents": "./agents/",
       "context": "./docs/chp/"

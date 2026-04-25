@@ -64,11 +64,12 @@
     "skills": {
       "directory": "skills",
       "items": [
-        {"id": "health-check", "file": "skills/health-check.md"},
-        {"id": "enforce-laws", "file": "skills/enforce-laws.md"},
-        {"id": "create-law", "file": "skills/create-law.md"},
+        {"id": "audit", "file": "skills/audit.md"},
         {"id": "investigate", "file": "skills/investigate.md"},
-        {"id": "write-laws", "file": "skills/write-laws/skill.md"}
+        {"id": "status", "file": "skills/status.md"},
+        {"id": "decompose-law", "file": "skills/decompose-law.md"},
+        {"id": "write-laws", "file": "skills/write-laws.md"},
+        {"id": "review-laws", "file": "skills/review-laws.md"}
       ]
     },
     "hooks": {
