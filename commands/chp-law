@@ -9,6 +9,10 @@ source "$SCRIPT_DIR/../core/detector.sh"
 source "$SCRIPT_DIR/../core/installer.sh"
 source "$SCRIPT_DIR/../core/tightener.sh"
 
+# Source interactive and builder modules
+source "$SCRIPT_DIR/../core/interactive.sh"
+source "$SCRIPT_DIR/../core/law-builder.sh"
+
 # Display usage information
 show_usage() {
     cat <<EOF
@@ -18,7 +22,7 @@ Usage:
     chp-law <command> [options]
 
 Commands:
-    create <law-name> [--hooks=<hook1,hook2>]  Create a new law
+    create <law-name> [--hooks=<hook1,hook2>] [--dry-run]  Create a new law
     list                                      List all laws
     delete <law-name>                         Delete a law and uninstall hooks
     test <law-name>                           Test a law's verification script
@@ -29,6 +33,7 @@ Commands:
 
 Options:
     --hooks=<hooks>    Comma-separated list of hooks to install (e.g., pre-commit,pre-push)
+    --dry-run          Show preview without creating the law
 
 Examples:
     chp-law create no-debug-code --hooks=pre-commit
@@ -88,6 +93,22 @@ parse_hooks() {
 create_law() {
     local law_name="$1"
     local hooks_arg="$2"
+    local dry_run=false
+
+    # Parse optional arguments
+    shift 2
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --dry-run)
+                dry_run=true
+                ;;
+            *)
+                log_error "Unknown option: $1"
+                return 1
+                ;;
+        esac
+        shift
+    done
 
     # Validate law name
     if ! validate_law_name "$law_name"; then
@@ -100,6 +121,12 @@ create_law() {
         return 1
     fi
 
+    # Flag variables (from command line or interactive)
+    local specified_severity=""
+    local specified_pattern=""
+    local specified_files=""
+    local specified_exceptions=""
+
     # Parse hooks
     local hooks=()
     if [[ -n "$hooks_arg" ]]; then
@@ -108,9 +135,87 @@ create_law() {
 
     # Create law directory
     local law_dir="$LAWS_DIR/$law_name"
-    mkdir -p "$law_dir"
 
     log_info "Creating law: $law_name"
+
+    # Determine if intent is clear
+    local severity
+    local pattern
+    local files
+    local exceptions
+
+    if is_intent_clear "$law_name"; then
+        # Suggest configuration
+        local config
+        config=$(suggest_config "$law_name")
+        read severity _ <<< "$config"
+        config=$(suggest_config "$law_name")
+        read _ hooks _ <<< "$config"
+        config=$(suggest_config "$law_name")
+        read pattern _ <<< "$config"
+        config=$(suggest_config "$law_name")
+        read _ files _ <<< "$config"
+        config=$(suggest_config "$law_name")
+        read exceptions _ <<< "$config"
+    else
+        # Ask questions interactively
+        echo "Creating law: $law_name"
+        echo ""
+        echo "What should this law enforce?"
+        echo "  A) File size limits"
+        echo "  B) Function length limits"
+        echo "  C) Documentation requirements"
+        echo "  D) Custom pattern"
+
+        local choice
+        read -p "Choose one: " choice
+
+        case "$choice" in
+            A|a)
+                pattern="File line count > LIMIT"
+                files="All source files"
+                ;;
+            B|b)
+                pattern="Function line count > LIMIT"
+                files="*.js,*.ts,*.py"
+                ;;
+            C|c)
+                pattern="(TODO|FIXME)"
+                files="All source files"
+                ;;
+            *)
+                pattern=$(prompt_text "Enter the pattern to detect")
+                files=$(prompt_text "Which file types" "*.js,*.ts")
+                ;;
+        esac
+
+        severity="warn"
+        hooks="pre-commit"
+        exceptions="none"
+    fi
+
+    # Apply flag overrides if provided
+    [[ -n "$specified_severity" ]] && severity="$specified_severity"
+    [[ -n "$specified_pattern" ]] && pattern="$specified_pattern"
+    [[ -n "$specified_files" ]] && files="$specified_files"
+    [[ -n "$specified_exceptions" ]] && exceptions="$specified_exceptions"
+
+    # Show preview
+    display_preview "$law_name" "$severity" "$hooks" "$pattern" "$files" "$exceptions"
+
+    # Confirm before creating (unless dry-run)
+    if [[ "$dry_run" = false ]]; then
+        if ! prompt_yes_no "Create this law?"; then
+            log_info "Law creation cancelled"
+            return 0
+        fi
+    else
+        log_info "Dry run - law not created"
+        return 0
+    fi
+
+    # Create law directory
+    mkdir -p "$law_dir"
 
     # Create law.json with metadata
     cat > "$law_dir/law.json" <<EOF
@@ -466,18 +571,22 @@ main() {
     case "$command" in
         create)
             if [[ $# -lt 1 ]]; then
-                log_error "Usage: chp-law create <law-name> [--hooks=<hooks>]"
+                log_error "Usage: chp-law create <law-name> [--hooks=<hooks>] [--dry-run]"
                 exit 1
             fi
             local law_name="$1"
             local hooks_arg=""
+            local dry_run_flag=""
             shift
 
-            # Parse optional hooks argument
+            # Parse optional arguments
             while [[ $# -gt 0 ]]; do
                 case "$1" in
                     --hooks=*)
                         hooks_arg="${1#*=}"
+                        ;;
+                    --dry-run)
+                        dry_run_flag="--dry-run"
                         ;;
                     *)
                         log_error "Unknown option: $1"
@@ -487,7 +596,7 @@ main() {
                 shift
             done
 
-            create_law "$law_name" "$hooks_arg"
+            create_law "$law_name" "$hooks_arg" $dry_run_flag
             ;;
         list)
             list_laws_cmd
