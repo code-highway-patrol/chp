@@ -87,3 +87,11 @@ For legitimate documentation that uses these words:
 This law has been violated 1 time(s). The guidance has been automatically strengthened.
 
 **Previous violations indicate this pattern is easy to miss. Pay extra attention.**
+
+---
+
+**Violation recorded:** 2026-04-25T09:03:25Z (Total: 2)
+
+This law has been violated 2 time(s). The guidance has been automatically strengthened.
+
+**Previous violations indicate this pattern is easy to miss. Pay extra attention.**

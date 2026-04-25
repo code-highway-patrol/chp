@@ -1,5 +1,5 @@
 ---
-name: scan-repo
+name: chp:scan-repo
 description: Scan entire repository for potential violations in dry-run mode
 ---
 

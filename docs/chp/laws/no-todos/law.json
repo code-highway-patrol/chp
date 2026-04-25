@@ -2,8 +2,8 @@
   "name": "no-todos",
   "created": "2026-04-25T05:35:43Z",
   "severity": "error",
-  "failures": 1,
-  "tightening_level": 1,
+  "failures": 2,
+  "tightening_level": 2,
   "hooks": [
     "pre-commit",
     "pre-push",

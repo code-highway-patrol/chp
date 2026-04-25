@@ -1,5 +1,5 @@
 ---
-name: chp-investigate
+name: chp:investigate
 description: Debug why an action was blocked by CHP and understand violation history
 ---
 
