@@ -1,0 +1,11 @@
+{
+  "name": "test-verifier-law",
+  "description": "Test law for verifier",
+  "severity": "error",
+  "hooks": [
+    "pre-commit"
+  ],
+  "created": "2026-04-24",
+  "failures": 1,
+  "tightening_level": 1
+}

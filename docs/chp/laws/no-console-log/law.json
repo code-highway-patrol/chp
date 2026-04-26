@@ -1,0 +1,30 @@
+{
+  "name": "no-console-log",
+  "description": "Prohibits console.log() statements in source code",
+  "severity": "error",
+  "hooks": [
+    "pre-commit",
+    "pre-tool"
+  ],
+  "enabled": true,
+  "intent": "Prevent debug console.log statements from being committed. Use logger.info(), logger.error(), or logger.debug() instead.",
+  "autoFix": "ask",
+  "include": [
+    "**/*.js",
+    "**/*.ts",
+    "**/*.jsx",
+    "**/*.tsx",
+    "**/*.mjs",
+    "**/*.cjs"
+  ],
+  "exclude": [
+    "**/node_modules/**",
+    "**/dist/**",
+    "**/build/**",
+    "**/.next/**",
+    "**/coverage/**"
+  ],
+  "created": "2026-04-25",
+  "failures": 5,
+  "tightening_level": 5
+}
