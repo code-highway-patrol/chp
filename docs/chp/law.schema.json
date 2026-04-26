@@ -78,6 +78,21 @@
         }
       }
     },
+    "include": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[^*\\s]*|\\*\\*?|\\*[^*\\s]*(\\*[^*\\s]*)*$"
+      },
+      "description": "Glob patterns for files this law applies to. Required for git-hook laws (pre-commit, pre-push, post-commit, commit-msg, etc.). Agent-only laws are exempt."
+    },
+    "exclude": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Glob patterns exempt from this law. Overrides include patterns."
+    },
     "created": {
       "type": "string",
       "format": "date-time",
