@@ -1,0 +1,114 @@
+name: publish
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  validate:
+    name: validate manifests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: validate JSON syntax
+        run: |
+          set -e
+          for f in \
+            .claude-plugin/marketplace.json \
+            .claude-plugin/plugins/chp/plugin.json \
+            .agents/plugins/marketplace.json \
+            .codex-plugin/plugins/chp/.codex-plugin/plugin.json
+          do
+            echo "::group::$f"
+            jq empty "$f"
+            echo "::endgroup::"
+          done
+
+      - name: assert version field present and non-empty
+        run: |
+          set -e
+          for f in \
+            .claude-plugin/plugins/chp/plugin.json \
+            .codex-plugin/plugins/chp/.codex-plugin/plugin.json
+          do
+            v=$(jq -r '.version // ""' "$f")
+            if [[ -z "$v" ]]; then
+              echo "::error file=$f::missing .version"
+              exit 1
+            fi
+            if [[ ! "$v" =~ ^[0-9]+\.[0-9]+\.[0-9]+ ]]; then
+              echo "::error file=$f::version '$v' is not semver-shaped"
+              exit 1
+            fi
+            echo "$f: $v"
+          done
+
+      - name: assert claude and codex versions match
+        run: |
+          claude_v=$(jq -r '.version' .claude-plugin/plugins/chp/plugin.json)
+          codex_v=$(jq -r '.version' .codex-plugin/plugins/chp/.codex-plugin/plugin.json)
+          if [[ "$claude_v" != "$codex_v" ]]; then
+            echo "::error::version drift (claude=$claude_v codex=$codex_v) — run scripts/bump-version.sh"
+            exit 1
+          fi
+
+      - name: assert version bumped vs previous commit (push to main only)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          prev=$(git show HEAD~1:.claude-plugin/plugins/chp/plugin.json 2>/dev/null | jq -r '.version // ""' || echo "")
+          curr=$(jq -r '.version' .claude-plugin/plugins/chp/plugin.json)
+          if [[ -n "$prev" && "$prev" == "$curr" ]]; then
+            echo "::error::version $curr unchanged from previous commit — pre-push hook should have bumped it"
+            exit 1
+          fi
+          echo "version: $prev -> $curr"
+
+      - name: assert plugin source paths exist
+        run: |
+          set -e
+          test -d .claude-plugin/plugins/chp
+          test -d .codex-plugin/plugins/chp
+          for skill in $(jq -r '.skills[]' .claude-plugin/plugins/chp/plugin.json); do
+            path=".claude-plugin/plugins/chp/$skill"
+            if [[ ! -d "$path" ]]; then
+              echo "::error::missing skill path: $path"
+              exit 1
+            fi
+          done
+
+  release:
+    name: tag release
+    needs: validate
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: tag and release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          version=$(jq -r '.version' .claude-plugin/plugins/chp/plugin.json)
+          tag="v$version"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            echo "release $tag already exists, skipping"
+            exit 0
+          fi
+          gh release create "$tag" \
+            --title "$tag" \
+            --notes "Auto-released by publish workflow on commit ${GITHUB_SHA:0:7}." \
+            --target "$GITHUB_SHA"
