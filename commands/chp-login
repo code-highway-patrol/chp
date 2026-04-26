@@ -1,0 +1,163 @@
+#!/usr/bin/env bash
+# CHP Login - Authenticate with marketplace for publishing
+
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../core/common.sh"
+
+AUTH_DIR="$HOME/.chp"
+AUTH_FILE="$AUTH_DIR/auth.json"
+MARKETPLACE_URL="${CHP_MARKETPLACE_URL:-https://pinkdonut.work}"
+
+show_usage() {
+    cat <<EOF
+CHP Login - Authenticate with marketplace
+
+Usage: chp-login [command]
+
+Commands:
+    login              Sign in to marketplace (opens browser)
+    logout             Sign out and remove stored credentials
+    status             Show current authentication status
+
+Examples:
+    chp-login login    # Sign in (stores token locally)
+    chp-login status   # Check if signed in
+    chp-login logout   # Sign out
+EOF
+}
+
+mkdir -p "$AUTH_DIR"
+
+cmd_status() {
+    if [[ -f "$AUTH_FILE" ]]; then
+        local token email
+        token=$(jq -r '.token // empty' "$AUTH_FILE" 2>/dev/null)
+        email=$(jq -r '.email // empty' "$AUTH_FILE" 2>/dev/null)
+
+        if [[ -n "$token" ]]; then
+            echo "Logged in"
+            [[ -n "$email" ]] && echo "  Email: $email"
+            echo "  Token: ${token:0:20}..."
+            echo ""
+            echo "Ready to publish with: chp publish <law-name>"
+            return 0
+        fi
+    fi
+
+    echo "Not logged in"
+    echo ""
+    echo "Sign in with: chp-login login"
+}
+
+cmd_logout() {
+    if [[ -f "$AUTH_FILE" ]]; then
+        rm "$AUTH_FILE"
+        echo "Logged out successfully"
+    else
+        echo "Not logged in"
+    fi
+}
+
+cmd_login() {
+    # Check if already logged in
+    if [[ -f "$AUTH_FILE" ]]; then
+        local existing_token
+        existing_token=$(jq -r '.token // empty' "$AUTH_FILE" 2>/dev/null)
+        if [[ -n "$existing_token" ]]; then
+            echo "Already logged in"
+            echo ""
+            echo "Use 'chp-login logout' first to sign in with a different account"
+            cmd_status
+            return 0
+        fi
+    fi
+
+    echo "CHP Marketplace Authentication"
+    echo "=============================="
+    echo ""
+    echo "Opening browser to sign in..."
+    echo ""
+
+    # Open browser to marketplace
+    if command -v start >/dev/null 2>&1; then
+        start "$MARKETPLACE_URL" 2>/dev/null || true
+    elif command -v open >/dev/null 2>&1; then
+        open "$MARKETPLACE_URL" 2>/dev/null || true
+    elif command -v xdg-open >/dev/null 2>&1; then
+        xdg-open "$MARKETPLACE_URL" 2>/dev/null || true
+    else
+        echo "Could not open browser automatically"
+        echo ""
+        echo "Open this URL manually: $MARKETPLACE_URL"
+    fi
+
+    echo ""
+    echo "After signing in:"
+    echo "  1. Open browser DevTools (F12)"
+    echo "  2. Go to Application → Local Storage"
+    echo "  3. Find the key starting with 'sb-'"
+    echo "  4. Copy the access token value"
+    echo ""
+    echo "Paste the token below and press Enter:"
+    read -r token
+
+    # Trim whitespace
+    token=$(echo "$token" | xargs)
+
+    if [[ -z "$token" ]]; then
+        echo "Error: No token provided" >&2
+        exit 1
+    fi
+
+    # Validate token format (basic check)
+    if [[ ! "$token" =~ ^eyJ ]]; then
+        echo "Warning: Token doesn't look like a valid JWT" >&2
+        echo "Expected format: eyJ..." >&2
+        echo "" >&2
+        read -p "Continue anyway? (y/N) " -n 1 -r
+        echo
+        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+            exit 1
+        fi
+    fi
+
+    # Store token
+    echo "{\"token\":\"$token\",\"issued_at\":$(date +%s)}" > "$AUTH_FILE"
+
+    echo ""
+    echo "Logged in successfully!"
+    echo ""
+    echo "You can now publish laws with: chp publish <law-name>"
+}
+
+# Main
+if [[ $# -eq 0 ]]; then
+    show_usage
+    exit 0
+fi
+
+cmd="$1"
+shift
+
+case "$cmd" in
+    login)
+        cmd_login
+        ;;
+    logout)
+        cmd_logout
+        ;;
+    status)
+        cmd_status
+        ;;
+    help|--help|-h)
+        show_usage
+        ;;
+    *)
+        echo "Error: unknown command: $cmd" >&2
+        echo ""
+        show_usage
+        exit 1
+        ;;
+esac

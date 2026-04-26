@@ -70,6 +70,9 @@ case "$cmd" in
     publish)
         exec "$COMMANDS_DIR/chp-publish" "$@"
         ;;
+    login)
+        exec "$COMMANDS_DIR/chp-login" "$@"
+        ;;
     marketplace)
         exec "$COMMANDS_DIR/chp-marketplace" "$@"
         ;;

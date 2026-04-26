@@ -117,37 +117,65 @@ if [[ ! -d "$law_path" ]]; then
     exit 1
 fi
 
-# Check for required files
+# Check for required files (all three are required for marketplace)
 law_json="$law_path/law.json"
 guidance="$law_path/guidance.md"
 verify="$law_path/verify.sh"
+missing_files=()
 
 if [[ ! -f "$law_json" ]]; then
-    echo "Error: law.json not found in $law_path" >&2
-    exit 1
+    missing_files+=("law.json")
 fi
 
-if [[ ! -f "$guidance" ]] && [[ ! -f "$verify" ]]; then
-    echo "Error: law must have at least guidance.md or verify.sh" >&2
+if [[ ! -f "$guidance" ]]; then
+    missing_files+=("guidance.md")
+fi
+
+if [[ ! -f "$verify" ]]; then
+    missing_files+=("verify.sh")
+fi
+
+if [[ ${#missing_files[@]} -gt 0 ]]; then
+    echo "Error: law is missing required files: ${missing_files[*]}" >&2
+    echo "" >&2
+    echo "Marketplace laws require all three files:" >&2
+    echo "  - law.json (law configuration)" >&2
+    echo "  - guidance.md (documentation)" >&2
+    echo "  - verify.sh (verification script)" >&2
+    echo "" >&2
+    echo "Path: $law_path" >&2
     exit 1
 fi
 
 # Get auth token (skip for dry-run)
 if [[ -z "$dry_run" ]]; then
+    # Try: --token flag, then CHP_PUBLISH_TOKEN, then stored auth
     token="${custom_token:-$CHP_PUBLISH_TOKEN}"
+
     if [[ -z "$token" ]]; then
-        echo "Error: Supabase auth token required" >&2
+        # Try to read from stored auth
+        AUTH_FILE="$HOME/.chp/auth.json"
+        if [[ -f "$AUTH_FILE" ]]; then
+            token=$(jq -r '.token // empty' "$AUTH_FILE" 2>/dev/null)
+        fi
+    fi
+
+    if [[ -z "$token" ]]; then
+        echo "Error: Not logged in" >&2
         echo "" >&2
-        echo "Get your token from:" >&2
-        echo "  1. Sign in at https://pinkdonut.work" >&2
-        echo "  2. Open DevTools → Application → Local Storage" >&2
-        echo "  3. Copy the access token" >&2
-        echo "" >&2
-        echo "Then pass it via --token or set CHP_PUBLISH_TOKEN" >&2
+        echo "Sign in with: chp login" >&2
+        echo "Or pass --token to use a custom token" >&2
         exit 1
     fi
 else
     token="${custom_token:-$CHP_PUBLISH_TOKEN}"
+    # Try to read from stored auth for dry-run too
+    if [[ -z "$token" ]]; then
+        AUTH_FILE="$HOME/.chp/auth.json"
+        if [[ -f "$AUTH_FILE" ]]; then
+            token=$(jq -r '.token // empty' "$AUTH_FILE" 2>/dev/null)
+        fi
+    fi
 fi
 
 # Read law.json for metadata
