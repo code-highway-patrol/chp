@@ -44,6 +44,8 @@ Options:
     --pattern=<regex>     Custom detection pattern
     --files=<extensions>  File types to check (comma-separated)
     --exceptions=<list>   Exception patterns (comma-separated)
+    --include=<patterns>  File patterns to include (comma-separated, e.g., **/*.js,**/*.ts)
+    --exclude=<patterns>  File patterns to exclude (comma-separated)
     --dry-run             Show preview without creating the law
     --response=<text>     Pre-answer interactive prompts (for testing)
 
@@ -131,6 +133,8 @@ create_law() {
     local specified_pattern=""
     local specified_files=""
     local specified_exceptions=""
+    local include_patterns=()
+    local exclude_patterns=()
 
     # Parse optional arguments
     shift 2
@@ -153,6 +157,22 @@ create_law() {
                 ;;
             --exceptions=*)
                 specified_exceptions="${1#*=}"
+                ;;
+            --include)
+                shift
+                IFS=',' read -ra include_patterns <<< "$1"
+                shift
+                ;;
+            --include=*)
+                IFS=',' read -ra include_patterns <<< "${1#*=}"
+                ;;
+            --exclude)
+                shift
+                IFS=',' read -ra exclude_patterns <<< "$1"
+                shift
+                ;;
+            --exclude=*)
+                IFS=',' read -ra exclude_patterns <<< "${1#*=}"
                 ;;
             *)
                 log_error "Unknown option: $1"
@@ -177,6 +197,26 @@ create_law() {
     local hooks=()
     if [[ -n "$hooks_arg" ]]; then
         IFS=',' read -ra hooks <<< "$hooks_arg"
+    fi
+
+    # Check if this is a git-hook law without scope
+    local has_git_hook=false
+    local has_include=false
+
+    for hook in "${hooks[@]}"; do
+        if is_git_hook "$hook"; then
+            has_git_hook=true
+        fi
+    done
+
+    if [[ ${#include_patterns[@]} -gt 0 ]]; then
+        has_include=true
+    fi
+
+    if $has_git_hook && ! $has_include; then
+        log_warn "Creating git-hook law without --include. Defaulting to ['**/*'] (all files)."
+        log_warn "For better performance, specify which file types this law applies to."
+        include_patterns=("**/*")
     fi
 
     # Create law directory
@@ -305,6 +345,18 @@ create_law() {
     # Create law directory
     mkdir -p "$law_dir"
 
+    # Build the include array JSON
+    local include_json="[]"
+    if [[ ${#include_patterns[@]} -gt 0 ]]; then
+        include_json=$(printf '%s\n' "${include_patterns[@]}" | jq -R . | jq -s .)
+    fi
+
+    # Build the exclude array JSON
+    local exclude_json="[]"
+    if [[ ${#exclude_patterns[@]} -gt 0 ]]; then
+        exclude_json=$(printf '%s\n' "${exclude_patterns[@]}" | jq -R . | jq -s .)
+    fi
+
     # Build checks array based on detected pattern
     local checks='[]'
 
@@ -319,9 +371,9 @@ create_law() {
 
     # Create law.json with checks
     if [[ "$checks" != "[]" ]]; then
-        build_law_json_with_checks "$law_name" "$severity" "$hooks_str" "$checks" > "$law_dir/law.json"
+        build_law_json_with_checks "$law_name" "$severity" "$hooks_str" "$checks" "true" "$include_json" "$exclude_json" > "$law_dir/law.json"
     else
-        build_law_json "$law_name" "$severity" "$hooks_str" > "$law_dir/law.json"
+        build_law_json "$law_name" "$severity" "$hooks_str" "true" "$include_json" "$exclude_json" > "$law_dir/law.json"
     fi
 
     # Create verify.sh (auto-generated using check-runner)
@@ -847,7 +899,7 @@ main() {
     case "$command" in
         create)
             if [[ $# -lt 1 ]]; then
-                log_error "Usage: chp-law create <law-name> [--hooks=<hooks>] [--dry-run] [--response=<text>]... [--severity=<severity>] [--pattern=<pattern>] [--files=<files>] [--exceptions=<exceptions>]"
+                log_error "Usage: chp-law create <law-name> [--hooks=<hooks>] [--dry-run] [--response=<text>]... [--severity=<severity>] [--pattern=<pattern>] [--files=<files>] [--exceptions=<exceptions>] [--include=<patterns>] [--exclude=<patterns>]"
                 exit 1
             fi
             local law_name="$1"

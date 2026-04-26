@@ -91,22 +91,31 @@ build_law_json() {
     local severity="$2"
     local hooks="$3"
     local enabled="${4:-true}"
+    local include="${5:-[]}"
+    local exclude="${6:-[]}"
 
     # Build hooks array from comma-separated string using single jq call
     local hooks_array=$(jq -nR --arg h "$hooks" '$h | split(",") | map(select(length > 0))')
 
-    cat <<EOF
-{
-  "name": "$name",
-  "intent": "Enforce the $name rule",
-  "created": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
-  "severity": "$severity",
-  "failures": 0,
-  "tightening_level": 0,
-  "hooks": $hooks_array,
-  "enabled": $enabled
-}
-EOF
+    jq -n \
+        --arg name "$name" \
+        --arg severity "$severity" \
+        --argjson hooks "$hooks_array" \
+        --argjson enabled "$enabled" \
+        --argjson inc "$include" \
+        --argjson exc "$exclude" \
+        '{
+            "name": $name,
+            "intent": "Enforce the \($name) rule",
+            "created": (now | todate),
+            "severity": $severity,
+            "failures": 0,
+            "tightening_level": 0,
+            "hooks": $hooks,
+            "enabled": ($enabled == "true"),
+            "include": $inc,
+            "exclude": $exc
+        }'
 }
 
 # Build verify.sh template
@@ -212,6 +221,8 @@ build_law_json_with_checks() {
     local hooks="$3"
     local checks_json="$4"
     local enabled="${5:-true}"
+    local include="${6:-[]}"
+    local exclude="${7:-[]}"
 
     local hooks_array=$(jq -nR --arg h "$hooks" '$h | split(",") | map(select(length > 0))')
 
@@ -234,6 +245,8 @@ build_law_json_with_checks() {
         --argjson hooks "$hooks_array" \
         --argjson checks "$checks" \
         --arg enabled "$enabled" \
+        --argjson inc "$include" \
+        --argjson exc "$exclude" \
         '{
             "name": $name,
             "intent": "Enforce the \($name) rule",
@@ -243,7 +256,9 @@ build_law_json_with_checks() {
             "tightening_level": 0,
             "hooks": $hooks,
             "checks": $checks,
-            "enabled": ($enabled == "true")
+            "enabled": ($enabled == "true"),
+            "include": $inc,
+            "exclude": $exc
         }'
 }
 
