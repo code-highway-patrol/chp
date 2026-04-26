@@ -28,7 +28,8 @@
           "pre-tool",
           "post-tool",
           "pre-write",
-          "post-response"
+          "post-response",
+          "fix"
         ]
       },
       "minItems": 1,
@@ -43,6 +44,12 @@
       "type": "string",
       "minLength": 10,
       "description": "Human-readable description of what the law enforces and why."
+    },
+    "autoFix": {
+      "type": "string",
+      "enum": ["never", "ask", "auto"],
+      "default": "never",
+      "description": "Whether Claude should attempt to auto-fix violations. 'never' = no fix (default), 'ask' = show diff and wait for confirmation, 'auto' = apply immediately."
     },
     "checks": {
       "type": "array",
