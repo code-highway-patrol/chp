@@ -1,9 +1,0 @@
-{
-  "name": "test-verifier-law-2",
-  "description": "Second test law",
-  "severity": "warn",
-  "hooks": ["pre-commit"],
-  "created": "2026-04-24",
-  "failures": 0,
-  "tightening_level": 0
-}
