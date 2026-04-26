@@ -5,7 +5,7 @@
   "severity": "warn",
   "failures": 0,
   "tightening_level": 0,
-  "hooks": ["pre-commit", "pre-push"],
+  "hooks": ["pre-commit", "pre-push", "pre-tool"],
   "enabled": true,
   "checks": [
     {
@@ -13,6 +13,15 @@
       "type": "pattern",
       "config": {"pattern": "alert\\("},
       "severity": "warn",
+      "message": "Use toast notifications or modal dialogs instead of alert()"
+    },
+    {
+      "id": "alert-guidance",
+      "type": "agent",
+      "config": {
+        "prompt": "RULE: Never use alert(). Use toast notifications, modal dialogs, or proper error boundaries instead. alert() blocks the UI thread and provides a poor user experience."
+      },
+      "severity": "block",
       "message": "Use toast notifications or modal dialogs instead of alert()"
     }
   ]

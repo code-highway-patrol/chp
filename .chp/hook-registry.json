@@ -21,7 +21,9 @@
     "pre-tool": {
       "laws": [
         "mandarin-only",
+        "no-alerts",
         "no-api-keys",
+        "no-console-log",
         "no-todos"
       ],
       "enabled": true,

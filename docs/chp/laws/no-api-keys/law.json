@@ -41,6 +41,15 @@
       "config": {"pattern": "xox[bop]-[0-9]{11,13}-[0-9]{11,13}-[a-zA-Z0-9]{24}"},
       "severity": "block",
       "message": "Slack token detected — use environment variable"
+    },
+    {
+      "id": "secrets-guidance",
+      "type": "agent",
+      "config": {
+        "prompt": "RULE: Never hardcode API keys, tokens, or secrets in source code. Always use environment variables (process.env.MY_KEY), a secrets manager, or configuration files excluded from version control. This includes Stripe keys (sk_*), Google API keys (AIza*), AWS keys (AKIA*), GitHub tokens (ghp_*), and Slack tokens (xoxb-*)."
+      },
+      "severity": "block",
+      "message": "Never commit secrets — use environment variables"
     }
   ]
 }

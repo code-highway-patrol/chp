@@ -17,6 +17,15 @@
       },
       "severity": "block",
       "message": "Remove TODO/FIXME/HACK comments or reference an issue ticket"
+    },
+    {
+      "id": "todos-guidance",
+      "type": "agent",
+      "config": {
+        "prompt": "RULE: Do not leave TODO, FIXME, HACK, or XXX comments in code. Either implement the fix now, or create a tracked issue and reference it (e.g., // See issue #42). Untracked TODOs are technical debt."
+      },
+      "severity": "block",
+      "message": "Remove TODO/FIXME/HACK comments or reference an issue ticket"
     }
   ]
 }
