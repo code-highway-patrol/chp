@@ -1,0 +1,49 @@
+{
+  "name": "no-api-keys",
+  "severity": "error",
+  "hooks": ["pre-commit", "pre-push", "pre-tool", "post-tool"],
+  "enabled": true,
+  "intent": "Prevent hardcoded API keys, tokens, or secrets in source code. Use environment variables instead.",
+  "autoFix": "never",
+  "checks": [
+    {
+      "id": "no-sk-keys",
+      "type": "pattern",
+      "config": {"pattern": "sk-[a-zA-Z0-9]{20,}"},
+      "severity": "block",
+      "message": "Hardcoded API key detected. Use process.env instead."
+    },
+    {
+      "id": "no-aiza-keys",
+      "type": "pattern",
+      "config": {"pattern": "AIza[A-Za-z0-9_-]{35}"},
+      "severity": "block",
+      "message": "Google API key detected. Use environment variables."
+    },
+    {
+      "id": "no-akia-keys",
+      "type": "pattern",
+      "config": {"pattern": "AKIA[0-9A-Z]{16}"},
+      "severity": "block",
+      "message": "AWS access key detected. Use environment variables."
+    },
+    {
+      "id": "no-ghp-keys",
+      "type": "pattern",
+      "config": {"pattern": "ghp_[a-zA-Z0-9]{36}"},
+      "severity": "block",
+      "message": "GitHub personal access token detected. Use environment variables."
+    },
+    {
+      "id": "no-xox-keys",
+      "type": "pattern",
+      "config": {"pattern": "xox[bap]-[0-9]{12}-[0-9]{12}-[0-9a-zA-Z]{24}"},
+      "severity": "block",
+      "message": "Slack token detected. Use environment variables."
+    }
+  ],
+  "include": ["**/*"],
+  "created": "2026-04-25T00:00:00Z",
+  "failures": 0,
+  "tightening_level": 0
+}

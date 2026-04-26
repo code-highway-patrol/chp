@@ -1,0 +1,21 @@
+{
+  "name": "no-todos",
+  "severity": "error",
+  "hooks": ["pre-commit", "pre-push", "pre-tool"],
+  "enabled": true,
+  "intent": "Prevent pending-task comments, fix-me notes, workarounds, XXX markers, or vague TODO comments in source code.",
+  "autoFix": "never",
+  "checks": [
+    {
+      "id": "no-pending-tasks",
+      "type": "pattern",
+      "config": {"pattern": "pending-task|fix-me|workaround|XXX|NOTE[:\\s]"},
+      "severity": "block",
+      "message": "Either finish the work or create a ticket and reference it by number. Use '// See issue #42' format."
+    }
+  ],
+  "include": ["**/*.js", "**/*.ts", "**/*.jsx", "**/*.tsx", "**/*.py", "**/*.go", "**/*.rs", "**/*.java", "**/*.c", "**/*.cpp", "**/*.h"],
+  "created": "2026-04-25T00:00:00Z",
+  "failures": 0,
+  "tightening_level": 0
+}
