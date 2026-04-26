@@ -88,22 +88,32 @@ async function registerLaws(lawNames) {
   await fs.writeFile(REGISTRY_PATH, JSON.stringify(registry, null, 2) + '\n', 'utf-8');
 }
 
-// Best-effort: tell chp-hooks to (re-)install templates for whatever's now
-// registered. If the binary isn't on PATH (fresh project, dev checkout), we
-// note it but don't fail the install — the registry is updated either way.
+// Best-effort: ensure hook templates are installed by calling the installer
+// directly. Skip the chp-hooks subprocess overhead - source installer.sh and
+// call ensure_hooks_installed directly.
 function ensureHookTemplates() {
   return new Promise((resolve) => {
-    const proc = spawn('chp-hooks', ['ensure'], { stdio: 'pipe' });
+    const proc = spawn('bash', ['-c', `
+      source "$(pwd)/core/common.sh"
+      source "$(pwd)/core/hook-registry.sh"
+      source "$(pwd)/core/detector.sh"
+      source "$(pwd)/core/installer.sh"
+      ensure_hooks_installed 2>&1
+    `], { stdio: 'pipe' });
     let stderr = '';
+    let stdout = '';
     proc.stderr.on('data', (d) => (stderr += d.toString()));
+    proc.stdout.on('data', (d) => (stdout += d.toString()));
     proc.on('error', () => {
-      console.log(chalk.gray('  · chp-hooks not on PATH — run `chp-hooks ensure` manually'));
+      console.log(chalk.gray('  · Could not run hook template install — run `bash scripts/setup.sh` manually'));
       resolve();
     });
     proc.on('exit', (code) => {
       if (code !== 0) {
-        console.log(chalk.yellow(`  · chp-hooks ensure exited ${code}: ${stderr.trim()}`));
+        console.log(chalk.yellow(`  · Hook template install exited ${code}`));
       }
+      // Show any useful output
+      if (stdout) console.log(chalk.gray(stdout.trim()));
       resolve();
     });
   });
@@ -114,7 +124,7 @@ async function installStatue(slug) {
   const statue = await fetchStatue(slug);
   if (!statue) {
     console.error(chalk.red(`  ✗ not found: ${slug}`));
-    return false;
+    return { success: false, lawNames: [] };
   }
 
   const fileList =
@@ -124,7 +134,7 @@ async function installStatue(slug) {
 
   if (fileList.length === 0) {
     console.error(chalk.red(`  ✗ ${slug} has no installable content`));
-    return false;
+    return { success: false, lawNames: [] };
   }
 
   const lawNames = new Set();
@@ -151,35 +161,45 @@ async function installStatue(slug) {
 
   if (written === 0) {
     console.error(chalk.red(`  ✗ ${slug} produced no usable law files`));
-    return false;
+    return { success: false, lawNames: [] };
   }
-
-  await registerLaws(Array.from(lawNames));
 
   const lawList = Array.from(lawNames).sort();
   console.log(chalk.green(`  ✓ wrote ${written} files (${skipped} skipped)`));
-  console.log(chalk.green(`  ✓ registered ${lawList.length} law(s): ${lawList.join(', ')}`));
-  return true;
+  console.log(chalk.green(`  ✓ ${lawList.length} law(s): ${lawList.join(', ')}`));
+  return { success: true, lawNames: lawList };
 }
 
 export async function install(slugs, _options) {
   console.log(chalk.bold.blue('CHP Marketplace Install'));
   console.log(chalk.gray('='.repeat(40)));
 
+  // Install all laws in parallel for significant speedup
+  const results = await Promise.allSettled(
+    slugs.map((slug) => installStatue(slug))
+  );
+
+  // Collect all law names from successful installs
+  const allLawNames = new Set();
   let ok = 0;
   let bad = 0;
-  for (const slug of slugs) {
-    try {
-      const success = await installStatue(slug);
-      success ? ok++ : bad++;
-    } catch (err) {
-      console.error(chalk.red(`  ✗ ${slug}: ${err.message}`));
+
+  for (const result of results) {
+    if (result.status === 'fulfilled' && result.value.success) {
+      ok++;
+      result.value.lawNames.forEach(name => allLawNames.add(name));
+    } else {
       bad++;
     }
     console.log();
   }
 
-  if (ok > 0) await ensureHookTemplates();
+  // Single batch registry update for all laws
+  if (allLawNames.size > 0) {
+    console.log(chalk.gray(`Updating registry with ${allLawNames.size} law(s)...`));
+    await registerLaws(Array.from(allLawNames));
+    await ensureHookTemplates();
+  }
 
   console.log(chalk.gray('='.repeat(40)));
   console.log(chalk.bold(`Installed: ${ok} | Failed: ${bad}`));

@@ -42,8 +42,9 @@ init_hook_registry
 log_info "Registry ready at .chp/hook-registry.json"
 echo ""
 
-# 3. Scan laws and register them with hooks
+# 3. Scan laws and register them with hooks (batched for performance)
 echo "Scanning laws..."
+declare -A hook_to_laws
 registered_hooks=0
 registered_laws=0
 
@@ -70,13 +71,47 @@ for law_dir in "$CHP_BASE/docs/chp/laws"/*/; do
     while IFS= read -r hook_type; do
         hook_type=$(echo "$hook_type" | tr -d '\r')
         [ -z "$hook_type" ] && continue
-        register_hook_law "$hook_type" "$law_name"
+        # Collect hook->law mappings in memory instead of writing immediately
+        hook_to_laws["$hook_type"]+="$law_name "
         registered_hooks=$((registered_hooks + 1))
     done <<< "$hooks"
 
     registered_laws=$((registered_laws + 1))
     log_info "  $law_name: registered"
 done
+
+# Batch write all hook registrations in a single operation
+echo ""
+log_info "Writing $registered_hooks hook bindings in single batch..."
+tmp_file=$(mktemp)
+cat > "$tmp_file" << 'EOF'
+{
+  "hooks": {
+EOF
+
+first=true
+for hook_type in "${!hook_to_laws[@]}"; do
+    laws="${hook_to_laws[$hook_type]}"
+    # Convert space-separated list to JSON array
+    laws_array=$(echo "$laws" | tr ' ' '\n' | jq -R . | jq -s .)
+
+    if [ "$first" = true ]; then
+        first=false
+    else
+        printf ',\n' >> "$tmp_file"
+    fi
+    printf '    "%s": {"laws": %s, "enabled": true, "blocking": true}' "$hook_type" "$laws_array" >> "$tmp_file"
+done
+
+cat >> "$tmp_file" << 'EOF'
+
+  },
+  "version": "1.0"
+}
+EOF
+
+mv "$tmp_file" "$HOOK_REGISTRY"
+log_info "Registry batch-write complete"
 
 echo ""
 log_info "Registered $registered_laws laws with $registered_hooks hook bindings"
