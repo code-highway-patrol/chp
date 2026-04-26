@@ -89,4 +89,15 @@ if [ "${CHP_SKIP_UPDATE_CHECK:-0}" != "1" ]; then
     _chp_check_updates
 fi
 
-exec "$CHP_BASE/core/dispatcher.sh" "$CHP_HOOK"
+# Cascade Hooks block on exit code 2 (docs.windsurf.com/windsurf/cascade/hooks).
+# CHP's dispatcher returns 1 on failure (git-hook convention). Translate for
+# pre_* events so Windsurf actually blocks instead of just logging.
+"$CHP_BASE/core/dispatcher.sh" "$CHP_HOOK"
+rc=$?
+
+case "$CASCADE_EVENT" in
+    pre_*)
+        [ $rc -ne 0 ] && exit 2
+        ;;
+esac
+exit $rc
