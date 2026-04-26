@@ -737,8 +737,15 @@ _ensure_claude_settings() {
 
 # Ensure all registered hooks have their files installed.
 # Reads the registry and installs any missing hook templates.
+# Skips re-install if state hasn't changed (performance optimization).
 # Requires: hook-registry.sh and detector.sh to be sourced by the caller.
 ensure_hooks_installed() {
+    # Fast path: check if sync is needed using state tracking
+    if ! _should_ensure_hooks; then
+        log_debug "Hooks already in sync, skipping ensure_hooks_installed"
+        return 0
+    fi
+
     _ensure_registry
 
     local registered_hooks
@@ -750,6 +757,7 @@ ensure_hooks_installed() {
     fi
 
     local installed=0
+    local updated=0
     local needs_claude_settings=false
 
     while IFS= read -r hook_type; do
@@ -765,9 +773,12 @@ ensure_hooks_installed() {
         fi
 
         if _is_hook_installed "$hook_type" "$hook_category"; then
+            # Hook exists, but we're here because state changed
             # Reinstall to pick up template changes
-            log_debug "Hook already installed, updating: $hook_type ($hook_category)"
-            install_hook_template "$hook_type" "$hook_category" >/dev/null 2>&1 || true
+            log_debug "Updating hook template: $hook_type ($hook_category)"
+            if install_hook_template "$hook_type" "$hook_category" >/dev/null 2>&1; then
+                ((updated++))
+            fi
             continue
         fi
 
@@ -789,8 +800,10 @@ ensure_hooks_installed() {
 
     if [[ $installed -gt 0 ]]; then
         log_info "Ensured $installed hook(s) installed"
+    elif [[ $updated -gt 0 ]]; then
+        log_debug "Updated $updated hook template(s)"
     else
-        log_info "All registered hooks already installed"
+        log_debug "All registered hooks already installed"
     fi
 
     # Store sync state for future change detection

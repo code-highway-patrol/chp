@@ -500,6 +500,9 @@ EOF
                 log_warn "jq is required to configure Claude Code agent hooks (skipping settings.json)"
             fi
         fi
+
+        # Ensure all hooks are installed (fast path: skips if state unchanged)
+        ensure_hooks_installed
     else
         log_warn "No hooks specified. Use --hooks=pre-commit,pre-push to install hooks"
     fi
