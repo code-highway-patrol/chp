@@ -7,6 +7,13 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/../core/common.sh"
 source "$SCRIPT_DIR/../core/detector.sh"
+source "$SCRIPT_DIR/../core/installer.sh"
+source "$SCRIPT_DIR/../core/hook-registry.sh"
+
+# Auto-ensure hooks are installed (silent unless something needs to be done)
+if _should_ensure_hooks; then
+    ensure_hooks_installed >/dev/null 2>&1 || true
+fi
 
 echo "CHP Law Enforcement Status"
 echo "=========================="

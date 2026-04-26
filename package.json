@@ -1,20 +1,10 @@
 {
   "name": "chp",
-  "displayName": "Code Health Protocol",
+  "displayName": "Code Highway Patrol",
   "version": "1.0.0",
   "description": "Highway Patrol for your code - enforcing traffic laws, catching speeders, and keeping your codebase safe",
-  "main": "index.js",
-  "bin": {
-    "chp": "./bin/chp",
-    "chp-analyze": "./scripts/analyze.js",
-    "chp-check": "./scripts/check.js",
-    "chp-validate": "./scripts/validate.js"
-  },
   "scripts": {
     "test": "bash scripts/run-tests.sh",
-    "analyze": "node scripts/analyze.js",
-    "check": "node scripts/check.js",
-    "validate": "node scripts/validate.js",
     "setup": "bash scripts/setup.sh"
   },
   "keywords": [
@@ -37,26 +27,12 @@
   "bugs": {
     "url": "https://github.com/yourusername/chp/issues"
   },
-  "engines": {
-    "node": ">=18.0.0"
-  },
-  "dependencies": {
-    "chalk": "^5.3.0",
-    "commander": "^12.0.0",
-    "fast-glob": "^3.3.2",
-    "js-yaml": "^4.1.0",
-    "jsonschema": "^1.4.1",
-    "minimatch": "^10.2.5"
-  },
-  "devDependencies": {},
   "files": [
     "bin/",
-    "lib/",
-    "scripts/",
-    "skills/",
-    "hooks/",
     "commands/",
-    "assets/",
+    "core/",
+    "docs/",
+    "skills/",
     "agents/",
     ".claude-plugin/",
     ".codex-plugin/",

@@ -69,9 +69,28 @@ install_hook() {
         echo "# CHP Law: $law_name"
         echo "# Hook type: $hook_type"
         echo ""
-        echo "SCRIPT_DIR=\"\$(cd \"\$(dirname \"\${BASH_SOURCE[0]}\")\" && pwd)\""
-        echo "PROJECT_ROOT=\"\$(cd \"\$SCRIPT_DIR/../..\" && pwd)\""
-        echo "exec \"\$PROJECT_ROOT/core/dispatcher.sh\" $hook_type \"\$@\""
+        echo "# Resolve CHP_BASE: env var, then settings.json, then relative fallback"
+        echo "if [[ -n \"\$CHP_BASE\" ]]; then"
+        echo "    : # CHP_BASE already set"
+        echo "elif [[ -f \"\$HOME/.claude/settings.json\" ]]; then"
+        echo "    CHP_BASE=\$(jq -r '.extraKnownMarketplaces[\"chp-local\"].source.path // empty' \"\$HOME/.claude/settings.json\" 2>/dev/null)"
+        echo "fi"
+        echo ""
+        echo "# Final fallback to relative path"
+        echo "if [[ -z \"\$CHP_BASE\" ]] || [[ ! -f \"\$CHP_BASE/core/dispatcher.sh\" ]]; then"
+        echo "    SCRIPT_DIR=\"\$(cd \"\$(dirname \"\${BASH_SOURCE[0]}\")\" && pwd)\""
+        echo "    PROJECT_ROOT=\"\$(cd \"\$SCRIPT_DIR/../..\" && pwd)\""
+        echo "    if [[ -f \"\$PROJECT_ROOT/core/dispatcher.sh\" ]]; then"
+        echo "        CHP_BASE=\"\$PROJECT_ROOT\""
+        echo "    fi"
+        echo "fi"
+        echo ""
+        echo "if [[ -z \"\$CHP_BASE\" ]] || [[ ! -f \"\$CHP_BASE/core/dispatcher.sh\" ]]; then"
+        echo "    echo \"Error: Cannot find CHP dispatcher (core/dispatcher.sh)\" >&2"
+        echo "    exit 1"
+        echo "fi"
+        echo ""
+        echo "exec \"\$CHP_BASE/core/dispatcher.sh\" $hook_type \"\$@\""
     } > "$hook_file"
 
     chmod +x "$hook_file"
@@ -447,10 +466,29 @@ EXTRA2
 
     cat >> "$wrapper_path" << 'WRAPPER3'
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+# Resolve CHP_BASE: env var, then settings.json, then relative fallback
+if [[ -n "$CHP_BASE" ]]; then
+    : # CHP_BASE already set
+elif [[ -f "$HOME/.claude/settings.json" ]]; then
+    CHP_BASE=$(jq -r '.extraKnownMarketplaces["chp-local"].source.path // empty' "$HOME/.claude/settings.json" 2>/dev/null)
+fi
 
-exec "$PROJECT_ROOT/core/dispatcher.sh" __HOOK_TYPE__ "$TOOL_NAME" "$FILE_PATH" "$CONTENT"
+# Final fallback to relative path (only works if CHP core is in project root)
+if [[ -z "$CHP_BASE" ]] || [[ ! -f "$CHP_BASE/core/dispatcher.sh" ]]; then
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+    if [[ -f "$PROJECT_ROOT/core/dispatcher.sh" ]]; then
+        CHP_BASE="$PROJECT_ROOT"
+    fi
+fi
+
+if [[ -z "$CHP_BASE" ]] || [[ ! -f "$CHP_BASE/core/dispatcher.sh" ]]; then
+    echo "Error: Cannot find CHP dispatcher (core/dispatcher.sh)" >&2
+    echo "Set CHP_BASE environment variable or ensure CHP is installed" >&2
+    exit 1
+fi
+
+exec "$CHP_BASE/core/dispatcher.sh" __HOOK_TYPE__ "$TOOL_NAME" "$FILE_PATH" "$CONTENT"
 WRAPPER3
 
     sed -i "s/__HOOK_TYPE__/$hook_type/g" "$wrapper_path"
@@ -629,7 +667,13 @@ _is_hook_installed() {
             [[ -f ".git/hooks/$hook_type" ]]
             ;;
         agent)
-            [[ -f ".claude/hooks/$hook_type" ]]
+            # For agent hooks, also check wrapper scripts exist
+            if [[ "$hook_type" == "pre-tool" ]] || [[ "$hook_type" == "post-tool" ]]; then
+                local wrapper="${hook_type}-wrapper.sh"
+                [[ -f ".claude/hooks/$hook_type" ]] && [[ -f ".claude/hooks/$wrapper" ]]
+            else
+                [[ -f ".claude/hooks/$hook_type" ]]
+            fi
             ;;
         *)
             return 1
@@ -647,9 +691,15 @@ _ensure_claude_settings() {
         log_info "Created $settings_file"
     fi
 
-    if jq -e '.hooks.PreToolUse' "$settings_file" >/dev/null 2>&1; then
-        log_debug "Claude Code hooks already configured in settings.json"
-        return 0
+    # Check if wrapper files exist (not just settings.json config)
+    local pre_wrapper=".claude/hooks/pre-tool-wrapper.sh"
+    local post_wrapper=".claude/hooks/post-tool-wrapper.sh"
+
+    if [[ -f "$pre_wrapper" ]] && [[ -f "$post_wrapper" ]]; then
+        if jq -e '.hooks.PreToolUse' "$settings_file" >/dev/null 2>&1; then
+            log_debug "Claude Code hooks already configured and wrappers exist"
+            return 0
+        fi
     fi
 
     if ! command -v jq >/dev/null 2>&1; then
@@ -743,5 +793,140 @@ ensure_hooks_installed() {
         log_info "All registered hooks already installed"
     fi
 
+    # Store sync state for future change detection
+    _store_sync_state
+
     return 0
+}
+
+# Check if hooks should be ensured (avoid running on every status call)
+# Only ensures if:
+# 1. .claude/hooks doesn't exist OR
+# 2. Wrapper scripts are missing OR
+# 3. .claude/settings.json exists but has no hooks configured
+# 4. Laws or registry were modified since last sync
+# 5. Plugin version changed
+_should_ensure_hooks() {
+    local stamp_file=".claude/.chp-hooks-synced"
+    local state_file=".claude/.chp-state"
+
+    # Initialize registry to check current state
+    init_hook_registry >/dev/null 2>&1 || true
+
+    # Get current state hash
+    local current_hash=""
+    local needs_sync=false
+
+    # 1. Check if wrapper scripts exist
+    local pre_wrapper=".claude/hooks/pre-tool-wrapper.sh"
+    local post_wrapper=".claude/hooks/post-tool-wrapper.sh"
+
+    if [[ ! -f "$pre_wrapper" ]] || [[ ! -f "$post_wrapper" ]]; then
+        # Wrappers missing, should ensure
+        return 0
+    fi
+
+    # 2. Check if any registered hook files are missing
+    local registered_hooks
+    registered_hooks=$(jq -r '.hooks | keys[]' "$HOOK_REGISTRY" 2>/dev/null)
+    if [[ -n "$registered_hooks" ]]; then
+        while IFS= read -r hook_type; do
+            hook_type=$(echo "$hook_type" | tr -d '\r')
+            [[ -z "$hook_type" ]] && continue
+
+            local hook_category
+            hook_category=$(get_hook_category "$hook_type")
+
+            if ! _is_hook_installed "$hook_type" "$hook_category"; then
+                # Hook file missing, should ensure
+                return 0
+            fi
+        done <<< "$registered_hooks"
+    fi
+
+    # 3. Compute current state hash
+    if command -v jq >/dev/null 2>&1 && [[ -f "$HOOK_REGISTRY" ]]; then
+        # Hash of registry + all law.json files + plugin version
+        local registry_hash
+        local laws_hash
+        local plugin_version="1.0.0"
+
+        # Hash the registry
+        registry_hash=$(jq -c '.' "$HOOK_REGISTRY" 2>/dev/null | md5sum | cut -d' ' -f1)
+
+        # Hash all law.json files (sorted for consistency)
+        if [[ -d "$LAWS_DIR" ]]; then
+            laws_hash=$(find "$LAWS_DIR" -name "law.json" -type f -exec cat {} \; 2>/dev/null | sort | md5sum | cut -d' ' -f1)
+        else
+            laws_hash=$(echo "$LAWS_DIR" | md5sum | cut -d' ' -f1)
+        fi
+
+        # Get plugin version from package.json if available
+        local plugin_package="$CHP_BASE/package.json"
+        if [[ -f "$plugin_package" ]]; then
+            plugin_version=$(jq -r '.version // "1.0.0"' "$plugin_package" 2>/dev/null)
+        fi
+
+        current_hash="${registry_hash}-${laws_hash}-${plugin_version}"
+    fi
+
+    # 4. Compare with stored state
+    if [[ -f "$state_file" ]]; then
+        local stored_hash
+        stored_hash=$(cat "$state_file" 2>/dev/null)
+
+        if [[ "$current_hash" != "$stored_hash" ]]; then
+            # State changed, should ensure
+            return 0
+        fi
+    else
+        # No state file, first run
+        return 0
+    fi
+
+    # 5. Check stamp age (re-sync at least once per day even if no changes)
+    if [[ -f "$stamp_file" ]]; then
+        local stamp_age=$(($(date +%s) - $(stat -c %Y "$stamp_file" 2>/dev/null || stat -f %m "$stamp_file")))
+        # Re-sync if older than 24 hours
+        if [[ $stamp_age -gt 86400 ]]; then
+            return 0
+        fi
+    fi
+
+    # Everything in sync, skip
+    return 1
+}
+
+# Store the current state after successful ensure
+_store_sync_state() {
+    local state_file=".claude/.chp-state"
+    local stamp_file=".claude/.chp-hooks-synced"
+
+    # Compute current state hash
+    local current_hash=""
+    if command -v jq >/dev/null 2>&1 && [[ -f "$HOOK_REGISTRY" ]]; then
+        local registry_hash
+        local laws_hash
+        local plugin_version="1.0.0"
+
+        registry_hash=$(jq -c '.' "$HOOK_REGISTRY" 2>/dev/null | md5sum | cut -d' ' -f1)
+
+        if [[ -d "$LAWS_DIR" ]]; then
+            laws_hash=$(find "$LAWS_DIR" -name "law.json" -type f -exec cat {} \; 2>/dev/null | sort | md5sum | cut -d' ' -f1)
+        else
+            laws_hash=$(echo "$LAWS_DIR" | md5sum | cut -d' ' -f1)
+        fi
+
+        local plugin_package="$CHP_BASE/package.json"
+        if [[ -f "$plugin_package" ]]; then
+            plugin_version=$(jq -r '.version // "1.0.0"' "$plugin_package" 2>/dev/null)
+        fi
+
+        current_hash="${registry_hash}-${laws_hash}-${plugin_version}"
+    fi
+
+    # Store state
+    mkdir -p ".claude"
+    echo "$current_hash" > "$state_file"
+    touch "$stamp_file"
 }

@@ -19,6 +19,7 @@
   "skills": [
     "./skills/audit",
     "./skills/investigate",
+    "./skills/marketplace",
     "./skills/status",
     "./skills/write-laws",
     "./skills/review-laws",

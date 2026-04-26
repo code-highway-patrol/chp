@@ -1,17 +1,664 @@
 #!/usr/bin/env bash
-# CHP Marketplace Command
-# Install and search for skills in the CHP marketplace
+# CHP Marketplace - Browse and install CHP laws from the marketplace
+
+set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-NODE_EXE="${NODE_EXE:-node}"
+source "$SCRIPT_DIR/../core/common.sh"
 
-# Path to the CLI script
-CLI_SCRIPT="$SCRIPT_DIR/../lib/cli.js"
+MARKETPLACE_API="${CHP_MARKETPLACE_API:-https://www.pinkdonut.work/api}"
 
-if [ ! -f "$CLI_SCRIPT" ]; then
-    echo "Error: CLI script not found at $CLI_SCRIPT" >&2
-    exit 1
+show_usage() {
+    cat <<EOF
+CHP Marketplace - Browse and install CHP laws
+
+Usage:
+    chp-marketplace <command> [options]
+
+Commands:
+    list [options]         List all available laws
+    search <query>         Search for laws by keyword
+    show <slug>            Show details of a law without installing
+    install <slug>...      Install one or more laws
+
+Options:
+    -l, --limit <n>        Number of results (default: 24 for list, 12 for search)
+    -v, --verbose          Show detailed output
+
+Examples:
+    chp-marketplace list                    # List all laws
+    chp-marketplace search "console"        # Search for console-related laws
+    chp-marketplace show no-console-log     # Show law details
+    chp-marketplace install no-console-log  # Install a law
+
+Shortcuts:
+    chp list <query>        List laws (alias for marketplace list)
+    chp search <query>      Search laws (alias for marketplace search)
+    chp show <slug>         Show law details (alias for marketplace show)
+    chp install <slug>      Install law (alias for marketplace install)
+EOF
+}
+
+# List all laws
+cmd_list() {
+    local limit="${1:-24}"
+    local url="$MARKETPLACE_API/statues?limit=$limit"
+
+    echo "CHP Marketplace - All Laws"
+    echo "=============================="
+    echo ""
+
+    local response
+    response=$(curl -s "$url")
+
+    if ! command -v jq >/dev/null 2>&1; then
+        echo "Error: jq is required for marketplace commands"
+        echo "Install: apt-get install jq / brew install jq"
+        exit 1
+    fi
+
+    local items
+    items=$(echo "$response" | jq -c '.items // []')
+
+    local count
+    count=$(echo "$items" | jq 'length')
+
+    if [[ "$count" -eq 0 ]]; then
+        echo "No laws found."
+        return 0
+    fi
+
+    echo "Found $count law(s):"
+    echo ""
+
+    for ((i=0; i<count; i++)); do
+        local item
+        item=$(echo "$items" | jq -c ".[$i]")
+
+        local title slug stars description type
+        title=$(echo "$item" | jq -r '.title // "Untitled"')
+        slug=$(echo "$item" | jq -r '.slug // "unknown"')
+        stars=$(echo "$item" | jq -r '.stars // 0')
+        description=$(echo "$item" | jq -r '.description // ""')
+        type=$(echo "$item" | jq -r '.type // "single"')
+
+        local icon="📄"
+        local type_label="single"
+        if [[ "$type" == "collection" ]]; then
+            icon="📁"
+            type_label="collection"
+        fi
+
+        echo "$((i+1)). $icon $title ($type_label)"
+        echo "   Slug: $slug"
+        echo "   Stars: ★ $stars"
+
+        if [[ -n "$description" ]]; then
+            local desc="$description"
+            if [[ ${#desc} -gt 60 ]]; then
+                desc="${desc:0:60}..."
+            fi
+            echo "   $desc"
+        fi
+
+        local tags
+        tags=$(echo "$item" | jq -r '.tags // [] | join(", ")' 2>/dev/null)
+        if [[ -n "$tags" && "$tags" != "null" ]]; then
+            echo "   Tags: $tags"
+        fi
+
+        echo ""
+    done
+
+    echo "Install with: chp install <slug>"
+}
+
+# Search for laws
+cmd_search() {
+    local query="$1"
+    local limit="${2:-12}"
+
+    if [[ -z "$query" ]]; then
+        echo "Error: search query is required"
+        echo "Usage: chp-marketplace search <query>"
+        exit 1
+    fi
+
+    echo "CHP Marketplace - Search: $query"
+    echo "==================================="
+    echo ""
+
+    local response
+    response=$(curl -s -X POST "$MARKETPLACE_API/statues/search" \
+        -H "Content-Type: application/json" \
+        -d "{\"query\":\"$query\"}")
+
+    if ! command -v jq >/dev/null 2>&1; then
+        echo "Error: jq is required for marketplace commands"
+        exit 1
+    fi
+
+    local items
+    items=$(echo "$response" | jq -c '.items // []')
+
+    local count
+    count=$(echo "$items" | jq 'length')
+
+    if [[ "$count" -eq 0 ]]; then
+        echo "No results found."
+        return 0
+    fi
+
+    echo "Found $count result(s):"
+    echo ""
+
+    for ((i=0; i<count; i++)); do
+        local item
+        item=$(echo "$items" | jq -c ".[$i]")
+
+        local title slug stars description type
+        title=$(echo "$item" | jq -r '.title // "Untitled"')
+        slug=$(echo "$item" | jq -r '.slug // "unknown"')
+        stars=$(echo "$item" | jq -r '.stars // 0')
+        description=$(echo "$item" | jq -r '.description // ""')
+        type=$(echo "$item" | jq -r '.type // "single"')
+
+        local icon="📄"
+        local type_label="single"
+        if [[ "$type" == "collection" ]]; then
+            icon="📁"
+            type_label="collection"
+        fi
+
+        echo "$((i+1)). $icon $title ($type_label)"
+        echo "   Slug: $slug"
+        echo "   Stars: ★ $stars"
+
+        if [[ -n "$description" ]]; then
+            local desc="$description"
+            if [[ ${#desc} -gt 60 ]]; then
+                desc="${desc:0:60}..."
+            fi
+            echo "   $desc"
+        fi
+
+        local tags
+        tags=$(echo "$item" | jq -r '.tags // [] | join(", ")' 2>/dev/null)
+        if [[ -n "$tags" && "$tags" != "null" ]]; then
+            echo "   Tags: $tags"
+        fi
+
+        echo ""
+    done
+
+    echo "Install with: chp install <slug>"
+}
+
+# Show law details
+cmd_show() {
+    local slug="$1"
+    local show_full=""
+
+    # Parse arguments
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --full|-f)
+                show_full="true"
+                shift
+                ;;
+            *)
+                if [[ -z "$slug" ]]; then
+                    slug="$1"
+                fi
+                shift
+                ;;
+        esac
+    done
+
+    if [[ -z "$slug" ]]; then
+        echo "Error: slug is required"
+        echo "Usage: chp-marketplace show <slug> [--full]"
+        exit 1
+    fi
+
+    echo "CHP Marketplace - Show: $slug"
+    echo "================================"
+    echo ""
+
+    local response
+    response=$(curl -s "$MARKETPLACE_API/statues/$slug")
+
+    if ! command -v jq >/dev/null 2>&1; then
+        echo "Error: jq is required for marketplace commands"
+        exit 1
+    fi
+
+    local error
+    error=$(echo "$response" | jq -r '.error // empty')
+
+    if [[ -n "$error" ]]; then
+        echo "Error: $error"
+        exit 1
+    fi
+
+    local title slug type stars author description
+    title=$(echo "$response" | jq -r '.title // "Untitled"')
+    slug=$(echo "$response" | jq -r '.slug // "unknown"')
+    type=$(echo "$response" | jq -r '.type // "single"')
+    stars=$(echo "$response" | jq -r '.stars // 0')
+    author=$(echo "$response" | jq -r '.author // empty')
+    description=$(echo "$response" | jq -r '.description // ""')
+
+    local icon="📄"
+    if [[ "$type" == "collection" ]]; then
+        icon="📁"
+    fi
+
+    echo "$icon $title"
+    echo "Slug: $slug"
+    echo "Type: $type"
+    echo "Stars: ★ $stars"
+
+    if [[ -n "$author" ]]; then
+        echo "Author: $author"
+    fi
+
+    echo ""
+
+    if [[ -n "$description" ]]; then
+        echo "$description"
+        echo ""
+    fi
+
+    # Show tags
+    local tags
+    tags=$(echo "$response" | jq -r '.tags // [] | join(", ")' 2>/dev/null)
+    if [[ -n "$tags" && "$tags" != "null" ]]; then
+        echo "Tags: $tags"
+        echo ""
+    fi
+
+    # Show files/contents
+    local has_files
+    has_files=$(echo "$response" | jq '(.files // [] | length) > 0')
+
+    if [[ "$has_files" == "true" ]]; then
+        echo "Contents:"
+        echo "$response" | jq -r '.files[]? | "  \(.path)"' 2>/dev/null || true
+        echo ""
+    else
+        # Legacy format - show what would be synthesized
+        local has_body has_law
+        has_body=$(echo "$response" | jq -r '.body // ""' | grep -q "." && echo "true" || echo "false")
+        has_law=$(echo "$response" | jq -r '.lawJson // ""' | grep -q "." && echo "true" || echo "false")
+
+        if [[ "$has_body" == "true" || "$has_law" == "true" ]]; then
+            echo "Contents:"
+            [[ "$has_body" == "true" ]] && echo "  $slug/guidance.md"
+            [[ "$has_law" == "true" ]] && echo "  $slug/law.json"
+            echo ""
+        fi
+    fi
+
+    # Show hooks from law.json
+    local hooks
+    hooks=$(echo "$response" | jq -r '
+        if .files then
+            (.files[]? | select(.path | endswith("law.json")) | .content) // empty
+        else
+            (.lawJson // empty)
+        end
+    ' | jq -r 'select(.hooks != null) | .hooks[]? // empty' 2>/dev/null)
+
+    if [[ -n "$hooks" ]]; then
+        echo "Hooks:"
+        echo "$hooks" | while read -r hook; do
+            echo "  $hook"
+        done
+        echo ""
+    fi
+
+    # Show preview or full contents
+    if [[ "$show_full" == "true" ]]; then
+        # Show full contents of all files
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo "FULL CONTENTS"
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo ""
+
+        # Process files array if present
+        if [[ "$has_files" == "true" ]]; then
+            echo "$response" | jq -c '.files[]' | while read -r file_info; do
+                local path content
+                path=$(echo "$file_info" | jq -r '.path // empty')
+                content=$(echo "$file_info" | jq -r '.content // ""')
+
+                if [[ -n "$path" ]]; then
+                    echo "📄 $path"
+                    echo "────────────────────────────────────────────────────────────────────────────────"
+                    echo "$content"
+                    echo ""
+                fi
+            done
+        else
+            # Legacy format - show body and lawJson
+            local body law_json
+            body=$(echo "$response" | jq -r '.body // ""')
+            law_json=$(echo "$response" | jq -r '.lawJson // ""')
+
+            if [[ -n "$body" ]]; then
+                echo "📄 $slug/guidance.md"
+                echo "────────────────────────────────────────────────────────────────────────────────"
+                echo "$body"
+                echo ""
+            fi
+
+            if [[ -n "$law_json" ]]; then
+                echo "📄 $slug/law.json"
+                echo "────────────────────────────────────────────────────────────────────────────────"
+                # Pretty print the JSON
+                echo "$law_json" | jq '.' 2>/dev/null || echo "$law_json"
+                echo ""
+            fi
+        fi
+
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    else
+        # Show preview of guidance
+        local preview
+        preview=$(echo "$response" | jq -r '
+            if .files then
+                (.files[]? | select(.path | endswith("guidance.md")) | .content) // empty
+            else
+                (.body // "")
+            end
+        ' 2>/dev/null)
+
+        if [[ -n "$preview" ]]; then
+            echo "Preview (guidance.md):"
+            echo ""
+            echo "$preview" | head -8
+            echo "…"
+            echo ""
+        fi
+
+        echo "Use --full to see complete file contents"
+    fi
+
+    echo ""
+    echo "Install with: chp install $slug"
+}
+
+# Install a law
+cmd_install() {
+    local slugs=("$@")
+    local LAWS_DIR="docs/chp/laws"
+    local REGISTRY=".chp/hook-registry.json"
+
+    if [[ ${#slugs[@]} -eq 0 ]]; then
+        echo "Error: at least one slug is required"
+        echo "Usage: chp-marketplace install <slug>..."
+        exit 1
+    fi
+
+    if ! command -v jq >/dev/null 2>&1; then
+        echo "Error: jq is required for marketplace commands"
+        exit 1
+    fi
+
+    echo "CHP Marketplace - Install"
+    echo "========================="
+    echo ""
+
+    local installed_count=0
+    local failed_count=0
+    declare -a installed_laws
+
+    for slug in "${slugs[@]}"; do
+        echo "Fetching $slug..."
+
+        local response
+        response=$(curl -s "$MARKETPLACE_API/statues/$slug")
+
+        local error
+        error=$(echo "$response" | jq -r '.error // empty')
+
+        if [[ -n "$error" ]]; then
+            echo "  ✗ not found: $slug"
+            failed_count=$((failed_count + 1))
+            echo ""
+            continue
+        fi
+
+        # Get files
+        local files_json
+        files_json=$(echo "$response" | jq -c 'if (.files // [] | length) > 0 then .files else [] end')
+
+        local has_files
+        has_files=$(echo "$files_json" | jq 'length')
+
+        local written=0
+        local skipped=0
+
+        # Process files array if present
+        if [[ "$has_files" -gt 0 ]]; then
+            while IFS= read -r file_info; do
+                local path content
+                path=$(echo "$file_info" | jq -r '.path // empty')
+                content=$(echo "$file_info" | jq -r '.content // ""')
+
+                if [[ -z "$path" ]]; then
+                    skipped=$((skipped + 1))
+                    continue
+                fi
+
+                # Skip README files
+                local basename
+                basename=$(basename "$path")
+                if [[ "$basename" == "README.md" || "$basename" == "readme.md" ]]; then
+                    skipped=$((skipped + 1))
+                    continue
+                fi
+
+                # Validate path structure: should be <slug>/<filename>
+                local segs
+                IFS='/' read -ra segs <<< "$path"
+
+                if [[ ${#segs[@]} -ne 2 ]]; then
+                    echo "  · ignoring unexpected path: $path"
+                    skipped=$((skipped + 1))
+                    continue
+                fi
+
+                local filename="${segs[1]}"
+                local valid_files=("law.json" "verify.sh" "guidance.md")
+
+                if [[ ! " ${valid_files[@]} " =~ " ${filename} " ]]; then
+                    echo "  · ignoring unexpected file: $filename"
+                    skipped=$((skipped + 1))
+                    continue
+                fi
+
+                # Write file
+                local dest="$LAWS_DIR/$path"
+                mkdir -p "$(dirname "$dest")"
+
+                if [[ "$filename" == *.sh ]]; then
+                    echo "$content" > "$dest"
+                    chmod +x "$dest"
+                else
+                    echo "$content" > "$dest"
+                fi
+
+                local law_name="${segs[0]}"
+                if [[ ! " ${installed_laws[@]} " =~ " ${law_name} " ]]; then
+                    installed_laws+=("$law_name")
+                fi
+
+                written=$((written + 1))
+            done < <(echo "$files_json" | jq -c '.[]')
+        else
+            # Legacy format - synthesize files from body and lawJson
+            local body law_json
+            body=$(echo "$response" | jq -r '.body // ""')
+            law_json=$(echo "$response" | jq -r '.lawJson // ""')
+
+            if [[ -n "$body" ]]; then
+                local dest="$LAWS_DIR/$slug/guidance.md"
+                mkdir -p "$(dirname "$dest")"
+                echo "$body" > "$dest"
+                written=$((written + 1))
+                if [[ ! " ${installed_laws[@]} " =~ " ${slug} " ]]; then
+                    installed_laws+=("$slug")
+                fi
+            fi
+
+            if [[ -n "$law_json" ]]; then
+                local dest="$LAWS_DIR/$slug/law.json"
+                mkdir -p "$(dirname "$dest")"
+                echo "$law_json" > "$dest"
+                written=$((written + 1))
+                if [[ ! " ${installed_laws[@]} " =~ " ${slug} " ]]; then
+                    installed_laws+=("$slug")
+                fi
+            fi
+        fi
+
+        if [[ $written -eq 0 ]]; then
+            echo "  ✗ $slug has no installable content"
+            failed_count=$((failed_count + 1))
+        else
+            echo "  ✓ wrote $written files ($skipped skipped)"
+            installed_count=$((installed_count + 1))
+        fi
+
+        echo ""
+    done
+
+    # Update hook registry
+    if [[ ${#installed_laws[@]} -gt 0 ]]; then
+        echo "Updating hook registry..."
+
+        # Initialize registry if needed
+        if [[ ! -f "$REGISTRY" ]]; then
+            mkdir -p "$(dirname "$REGISTRY")"
+            echo '{"hooks":{}}' > "$REGISTRY"
+        fi
+
+        for law_name in "${installed_laws[@]}"; do
+            local law_json="$LAWS_DIR/$law_name/law.json"
+
+            if [[ ! -f "$law_json" ]]; then
+                continue
+            fi
+
+            local hooks
+            hooks=$(jq -r '.hooks[]? // empty' "$law_json" 2>/dev/null)
+
+            if [[ -z "$hooks" ]]; then
+                continue
+            fi
+
+            while IFS= read -r hook; do
+                hook=$(echo "$hook" | tr -d '\r')
+                [[ -z "$hook" ]] && continue
+
+                # Update registry
+                local tmp
+                tmp=$(mktemp)
+                jq "
+                    .hooks[\"$hook\"] = (.hooks[\"$hook\"] // {laws: [], enabled: true, blocking: true}) |
+                    .hooks[\"$hook\"].laws = (.hooks[\"$hook\"].laws + [\"$law_name\"] | unique)
+                " "$REGISTRY" > "$tmp" && mv "$tmp" "$REGISTRY"
+            done <<< "$hooks"
+        done
+
+        echo "  ✓ registry updated"
+
+        # Ensure hooks are installed
+        if [[ -f "$SCRIPT_DIR/../core/installer.sh" ]]; then
+            source "$SCRIPT_DIR/../core/hook-registry.sh"
+            source "$SCRIPT_DIR/../core/detector.sh"
+            source "$SCRIPT_DIR/../core/installer.sh"
+
+            ensure_hooks_installed 2>&1 | while read -r line; do
+                echo "  $line"
+            done
+        fi
+    fi
+
+    echo "========================="
+    echo "Installed: $installed_count | Failed: $failed_count"
+
+    if [[ $installed_count -gt 0 ]]; then
+        echo ""
+        echo "Laws now live under docs/chp/laws/ and are wired into .chp/hook-registry.json"
+    fi
+
+    if [[ $failed_count -gt 0 ]]; then
+        exit 1
+    fi
+}
+
+# Main
+if [[ $# -eq 0 ]]; then
+    show_usage
+    exit 0
 fi
 
-# Execute with node, passing marketplace as the first argument
-exec "$NODE_EXE" "$CLI_SCRIPT" marketplace "$@"
+main() {
+    local cmd="$1"
+    shift
+
+    case "$cmd" in
+        list)
+            local limit="24"
+            while [[ $# -gt 0 ]]; do
+                case "$1" in
+                    -l|--limit)
+                        limit="$2"
+                        shift 2
+                        ;;
+                    *)
+                        shift
+                        ;;
+                esac
+            done
+            cmd_list "$limit"
+            ;;
+        search)
+            local query=""
+            local limit="12"
+            while [[ $# -gt 0 ]]; do
+                case "$1" in
+                    -l|--limit)
+                        limit="$2"
+                        shift 2
+                        ;;
+                    *)
+                        query="$1"
+                        shift
+                        ;;
+                esac
+            done
+            cmd_search "$query" "$limit"
+            ;;
+        show)
+            cmd_show "$@"
+            ;;
+        install)
+            cmd_install "$@"
+            ;;
+        help|--help|-h)
+            show_usage
+            ;;
+        *)
+            echo "Error: unknown command: $cmd"
+            echo ""
+            show_usage
+            exit 1
+            ;;
+    esac
+}
+
+main "$@"

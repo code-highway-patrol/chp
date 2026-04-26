@@ -239,3 +239,79 @@
 {"timestamp":"2026-04-26T03:56:47Z","event_type":"fix_trigger","law_name":"no-console-log","mode":"ask","hook_type":"pre-commit"}
 {"timestamp":"2026-04-26T04:14:11Z","event_type":"violation","law_id":"test-autofix-demo","action":"tightening","result":"failed","pattern":"violation-trend","fix":"address the pattern causing repeated violations","files":"","hook_type":""}
 {"timestamp":"2026-04-26T04:14:12Z","event_type":"fix_trigger","law_name":"test-autofix-demo","mode":"ask","hook_type":"pre-commit"}
+{"timestamp":"2026-04-26T05:06:34Z","event_type":"fix_trigger","law_name":"test-autofix-ask","mode":"ask","hook_type":"pre-commit"}
+{"timestamp":"2026-04-26T05:06:56Z","event_type":"violation","law_id":"test-tightener-law","action":"tightening","result":"failed","pattern":"violation-trend","fix":"address the pattern causing repeated violations","files":"","hook_type":""}
+{"timestamp":"2026-04-26T05:06:57Z","event_type":"violation","law_id":"test-tightener-law","action":"tightening","result":"failed","pattern":"violation-trend","fix":"address the pattern causing repeated violations","files":"","hook_type":""}
+{"timestamp":"2026-04-26T05:06:59Z","event_type":"violation","law_id":"test-tightener-law","action":"tightening","result":"failed","pattern":"violation-trend","fix":"address the pattern causing repeated violations","files":"","hook_type":""}
+{"timestamp":"2026-04-26T05:07:00Z","event_type":"violation","law_id":"test-tightener-law","action":"tightening","result":"failed","pattern":"violation-trend","fix":"address the pattern causing repeated violations","files":"","hook_type":""}
+{"timestamp":"2026-04-26T05:07:02Z","event_type":"violation","law_id":"test-tightener-law","action":"tightening","result":"failed","pattern":"violation-trend","fix":"address the pattern causing repeated violations","files":"","hook_type":""}
+{"timestamp":"2026-04-26T05:07:04Z","event_type":"violation","law_id":"test-tightener-law","action":"tightening","result":"failed","pattern":"violation-trend","fix":"address the pattern causing repeated violations","files":"","hook_type":""}
+{"timestamp":"2026-04-26T05:07:06Z","event_type":"evaluation","law_id":"test-verifier-law","action":"verification","result":"passed","files":""}
+{"timestamp":"2026-04-26T05:07:07Z","event_type":"violation","law_id":"test-verifier-law","action":"verification","result":"failed","pattern":"verification-script","fix":"fix the issue reported by verify.sh","files":"","hook_type":""}
+{"timestamp":"2026-04-26T05:07:08Z","event_type":"violation","law_id":"test-verifier-law","action":"tightening","result":"failed","pattern":"violation-trend","fix":"address the pattern causing repeated violations","files":"","hook_type":""}
+{"timestamp":"2026-04-26T05:07:09Z","event_type":"hook_trigger","hook_type":"pre-commit","laws":"no-alerts,no-api-keys,no-console-log,no-consolelog-in-committed-code,no-todos,test-scope,test-verifier-law,test-verifier-law-2"}
+{"timestamp":"2026-04-26T05:07:10Z","event_type":"evaluation","law_id":"no-alerts","action":"verification","result":"passed","files":""}
+{"timestamp":"2026-04-26T05:07:11Z","event_type":"evaluation","law_id":"no-api-keys","action":"verification","result":"passed","files":""}
+{"timestamp":"2026-04-26T05:07:12Z","event_type":"evaluation","law_id":"no-console-log","action":"verification","result":"passed","files":""}
+{"timestamp":"2026-04-26T05:07:14Z","event_type":"evaluation","law_id":"no-todos","action":"verification","result":"passed","files":""}
+{"timestamp":"2026-04-26T05:07:15Z","event_type":"evaluation","law_id":"test-scope","action":"verification","result":"passed","files":""}
+{"timestamp":"2026-04-26T05:07:16Z","event_type":"evaluation","law_id":"test-verifier-law","action":"verification","result":"passed","files":""}
+{"timestamp":"2026-04-26T05:07:17Z","event_type":"evaluation","law_id":"test-verifier-law-2","action":"verification","result":"passed","files":""}
+{"timestamp":"2026-04-26T05:34:42Z","event_type":"fix_trigger","law_name":"test-autofix-ask","mode":"ask","hook_type":"pre-commit"}
+{"timestamp":"2026-04-26T05:35:03Z","event_type":"violation","law_id":"test-tightener-law","action":"tightening","result":"failed","pattern":"violation-trend","fix":"address the pattern causing repeated violations","files":"","hook_type":""}
+{"timestamp":"2026-04-26T05:35:04Z","event_type":"violation","law_id":"test-tightener-law","action":"tightening","result":"failed","pattern":"violation-trend","fix":"address the pattern causing repeated violations","files":"","hook_type":""}
+{"timestamp":"2026-04-26T05:35:06Z","event_type":"violation","law_id":"test-tightener-law","action":"tightening","result":"failed","pattern":"violation-trend","fix":"address the pattern causing repeated violations","files":"","hook_type":""}
+{"timestamp":"2026-04-26T05:35:07Z","event_type":"violation","law_id":"test-tightener-law","action":"tightening","result":"failed","pattern":"violation-trend","fix":"address the pattern causing repeated violations","files":"","hook_type":""}
+{"timestamp":"2026-04-26T05:35:09Z","event_type":"violation","law_id":"test-tightener-law","action":"tightening","result":"failed","pattern":"violation-trend","fix":"address the pattern causing repeated violations","files":"","hook_type":""}
+{"timestamp":"2026-04-26T05:35:10Z","event_type":"violation","law_id":"test-tightener-law","action":"tightening","result":"failed","pattern":"violation-trend","fix":"address the pattern causing repeated violations","files":"","hook_type":""}
+{"timestamp":"2026-04-26T05:35:12Z","event_type":"evaluation","law_id":"test-verifier-law","action":"verification","result":"passed","files":""}
+{"timestamp":"2026-04-26T05:35:13Z","event_type":"violation","law_id":"test-verifier-law","action":"verification","result":"failed","pattern":"verification-script","fix":"fix the issue reported by verify.sh","files":"","hook_type":""}
+{"timestamp":"2026-04-26T05:35:14Z","event_type":"violation","law_id":"test-verifier-law","action":"tightening","result":"failed","pattern":"violation-trend","fix":"address the pattern causing repeated violations","files":"","hook_type":""}
+{"timestamp":"2026-04-26T05:35:15Z","event_type":"hook_trigger","hook_type":"pre-commit","laws":"no-alerts,no-api-keys,no-console-log,no-consolelog-in-committed-code,no-todos,test-scope,test-verifier-law,test-verifier-law-2"}
+{"timestamp":"2026-04-26T05:35:16Z","event_type":"evaluation","law_id":"no-alerts","action":"verification","result":"passed","files":""}
+{"timestamp":"2026-04-26T05:35:17Z","event_type":"evaluation","law_id":"no-api-keys","action":"verification","result":"passed","files":""}
+{"timestamp":"2026-04-26T05:35:18Z","event_type":"evaluation","law_id":"no-console-log","action":"verification","result":"passed","files":""}
+{"timestamp":"2026-04-26T05:35:19Z","event_type":"evaluation","law_id":"no-todos","action":"verification","result":"passed","files":""}
+{"timestamp":"2026-04-26T05:35:20Z","event_type":"evaluation","law_id":"test-scope","action":"verification","result":"passed","files":""}
+{"timestamp":"2026-04-26T05:35:21Z","event_type":"evaluation","law_id":"test-verifier-law","action":"verification","result":"passed","files":""}
+{"timestamp":"2026-04-26T05:35:22Z","event_type":"evaluation","law_id":"test-verifier-law-2","action":"verification","result":"passed","files":""}
+{"timestamp":"2026-04-26T07:31:16Z","event_type":"violation","law_id":"no-console-log","action":"tightening","result":"failed","pattern":"violation-trend","fix":"address the pattern causing repeated violations","files":"","hook_type":""}
+{"timestamp":"2026-04-26T07:51:08Z","event_type":"fix_trigger","law_name":"test-autofix-ask","mode":"ask","hook_type":"pre-commit"}
+{"timestamp":"2026-04-26T07:52:03Z","event_type":"violation","law_id":"test-tightener-law","action":"tightening","result":"failed","pattern":"violation-trend","fix":"address the pattern causing repeated violations","files":"","hook_type":""}
+{"timestamp":"2026-04-26T07:52:05Z","event_type":"fix_trigger","law_name":"test-autofix-ask","mode":"ask","hook_type":"pre-commit"}
+{"timestamp":"2026-04-26T07:52:08Z","event_type":"violation","law_id":"test-tightener-law","action":"tightening","result":"failed","pattern":"violation-trend","fix":"address the pattern causing repeated violations","files":"","hook_type":""}
+{"timestamp":"2026-04-26T07:52:12Z","event_type":"violation","law_id":"test-tightener-law","action":"tightening","result":"failed","pattern":"violation-trend","fix":"address the pattern causing repeated violations","files":"","hook_type":""}
+{"timestamp":"2026-04-26T07:52:17Z","event_type":"violation","law_id":"test-tightener-law","action":"tightening","result":"failed","pattern":"violation-trend","fix":"address the pattern causing repeated violations","files":"","hook_type":""}
+{"timestamp":"2026-04-26T07:52:21Z","event_type":"violation","law_id":"test-tightener-law","action":"tightening","result":"failed","pattern":"violation-trend","fix":"address the pattern causing repeated violations","files":"","hook_type":""}
+{"timestamp":"2026-04-26T07:52:24Z","event_type":"violation","law_id":"test-tightener-law","action":"tightening","result":"failed","pattern":"violation-trend","fix":"address the pattern causing repeated violations","files":"","hook_type":""}
+{"timestamp":"2026-04-26T07:52:28Z","event_type":"evaluation","law_id":"test-verifier-law","action":"verification","result":"passed","files":""}
+{"timestamp":"2026-04-26T07:52:29Z","event_type":"violation","law_id":"test-verifier-law","action":"verification","result":"failed","pattern":"verification-script","fix":"fix the issue reported by verify.sh","files":"","hook_type":""}
+{"timestamp":"2026-04-26T07:52:31Z","event_type":"violation","law_id":"test-verifier-law","action":"tightening","result":"failed","pattern":"violation-trend","fix":"address the pattern causing repeated violations","files":"","hook_type":""}
+{"timestamp":"2026-04-26T07:52:33Z","event_type":"hook_trigger","hook_type":"pre-commit","laws":"test-verifier-law,test-verifier-law-2"}
+{"timestamp":"2026-04-26T07:52:34Z","event_type":"evaluation","law_id":"test-verifier-law","action":"verification","result":"passed","files":""}
+{"timestamp":"2026-04-26T07:52:37Z","event_type":"evaluation","law_id":"test-verifier-law-2","action":"verification","result":"passed","files":""}
+{"timestamp":"2026-04-26T07:52:53Z","event_type":"violation","law_id":"test-tightener-law","action":"tightening","result":"failed","pattern":"violation-trend","fix":"address the pattern causing repeated violations","files":"","hook_type":""}
+{"timestamp":"2026-04-26T07:52:57Z","event_type":"violation","law_id":"test-tightener-law","action":"tightening","result":"failed","pattern":"violation-trend","fix":"address the pattern causing repeated violations","files":"","hook_type":""}
+{"timestamp":"2026-04-26T07:53:00Z","event_type":"violation","law_id":"test-tightener-law","action":"tightening","result":"failed","pattern":"violation-trend","fix":"address the pattern causing repeated violations","files":"","hook_type":""}
+{"timestamp":"2026-04-26T07:53:03Z","event_type":"violation","law_id":"test-tightener-law","action":"tightening","result":"failed","pattern":"violation-trend","fix":"address the pattern causing repeated violations","files":"","hook_type":""}
+{"timestamp":"2026-04-26T07:53:07Z","event_type":"violation","law_id":"test-tightener-law","action":"tightening","result":"failed","pattern":"violation-trend","fix":"address the pattern causing repeated violations","files":"","hook_type":""}
+{"timestamp":"2026-04-26T07:53:09Z","event_type":"violation","law_id":"test-tightener-law","action":"tightening","result":"failed","pattern":"violation-trend","fix":"address the pattern causing repeated violations","files":"","hook_type":""}
+{"timestamp":"2026-04-26T07:53:14Z","event_type":"evaluation","law_id":"test-verifier-law","action":"verification","result":"passed","files":""}
+{"timestamp":"2026-04-26T07:53:15Z","event_type":"violation","law_id":"test-verifier-law","action":"verification","result":"failed","pattern":"verification-script","fix":"fix the issue reported by verify.sh","files":"","hook_type":""}
+{"timestamp":"2026-04-26T07:53:18Z","event_type":"violation","law_id":"test-verifier-law","action":"tightening","result":"failed","pattern":"violation-trend","fix":"address the pattern causing repeated violations","files":"","hook_type":""}
+{"timestamp":"2026-04-26T07:53:20Z","event_type":"hook_trigger","hook_type":"pre-commit","laws":"test-verifier-law,test-verifier-law-2"}
+{"timestamp":"2026-04-26T07:53:22Z","event_type":"evaluation","law_id":"test-verifier-law","action":"verification","result":"passed","files":""}
+{"timestamp":"2026-04-26T07:53:24Z","event_type":"evaluation","law_id":"test-verifier-law-2","action":"verification","result":"passed","files":""}
+{"timestamp":"2026-04-26T07:54:19Z","event_type":"fix_trigger","law_name":"test-autofix-ask","mode":"ask","hook_type":"pre-commit"}
+{"timestamp":"2026-04-26T07:55:03Z","event_type":"violation","law_id":"test-tightener-law","action":"tightening","result":"failed","pattern":"violation-trend","fix":"address the pattern causing repeated violations","files":"","hook_type":""}
+{"timestamp":"2026-04-26T07:55:07Z","event_type":"violation","law_id":"test-tightener-law","action":"tightening","result":"failed","pattern":"violation-trend","fix":"address the pattern causing repeated violations","files":"","hook_type":""}
+{"timestamp":"2026-04-26T07:55:11Z","event_type":"violation","law_id":"test-tightener-law","action":"tightening","result":"failed","pattern":"violation-trend","fix":"address the pattern causing repeated violations","files":"","hook_type":""}
+{"timestamp":"2026-04-26T07:55:14Z","event_type":"violation","law_id":"test-tightener-law","action":"tightening","result":"failed","pattern":"violation-trend","fix":"address the pattern causing repeated violations","files":"","hook_type":""}
+{"timestamp":"2026-04-26T07:55:19Z","event_type":"violation","law_id":"test-tightener-law","action":"tightening","result":"failed","pattern":"violation-trend","fix":"address the pattern causing repeated violations","files":"","hook_type":""}
+{"timestamp":"2026-04-26T07:55:22Z","event_type":"violation","law_id":"test-tightener-law","action":"tightening","result":"failed","pattern":"violation-trend","fix":"address the pattern causing repeated violations","files":"","hook_type":""}
+{"timestamp":"2026-04-26T07:55:27Z","event_type":"evaluation","law_id":"test-verifier-law","action":"verification","result":"passed","files":""}
+{"timestamp":"2026-04-26T07:55:29Z","event_type":"violation","law_id":"test-verifier-law","action":"verification","result":"failed","pattern":"verification-script","fix":"fix the issue reported by verify.sh","files":"","hook_type":""}
+{"timestamp":"2026-04-26T07:55:31Z","event_type":"violation","law_id":"test-verifier-law","action":"tightening","result":"failed","pattern":"violation-trend","fix":"address the pattern causing repeated violations","files":"","hook_type":""}
+{"timestamp":"2026-04-26T07:55:33Z","event_type":"hook_trigger","hook_type":"pre-commit","laws":"test-verifier-law,test-verifier-law-2"}
+{"timestamp":"2026-04-26T07:55:35Z","event_type":"evaluation","law_id":"test-verifier-law","action":"verification","result":"passed","files":""}
+{"timestamp":"2026-04-26T07:55:37Z","event_type":"evaluation","law_id":"test-verifier-law-2","action":"verification","result":"passed","files":""}

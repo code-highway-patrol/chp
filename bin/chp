@@ -1,37 +1,77 @@
-#!/bin/sh
+#!/bin/bash
 # CHP - Code Highway Patrol
-# POSIX shell wrapper for the CHP CLI
+# Bash wrapper for CHP commands
 
 set -e
 
-# Get the absolute path to this script
-SCRIPT_PATH="$0"
-
-# Resolve symlinks
-while [ -h "$SCRIPT_PATH" ]; do
-    DIR=$(cd -P "$(dirname "$SCRIPT_PATH")" && pwd)
-    SYM=$(readlink "$SCRIPT_PATH")
-    SCRIPT_PATH=$(cd "$DIR" && cd "$(dirname "$SYM")" && pwd)/$(basename "$SYM")
-done
-
 # Get the directory containing this script
-BIN_DIR=$(cd -P "$(dirname "$SCRIPT_PATH")" && pwd)
+BIN_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+COMMANDS_DIR="$BIN_DIR/../commands"
 
-# Path to the CLI entry point
-CLI_FILE="$BIN_DIR/../lib/cli.js"
-
-# Check if CLI file exists
-if [ ! -f "$CLI_FILE" ]; then
-    echo "Error: CHP CLI not found at $CLI_FILE" >&2
+# Check if commands directory exists
+if [[ ! -d "$COMMANDS_DIR" ]]; then
+    echo "Error: CHP commands not found at $COMMANDS_DIR" >&2
     exit 1
 fi
 
-# Try to use node from the same directory first (for local installs)
-if [ -x "$BIN_DIR/node" ]; then
-    NODE_EXE="$BIN_DIR/node"
-else
-    NODE_EXE=node
+# If no arguments, show help
+if [[ $# -eq 0 ]]; then
+    echo "CHP - Code Highway Patrol"
+    echo ""
+    echo "Available commands:"
+    echo "  chp-law          Manage laws (create, list, delete, test)"
+    echo "  chp-hooks        Manage hooks (list, enable, disable)"
+    echo "  chp-status       Show CHP status"
+    echo "  chp-audit        Audit codebase for violations"
+    echo "  chp-scan         Scan for issues"
+    echo "  chp-install      Install law from marketplace"
+    echo "  chp-search       Search marketplace"
+    echo "  chp-show         Show law details"
+    echo "  chp-list         List marketplace laws"
+    echo ""
+    echo "Run 'chp-<command> help' for more info"
+    exit 0
 fi
 
-# Execute
-exec "$NODE_EXE" "$CLI_FILE" "$@"
+# Get the command
+cmd="$1"
+shift
+
+# Map common shortcuts to actual commands
+case "$cmd" in
+    law|laws)
+        exec "$COMMANDS_DIR/chp-law" "$@"
+        ;;
+    hooks)
+        exec "$COMMANDS_DIR/chp-hooks" "$@"
+        ;;
+    status)
+        exec "$COMMANDS_DIR/chp-status" "$@"
+        ;;
+    audit)
+        exec "$COMMANDS_DIR/chp-audit" "$@"
+        ;;
+    scan)
+        exec "$COMMANDS_DIR/chp-scan" "$@"
+        ;;
+    install)
+        exec "$COMMANDS_DIR/chp-install" "$@"
+        ;;
+    search)
+        exec "$COMMANDS_DIR/chp-search" "$@"
+        ;;
+    show)
+        exec "$COMMANDS_DIR/chp-show" "$@"
+        ;;
+    list)
+        exec "$COMMANDS_DIR/chp-list" "$@"
+        ;;
+    marketplace)
+        exec "$COMMANDS_DIR/chp-marketplace" "$@"
+        ;;
+    *)
+        echo "Error: unknown command: $cmd" >&2
+        echo "Run 'chp' to see available commands" >&2
+        exit 1
+        ;;
+esac

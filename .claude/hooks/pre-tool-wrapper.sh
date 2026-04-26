@@ -13,7 +13,26 @@ export CHP_TOOL_NAME="$TOOL_NAME"
 export CHP_FILE_PATH="$FILE_PATH"
 export CHP_CONTENT="$CONTENT"
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+# Resolve CHP_BASE: env var, then settings.json, then relative fallback
+if [[ -n "$CHP_BASE" ]]; then
+    : # CHP_BASE already set
+elif [[ -f "$HOME/.claude/settings.json" ]]; then
+    CHP_BASE=$(jq -r '.extraKnownMarketplaces["chp-local"].source.path // empty' "$HOME/.claude/settings.json" 2>/dev/null)
+fi
 
-exec "$PROJECT_ROOT/core/dispatcher.sh" pre-tool "$TOOL_NAME" "$FILE_PATH" "$CONTENT"
+# Final fallback to relative path (only works if CHP core is in project root)
+if [[ -z "$CHP_BASE" ]] || [[ ! -f "$CHP_BASE/core/dispatcher.sh" ]]; then
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+    if [[ -f "$PROJECT_ROOT/core/dispatcher.sh" ]]; then
+        CHP_BASE="$PROJECT_ROOT"
+    fi
+fi
+
+if [[ -z "$CHP_BASE" ]] || [[ ! -f "$CHP_BASE/core/dispatcher.sh" ]]; then
+    echo "Error: Cannot find CHP dispatcher (core/dispatcher.sh)" >&2
+    echo "Set CHP_BASE environment variable or ensure CHP is installed" >&2
+    exit 1
+fi
+
+exec "$CHP_BASE/core/dispatcher.sh" pre-tool "$TOOL_NAME" "$FILE_PATH" "$CONTENT"
