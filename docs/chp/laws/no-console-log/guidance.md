@@ -67,3 +67,19 @@ This law has been violated 2 time(s). The guidance has been automatically streng
 This law has been violated 3 time(s). The guidance has been automatically strengthened.
 
 **Previous violations indicate this pattern is easy to miss. Pay extra attention.**
+
+---
+
+**Violation recorded:** 2026-04-26T03:55:42Z (Total: 4)
+
+This law has been violated 4 time(s). The guidance has been automatically strengthened.
+
+**Previous violations indicate this pattern is easy to miss. Pay extra attention.**
+
+---
+
+**Violation recorded:** 2026-04-26T03:56:45Z (Total: 5)
+
+This law has been violated 5 time(s). The guidance has been automatically strengthened.
+
+**Previous violations indicate this pattern is easy to miss. Pay extra attention.**

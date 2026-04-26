@@ -7,6 +7,6 @@
   ],
   "autoFix": "prompt",
   "created": "2026-04-26",
-  "failures": 3,
-  "tightening_level": 3
+  "failures": 4,
+  "tightening_level": 4
 }

@@ -6,7 +6,8 @@
         "no-api-keys",
         "no-console-log",
         "no-todos",
-        "test-scope"
+        "test-scope",
+        "test-update-scope"
       ],
       "enabled": true,
       "blocking": true

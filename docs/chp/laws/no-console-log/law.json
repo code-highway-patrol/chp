@@ -25,6 +25,6 @@
     "**/coverage/**"
   ],
   "created": "2026-04-25",
-  "failures": 3,
-  "tightening_level": 3
+  "failures": 5,
+  "tightening_level": 5
 }

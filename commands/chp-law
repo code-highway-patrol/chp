@@ -54,6 +54,8 @@ Update Options:
     --hooks=<list>             Replace all hooks
     --add-hook=<hook>          Add a hook
     --remove-hook=<hook>       Remove a hook
+    --include=<patterns>       Replace file patterns to include (comma-separated, e.g., **/*.js,**/*.ts)
+    --exclude=<patterns>       Replace file patterns to exclude (comma-separated)
     --add-exception=<pattern>  Add exception pattern (not yet implemented)
     --remove-exception=<pattern> Remove exception pattern (not yet implemented)
     --set-guidance             Open guidance.md for editing
@@ -753,6 +755,8 @@ update_law() {
     local new_hooks=""
     local add_hook=""
     local remove_hook=""
+    local new_include=()
+    local new_exclude=()
     local add_exception=""
     local remove_exception=""
     local set_guidance=false
@@ -773,6 +777,22 @@ update_law() {
                 ;;
             --remove-hook=*)
                 remove_hook="${1#*=}"
+                ;;
+            --include)
+                shift
+                IFS=',' read -ra new_include <<< "$1"
+                shift
+                ;;
+            --include=*)
+                IFS=',' read -ra new_include <<< "${1#*=}"
+                ;;
+            --exclude)
+                shift
+                IFS=',' read -ra new_exclude <<< "$1"
+                shift
+                ;;
+            --exclude=*)
+                IFS=',' read -ra new_exclude <<< "${1#*=}"
                 ;;
             --add-exception=*)
                 add_exception="${1#*=}"
@@ -868,6 +888,26 @@ update_law() {
             mutate_checks "$law_name" "update" "$updated_check"
             log_info "Updated check '$target_check' severity to: $target_check_severity"
         fi
+        updated=true
+    fi
+
+    # Update include if provided
+    if [[ ${#new_include[@]} -gt 0 ]]; then
+        local include_json
+        include_json=$(printf '%s\n' "${new_include[@]}" | jq -R . | jq -s .)
+        jq --argjson inc "$include_json" '.include = $inc' "$law_json" > "${law_json}.tmp"
+        mv "${law_json}.tmp" "$law_json"
+        log_info "Updated include to: ${new_include[*]}"
+        updated=true
+    fi
+
+    # Update exclude if provided
+    if [[ ${#new_exclude[@]} -gt 0 ]]; then
+        local exclude_json
+        exclude_json=$(printf '%s\n' "${new_exclude[@]}" | jq -R . | jq -s .)
+        jq --argjson exc "$exclude_json" '.exclude = $exc' "$law_json" > "${law_json}.tmp"
+        mv "${law_json}.tmp" "$law_json"
+        log_info "Updated exclude to: ${new_exclude[*]}"
         updated=true
     fi
 
