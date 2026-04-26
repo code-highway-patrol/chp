@@ -99,7 +99,7 @@ npm run lint
 
 ## Contributing
 
-Contributions are welcome! Please read our [Code of Conduct](CODE_OF_CONDUCT.md) before contributing.
+Contributions are welcome!
 
 1. Fork the repository
 2. Create a feature branch
