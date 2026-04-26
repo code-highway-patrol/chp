@@ -1,6 +1,6 @@
 {
   "name": "chp",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "displayName": "CHP - Code Highway Patrol",
   "description": "Code quality enforcement with traffic laws and automated violation detection",
   "author": {
