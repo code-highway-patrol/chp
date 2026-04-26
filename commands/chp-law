@@ -163,7 +163,6 @@ create_law() {
             --include)
                 shift
                 IFS=',' read -ra include_patterns <<< "$1"
-                shift
                 ;;
             --include=*)
                 IFS=',' read -ra include_patterns <<< "${1#*=}"
@@ -171,7 +170,6 @@ create_law() {
             --exclude)
                 shift
                 IFS=',' read -ra exclude_patterns <<< "$1"
-                shift
                 ;;
             --exclude=*)
                 IFS=',' read -ra exclude_patterns <<< "${1#*=}"
@@ -781,7 +779,6 @@ update_law() {
             --include)
                 shift
                 IFS=',' read -ra new_include <<< "$1"
-                shift
                 ;;
             --include=*)
                 IFS=',' read -ra new_include <<< "${1#*=}"
@@ -789,7 +786,6 @@ update_law() {
             --exclude)
                 shift
                 IFS=',' read -ra new_exclude <<< "$1"
-                shift
                 ;;
             --exclude=*)
                 IFS=',' read -ra new_exclude <<< "${1#*=}"
