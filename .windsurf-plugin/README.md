@@ -1,122 +1,32 @@
-# CHP for Windsurf IDE
+# CHP for Windsurf
 
-The Code Highway Patrol plugin for Windsurf brings automated code quality enforcement to your AI-native development workflow.
+Code Highway Patrol delivers the same enforcement experience in Windsurf that it does in Claude Code and Codex — Cascade gets blocked the moment it tries to write `console.log`, commit a hard-coded API key, or run a command that violates a law.
 
-## Features
-
-- **🚔 Traffic Law Enforcement** - Automatically detect and prevent code quality violations
-- **🤖 Cascade AI Integration** - Leverage Windsurf's AI agent for intelligent code analysis
-- **📋 MCP Server** - Full Model Context Protocol support for deep IDE integration
-- **🔧 Git Hooks** - Pre-commit and pre-push hooks to catch violations before they're committed
-- **⚡ Real-time Validation** - Instant feedback on rule violations
-
-## Installation
-
-### Option 1: Manual Installation
-
-1. Copy the `.windsurf-plugin` directory to your project root:
-   ```bash
-   cp -r path/to/chp/.windsurf-plugin ./
-   ```
-
-2. Add the MCP server to your Windsurf settings (`~/.windsurf/settings.json` or project-level):
-   ```json
-   {
-     "mcpServers": {
-       "chp": {
-         "command": "node",
-         "args": ["./node_modules/chp/lib/mcp-server.js"],
-         "env": {
-           "CHP_ROOT": "${workspaceFolder}"
-         }
-       }
-     }
-   }
-   ```
-
-### Option 2: Windsurf Plugin Store
-
-Once published, you can install directly from Windsurf's Plugin Store:
-1. Open Windsurf Settings
-2. Navigate to Plugins
-3. Search for "CHP - Code Highway Patrol"
-4. Click Install
-
-## Usage
-
-### With Cascade AI
-
-Ask Cascade to run CHP analysis:
-```
-"Run CHP analysis on this file"
-"Check for console.log violations"
-"Create a new traffic law for API keys"
-```
-
-### MCP Tools
-
-The plugin provides these MCP tools that Cascade can use:
-
-- **chp_analyze** - Run full codebase analysis
-- **chp_check** - Check specific files or rules
-- **chp_create_law** - Create a new traffic law
-- **chp_validate** - Validate CHP configuration
-
-### Example Prompts for Cascade
-
-```
-"Use chp_analyze to check for any violations in my codebase"
-"Run chp_check on src/utils/auth.js for security rules"
-"Create a law called no-hardcoded-secrets with pre-commit hook"
-```
-
-## Configuration
-
-CHP respects your project's `.chprc` or `chp.config.js` file:
-
-```javascript
-module.exports = {
-  rules: {
-    'no-console': 'error',
-    'no-secrets': 'error',
-    'max-line-length': ['warn', 120]
-  },
-  ignore: ['node_modules/**', 'dist/**']
-};
-```
-
-## Creating Custom Laws
-
-Use the MCP tool or CLI:
+Windsurf has no plugin marketplace, so install is one bash command. See [INSTALL.md](./INSTALL.md) for full instructions.
 
 ```bash
-# Via CLI
-./commands/chp-law create my-law --hooks=pre-commit
-
-# Via Cascade
-"Create a law called enforce-typescript with pre-push hook"
+curl -sSL https://raw.githubusercontent.com/code-highway-patrol/chp/main/scripts/install-windsurf.sh | bash
 ```
 
-## Troubleshooting
+## What you get
 
-### MCP Server Not Starting
+- **Cascade Hooks** wired to CHP's dispatcher — agent actions get verified before they execute
+- **Cascade Skills** (`chp-audit`, `chp-investigate`, `chp-status`, `chp-write-laws`, `chp-review-laws`, `chp-decompose-laws`)
+- **MCP server** exposing `chp_analyze`, `chp_check`, `chp_create_law`, `chp_validate`
+- **Cascade rule** at `.windsurf/rules/chp.md` so the agent understands CHP's enforcement model
+- **Git hooks** (pre-commit, pre-push) for the commit-time safety net
 
-1. Ensure Node.js >= 18.0.0 is installed
-2. Verify the MCP server path in Windsurf settings
-3. Check Windsurf's developer console for errors
+All laws live in `docs/chp/laws/<name>/`. The same `verify.sh` files enforce the same rules across every editor — Windsurf is just another front-end.
 
-### Tools Not Available
+## Auto-update
 
-1. Restart Windsurf after installing the plugin
-2. Verify the MCP server is running in Settings > MCP Servers
-3. Check that CHP_ROOT environment variable is set correctly
+Brew-style: the dispatcher does a throttled `git fetch` once per 24h. If new commits exist, you get a banner in chat suggesting `chp upgrade`. Pass `--auto-apply` at install time to skip the prompt and pull automatically.
 
-## Resources
+## Files
 
-- [CHP Documentation](https://github.com/yourusername/chp)
-- [Windsurf Documentation](https://windsurf.ai)
-- [MCP Protocol](https://modelcontextprotocol.io)
+- [INSTALL.md](./INSTALL.md) — install, uninstall, troubleshooting
+- [mcp-server.json](./mcp-server.json) — reference MCP tool/resource schema (also the source of truth for what the MCP server exposes)
 
-## License
+## Why no plugin manifest?
 
-MIT
+Windsurf has no plugin system in the Claude Code / Codex sense. There's no `plugin.json` schema for Windsurf, no marketplace catalog format, and no first-party install command. Cascade's extensibility is delivered through `.windsurf/hooks.json` (workspace), `.windsurf/skills/` (workspace), `.windsurf/rules/` (workspace), and `~/.codeium/windsurf/mcp_config.json` (user-global). The installer writes those files directly.
