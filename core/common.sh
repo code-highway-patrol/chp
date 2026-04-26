@@ -94,7 +94,7 @@ list_laws() {
 
 # Valid values for law fields
 _CHP_VALID_SEVERITIES="error warn info"
-_CHP_VALID_HOOKS="pre-commit pre-push post-commit commit-msg pre-tool post-tool pre-write post-response"
+_CHP_VALID_HOOKS="pre-commit pre-push post-commit commit-msg pre-tool post-tool pre-write post-response fix"
 _CHP_VALID_CHECK_TYPES="pattern agent structural metric"
 _CHP_VALID_CHECK_SEVERITIES="block warn log"
 
