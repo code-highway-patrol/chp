@@ -601,8 +601,10 @@ uninstall_codex_hooks() {
         local tmp_file
         tmp_file=$(mktemp)
         sed "/$CODEX_HOOKS_MARKER/,/$CODEX_HOOKS_END_MARKER/d" "$config_file" > "$tmp_file"
-        # Clean up: if only whitespace remains, remove the file
-        if [[ -z $(tr -d '[:space:]' < "$tmp_file") ]]; then
+        # Clean up: if only comments/whitespace remain, remove the file
+        local remaining
+        remaining=$(grep -v '^\s*#' "$tmp_file" | grep -v '^\s*$' | tr -d '[:space:]')
+        if [[ -z "$remaining" ]]; then
             rm -f "$config_file"
             log_info "Removed empty Codex config: $config_file"
         else

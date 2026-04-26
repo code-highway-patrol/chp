@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+# CHP Marketplace Command
+# Install and search for skills in the CHP marketplace
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+NODE_EXE="${NODE_EXE:-node}"
+
+# Path to the marketplace script
+MARKETPLACE_SCRIPT="$SCRIPT_DIR/../scripts/marketplace.js"
+
+if [ ! -f "$MARKETPLACE_SCRIPT" ]; then
+    echo "Error: Marketplace script not found at $MARKETPLACE_SCRIPT" >&2
+    exit 1
+fi
+
+# Execute with node
+exec "$NODE_EXE" "$MARKETPLACE_SCRIPT" "$@"

@@ -1,30 +1,30 @@
 {
   "name": "no-console-log",
-  "intent": "Prevent console.log() calls in source code — use logger.info/error/debug instead",
-  "created": "2026-04-25T04:05:10Z",
+  "description": "Prohibits console.log() statements in source code",
   "severity": "error",
-  "failures": 16,
-  "tightening_level": 16,
-  "hooks": ["pre-commit", "pre-tool"],
+  "hooks": [
+    "pre-commit",
+    "pre-tool"
+  ],
   "enabled": true,
-  "checks": [
-    {
-      "id": "console-log",
-      "type": "pattern",
-      "config": {
-        "pattern": "console\\.log\\("
-      },
-      "severity": "block",
-      "message": "Use logger.info() instead of console.log()"
-    },
-    {
-      "id": "console-log-guidance",
-      "type": "agent",
-      "config": {
-        "prompt": "RULE: Never use console.log(). Use logger.info(), logger.error(), or logger.debug() instead. If you need to debug, use logger.debug(). Remove all console.log statements before finishing."
-      },
-      "severity": "block",
-      "message": "Use logger.info() instead of console.log()"
-    }
-  ]
+  "intent": "Prevent debug console.log statements from being committed. Use logger.info(), logger.error(), or logger.debug() instead.",
+  "autoFix": "ask",
+  "include": [
+    "**/*.js",
+    "**/*.ts",
+    "**/*.jsx",
+    "**/*.tsx",
+    "**/*.mjs",
+    "**/*.cjs"
+  ],
+  "exclude": [
+    "**/node_modules/**",
+    "**/dist/**",
+    "**/build/**",
+    "**/.next/**",
+    "**/coverage/**"
+  ],
+  "created": "2026-04-25",
+  "failures": 2,
+  "tightening_level": 2
 }

@@ -1,6 +1,5 @@
-# CHP Codex Integration Config
-# This file is installed to .codex/config.toml by CHP
 # CHP-MANAGED-START
+# CHP Codex Integration — managed by chp-hooks, do not edit between markers
 [features]
 codex_hooks = true
 

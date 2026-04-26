@@ -1,0 +1,12 @@
+{
+  "name": "test-autofix-law",
+  "description": "Test law with autoFix",
+  "severity": "error",
+  "hooks": [
+    "pre-commit"
+  ],
+  "autoFix": "prompt",
+  "created": "2026-04-26",
+  "failures": 3,
+  "tightening_level": 3
+}
