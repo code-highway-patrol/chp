@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash .claude/hooks/pre-tool-wrapper.sh"
+            "command": "for d in \"$CLAUDE_PROJECT_DIR\" \"$CHP_BASE\" \"$HOME/Desktop/chp\"; do [ -f \"$d/.claude/hooks/pre-tool-wrapper.sh\" ] && exec bash \"$d/.claude/hooks/pre-tool-wrapper.sh\"; done; exit 0"
           }
         ]
       }
@@ -17,7 +17,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash .claude/hooks/post-tool-wrapper.sh"
+            "command": "for d in \"$CLAUDE_PROJECT_DIR\" \"$CHP_BASE\" \"$HOME/Desktop/chp\"; do [ -f \"$d/.claude/hooks/post-tool-wrapper.sh\" ] && exec bash \"$d/.claude/hooks/post-tool-wrapper.sh\"; done; exit 0"
           }
         ]
       }
