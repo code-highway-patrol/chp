@@ -97,6 +97,7 @@ _CHP_VALID_SEVERITIES="error warn info"
 _CHP_VALID_HOOKS="pre-commit pre-push post-commit commit-msg pre-tool post-tool pre-write post-response fix"
 _CHP_VALID_CHECK_TYPES="pattern agent structural metric"
 _CHP_VALID_CHECK_SEVERITIES="block warn log"
+_CHP_VALID_AUTOFIX="never ask auto"
 
 # Check if a hook type is a git hook (has file context)
 # Usage: is_git_hook <hook_name>
@@ -292,10 +293,36 @@ validate_law_json() {
         issues+=("checks must be an array (got: $checks_type)")
     fi
 
+    # Validate autoFix if present
+    if ! validate_autofix_field "$law_json"; then
+        return 1
+    fi
+
     # Output issues
     if [[ ${#issues[@]} -gt 0 ]]; then
         printf '%s\n' "${issues[@]}" >&2
         return 1
+    fi
+    return 0
+}
+
+# Validate the autoFix field if present
+# Usage: validate_autofix_field <law_json_path>
+# Returns: 0 if valid, 1 if invalid
+validate_autofix_field() {
+    local law_json="$1"
+    local autofix_val
+    autofix_val=$(jq -r '.autoFix // "never"' "$law_json" 2>/dev/null)
+
+    if [[ -n "$autofix_val" && "$autofix_val" != "null" ]]; then
+        local autofix_ok=false
+        for v in $_CHP_VALID_AUTOFIX; do
+            [[ "$autofix_val" == "$v" ]] && autofix_ok=true
+        done
+        if ! $autofix_ok; then
+            echo "autoFix must be one of: $_CHP_VALID_AUTOFIX (got: '$autofix_val')" >&2
+            return 1
+        fi
     fi
     return 0
 }
