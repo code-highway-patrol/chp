@@ -38,7 +38,10 @@ check_pattern() {
                 echo "$file" | grep -qE "\\.(${skip_ext})$" && continue
                 [[ ! -f "$file" ]] && continue
 
-                if git diff --cached "$file" 2>/dev/null | grep -qE "$pattern"; then
+                # Match only added lines (+), not deletions or surrounding context.
+                # Without this filter, deleting code near an unchanged violation
+                # makes pre-commit reject the deletion — false positive.
+                if git diff --cached "$file" 2>/dev/null | grep -E '^\+' | grep -v '^\+\+\+' | grep -qE "$pattern"; then
                     violations=$((violations + 1))
                     violating_files+=("$file")
                 fi

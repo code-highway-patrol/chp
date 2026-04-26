@@ -18,7 +18,6 @@
 | OpenAI Codex | `.codex-plugin/` - Plugin manifest |
 | Cursor IDE | `.cursor-plugin/` - Plugin + registry |
 | Windsurf | `.windsurf-plugin/` - MCP server |
-| Gemini | `gemini-extension.json` |
 
 **Key Feature:** One law definition works across all AI tools.
 

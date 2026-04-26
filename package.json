@@ -61,7 +61,6 @@
     ".claude-plugin/",
     ".codex-plugin/",
     ".cursor-plugin/",
-    ".windsurf-plugin/",
-    "gemini-extension.json"
+    ".windsurf-plugin/"
   ]
 }

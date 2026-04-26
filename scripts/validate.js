@@ -164,23 +164,6 @@ function validateConfig() {
     }
   });
 
-  // Validate gemini-extension.json
-  const geminiPath = join(__dirname, 'gemini-extension.json');
-  if (existsSync(geminiPath)) {
-    try {
-      const content = readFileSync(geminiPath, 'utf8');
-      const config = JSON.parse(content);
-
-      if (!config.name || !config.version) {
-        logError('gemini-extension.json: Missing required fields');
-      } else {
-        logSuccess('gemini-extension.json: Valid');
-      }
-    } catch (error) {
-      logError(`gemini-extension.json: ${error.message}`);
-    }
-  }
-
   console.log();
 }
 
