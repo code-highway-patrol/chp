@@ -42,8 +42,44 @@ Before creating a law, assess whether the user's request is clear enough to impl
 To decompose:
 ```
 Invoke the chp:decompose-laws skill with the user's concept.
-After decomposition is approved, continue here with the resulting checks.
+After decomposition is approved, continue to "Check Marketplace Before Writing".
 ```
+
+## Check Marketplace Before Writing
+
+After decomposing the law into atomic checks (or for clear, specific requests), check if a similar law exists on the marketplace before writing from scratch.
+
+**Query the marketplace:**
+```bash
+# Search by key terms from the decomposed checks
+chp search "console"
+chp search "api keys"
+chp search "security"
+```
+
+**If similar laws are found:**
+
+Present the results to the user and ask what they'd like to do:
+
+> "I found similar laws on the marketplace:
+>
+> - **No Console Logging** (no-console-log) ★ 42 — Prevents console.log in production code
+> - **No Debug Statements** (no-debug) ★ 15 — Blocks console.debug, console.error in non-error contexts
+>
+> What would you like to do?
+> 1. Use a marketplace law instead
+> 2. Write a custom law
+> 3. Show details of the marketplace law first"
+
+**User response handling:**
+
+- **"Use marketplace law"** → Invoke `chp:marketplace` skill to install the chosen law
+- **"Write custom law"** → Proceed to "Creating a Law" below
+- **"Show details"** → Display the marketplace law's full description and tags, then re-ask
+
+**If no similar laws found:**
+
+Proceed directly to "Creating a Law" below.
 
 ## Creating a Law
 
