@@ -4,25 +4,25 @@ import path from 'path';
 
 const MARKETPLACE_API = 'https://pinkdonut.work/api';
 
-async function ensureChprcDir() {
-  const chprcDir = path.join(process.cwd(), '.chprc');
+async function ensureLawsDir() {
+  const lawsDir = path.join(process.cwd(), 'docs', 'chp', 'laws');
   try {
-    await fs.access(chprcDir);
+    await fs.access(lawsDir);
   } catch {
-    await fs.mkdir(chprcDir, { recursive: true });
-    console.log(chalk.gray('Created .chprc directory'));
+    await fs.mkdir(lawsDir, { recursive: true });
+    console.log(chalk.gray('Created docs/chp/laws directory'));
   }
-  return chprcDir;
+  return lawsDir;
 }
 
-async function installStatue(slug, chprcDir) {
-  console.log(chalk.blue(`Fetching statue: ${slug}...`));
+async function installStatue(slug, lawsDir) {
+  console.log(chalk.blue(`Fetching law: ${slug}...`));
 
   try {
     const response = await fetch(`${MARKETPLACE_API}/statues/${slug}`);
     if (!response.ok) {
       if (response.status === 404) {
-        console.error(chalk.red(`Statue not found: ${slug}`));
+        console.error(chalk.red(`Law not found: ${slug}`));
         return false;
       }
       throw new Error(`HTTP ${response.status}`);
@@ -31,54 +31,64 @@ async function installStatue(slug, chprcDir) {
     const statue = await response.json();
 
     if (statue.type === 'collection') {
-      console.log(chalk.yellow(`Installing collection "${statue.title}" with ${statue.contents?.length || 0} skills...`));
+      console.log(chalk.yellow(`Installing collection "${statue.title}" with ${statue.contents?.length || 0} laws...`));
 
       if (statue.contents && statue.contents.length > 0) {
-        const collectionDir = path.join(chprcDir, statue.slug);
-        await fs.mkdir(collectionDir, { recursive: true });
-
         for (const item of statue.contents) {
-          const itemPath = path.join(collectionDir, `${item.slug}.md`);
-
-          // Format as CHP skill with frontmatter
-          const skillContent = `---
-name: ${item.slug}
-description: ${item.description || item.title}
----
-
-${item.body}`;
-
-          await fs.writeFile(itemPath, skillContent, 'utf-8');
-          console.log(chalk.green(`  ✓ Installed: ${item.title}`));
+          await installLaw(item, lawsDir);
         }
-
-        console.log(chalk.green(`Collection installed to .chprc/${statue.slug}/`));
+        console.log(chalk.green(`Collection installed to docs/chp/laws/`));
       }
     } else {
-      const filePath = path.join(chprcDir, `${statue.slug}.md`);
-
-      // Format as CHP skill with frontmatter
-      const skillContent = `---
-name: ${statue.slug}
-description: ${statue.description || statue.title}
----
-
-${statue.body}`;
-
-      await fs.writeFile(filePath, skillContent, 'utf-8');
-      console.log(chalk.green(`✓ Installed: ${statue.title}`));
-      console.log(chalk.gray(`  Saved to: .chprc/${statue.slug}.md`));
+      await installLaw(statue, lawsDir);
     }
 
     return true;
   } catch (error) {
-    console.error(chalk.red(`Failed to install statue: ${error.message}`));
+    console.error(chalk.red(`Failed to install law: ${error.message}`));
     return false;
   }
 }
 
+async function installLaw(law, lawsDir) {
+  const lawDir = path.join(lawsDir, law.slug);
+  await fs.mkdir(lawDir, { recursive: true });
+
+  let lawJson;
+  if (law.lawJson) {
+    if (typeof law.lawJson === 'string') {
+      lawJson = JSON.parse(law.lawJson);
+    } else {
+      lawJson = law.lawJson;
+    }
+  } else {
+    lawJson = {
+      name: law.slug,
+      severity: 'error',
+      hooks: ['pre-commit'],
+      enabled: true,
+      intent: law.description || law.title,
+      autoFix: 'never',
+      checks: [],
+      include: ['**/*'],
+      exclude: ['**/node_modules/**'],
+      created: new Date().toISOString(),
+      failures: 0,
+      tightening_level: 0
+    };
+  }
+
+  await fs.writeFile(path.join(lawDir, 'law.json'), JSON.stringify(lawJson, null, 2), 'utf-8');
+
+  if (law.body) {
+    await fs.writeFile(path.join(lawDir, 'guidance.md'), law.body, 'utf-8');
+  }
+
+  console.log(chalk.green(`  ✓ Installed: ${law.title}`));
+}
+
 export async function install(slugs, options) {
-  const chprcDir = await ensureChprcDir();
+  const lawsDir = await ensureLawsDir();
 
   console.log(chalk.bold.blue('CHP Marketplace Install'));
   console.log(chalk.gray('='.repeat(40)));
@@ -87,7 +97,7 @@ export async function install(slugs, options) {
   let failCount = 0;
 
   for (const slug of slugs) {
-    const success = await installStatue(slug, chprcDir);
+    const success = await installStatue(slug, lawsDir);
     if (success) {
       successCount++;
     } else {
@@ -100,6 +110,6 @@ export async function install(slugs, options) {
   console.log(chalk.bold(`Installed: ${successCount} | Failed: ${failCount}`));
 
   if (successCount > 0) {
-    console.log(chalk.gray('\nSkills are now available in your .chprc directory.'));
+    console.log(chalk.gray('\nLaws are now available in docs/chp/laws/'));
   }
 }
