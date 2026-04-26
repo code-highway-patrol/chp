@@ -212,3 +212,8 @@
 {"timestamp":"2026-04-26T03:39:09Z","event_type":"fix_trigger","law_name":"no-console-log","mode":"ask","hook_type":"pre-commit"}
 {"timestamp":"2026-04-26T03:39:11Z","event_type":"violation","law_id":"no-console-log","action":"tightening","result":"failed","pattern":"violation-trend","fix":"address the pattern causing repeated violations","files":"","hook_type":""}
 {"timestamp":"2026-04-26T03:39:13Z","event_type":"fix_trigger","law_name":"no-console-log","mode":"ask","hook_type":"pre-commit"}
+{"timestamp":"2026-04-26T03:39:48Z","event_type":"fix_trigger","law_name":"test-autofix-ask","mode":"ask","hook_type":"pre-commit"}
+{"timestamp":"2026-04-26T03:41:17Z","event_type":"fix_trigger","law_name":"test-autofix-ask","mode":"ask","hook_type":"pre-commit"}
+{"timestamp":"2026-04-26T03:44:07Z","event_type":"fix_trigger","law_name":"test-autofix-ask","mode":"ask","hook_type":"pre-commit"}
+{"timestamp":"2026-04-26T03:44:30Z","event_type":"fix_trigger","law_name":"test-autofix-ask","mode":"ask","hook_type":"pre-commit"}
+{"timestamp":"2026-04-26T03:45:07Z","event_type":"fix_trigger","law_name":"test-autofix-ask","mode":"ask","hook_type":"pre-commit"}
