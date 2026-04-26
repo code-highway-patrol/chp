@@ -60,7 +60,6 @@
     "agents/",
     ".claude-plugin/",
     ".codex-plugin/",
-    ".cursor-plugin/",
     ".windsurf-plugin/"
   ]
 }

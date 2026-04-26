@@ -16,7 +16,6 @@
 |----------|-------------|
 | Claude Code | `.claude-plugin/` - Skills + hooks |
 | OpenAI Codex | `.codex-plugin/` - Plugin manifest |
-| Cursor IDE | `.cursor-plugin/` - Plugin + registry |
 | Windsurf | `.windsurf-plugin/` - MCP server |
 
 **Key Feature:** One law definition works across all AI tools.

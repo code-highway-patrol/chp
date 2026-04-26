@@ -114,8 +114,7 @@ function validateConfig() {
 
   const pluginDirs = [
     '.claude-plugin',
-    '.codex-plugin',
-    '.cursor-plugin'
+    '.codex-plugin'
   ];
 
   pluginDirs.forEach(dir => {
