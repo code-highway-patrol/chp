@@ -61,6 +61,9 @@ trigger_fix() {
     esac
     export CHP_FIX_FILES="$affected_files"
 
+    # Log the fix trigger attempt before any early returns
+    logger_log "fix_trigger" "law_name" "$law_name" "mode" "$auto_fix" "hook_type" "$hook_type"
+
     # Look for fixer agent prompt
     local fixer_prompt="$CHP_BASE/agents/fixer.md"
     if [[ ! -f "$fixer_prompt" ]]; then
@@ -70,7 +73,6 @@ trigger_fix() {
 
     # Read and output the fixer prompt for Claude to see
     cat "$fixer_prompt"
-    logger_log "fix_trigger" "law_name" "$law_name" "mode" "$auto_fix" "hook_type" "$hook_type"
 
     return 0
 }
