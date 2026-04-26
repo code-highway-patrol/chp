@@ -31,6 +31,8 @@ Subcommands:
   blocking <hook-type> [true]   Set blocking behavior (default: true)
   install <hook-type>           Install hook template
   uninstall <hook-type>         Uninstall hook template
+  install-codex                 Install Codex CLI integration
+  uninstall-codex               Uninstall Codex CLI integration
   detect                        Detect available hook types in current environment
   registry                      Show hook registry JSON
 
@@ -42,6 +44,8 @@ Examples:
   chp-hooks blocking commit-msg false      # Set commit-msg to non-blocking
   chp-hooks install pre-commit             # Install pre-commit hook template
   chp-hooks uninstall pre-commit           # Uninstall pre-commit hook template
+  chp-hooks install-codex                  # Install Codex CLI hook integration
+  chp-hooks uninstall-codex                # Uninstall Codex CLI hook integration
   chp-hooks detect                         # Detect available hook types
   chp-hooks registry                       # Show hook registry JSON
 
@@ -264,6 +268,20 @@ cmd_detect() {
     fi
 
     echo ""
+    echo "Codex Hooks:"
+    if [[ -d .codex ]]; then
+        if [[ -f .codex/config.toml ]] && grep -q "CHP-MANAGED-START" .codex/config.toml 2>/dev/null; then
+            echo "  - CHP integration (installed)"
+        elif [[ -f .codex/config.toml ]]; then
+            echo "  - .codex/ detected (CHP not configured)"
+        else
+            echo "  - .codex/ detected"
+        fi
+    else
+        echo "  (none - run 'chp-hooks install-codex' to set up)"
+    fi
+
+    echo ""
     log_info "Total available hooks: $(echo "$hooks" | wc -w | tr -d ' ')"
 }
 
@@ -308,6 +326,12 @@ main() {
             ;;
         uninstall)
             cmd_uninstall "$@"
+            ;;
+        install-codex)
+            install_codex_hooks
+            ;;
+        uninstall-codex)
+            uninstall_codex_hooks
             ;;
         detect)
             cmd_detect

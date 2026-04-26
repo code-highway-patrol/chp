@@ -10,6 +10,9 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TEST_ROOT="$(mktemp -d)"
 mkdir -p "$TEST_ROOT/docs/chp/laws" "$TEST_ROOT/.chp"
 
+# Initialize git repo for git-based hook context
+cd "$TEST_ROOT" && git init -q
+
 # Copy core scripts to test root
 cp -r "$SCRIPT_DIR/../core" "$TEST_ROOT/core"
 

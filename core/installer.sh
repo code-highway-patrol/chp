@@ -528,6 +528,93 @@ uninstall_claude_hooks() {
     return 0
 }
 
+# Codex Hooks
+
+readonly CODEX_HOOKS_MARKER="# CHP-MANAGED-START"
+readonly CODEX_HOOKS_END_MARKER="# CHP-MANAGED-END"
+
+can_install_codex_hooks() {
+    command -v git >/dev/null 2>&1 && git rev-parse --git-dir >/dev/null 2>&1
+}
+
+install_codex_hooks() {
+    if ! command -v jq >/dev/null 2>&1; then
+        log_error "jq is required to install Codex hooks"
+        return 1
+    fi
+
+    local codex_dir=".codex"
+    local codex_hooks_dir="$codex_dir/hooks"
+    local config_file="$codex_dir/config.toml"
+    local bridge_template="$CHP_BASE/hooks/codex/bridge.sh"
+    local config_template="$CHP_BASE/hooks/codex/config.toml"
+
+    if [[ ! -f "$bridge_template" ]]; then
+        log_error "Codex bridge template not found: $bridge_template"
+        return 1
+    fi
+
+    mkdir -p "$codex_hooks_dir"
+
+    # Install bridge script
+    cp "$bridge_template" "$codex_hooks_dir/chp-bridge.sh"
+    chmod +x "$codex_hooks_dir/chp-bridge.sh"
+    log_info "Installed Codex bridge: $codex_hooks_dir/chp-bridge.sh"
+
+    # Install config.toml
+    if [[ -f "$config_file" ]]; then
+        # Remove existing CHP-managed section if present
+        if grep -q "$CODEX_HOOKS_MARKER" "$config_file"; then
+            local tmp_file
+            tmp_file=$(mktemp)
+            sed "/$CODEX_HOOKS_MARKER/,/$CODEX_HOOKS_END_MARKER/d" "$config_file" > "$tmp_file"
+            # Remove trailing empty lines
+            sed -e :a -e '/^\n*$/{$d;N;ba' -e '}' "$tmp_file" > "$config_file"
+            rm -f "$tmp_file"
+            echo "" >> "$config_file"
+        else
+            echo "" >> "$config_file"
+        fi
+        cat "$config_template" >> "$config_file"
+        log_info "Updated existing Codex config: $config_file"
+    else
+        cp "$config_template" "$config_file"
+        log_info "Created Codex config: $config_file"
+    fi
+
+    return 0
+}
+
+uninstall_codex_hooks() {
+    local codex_dir=".codex"
+    local bridge_file="$codex_dir/hooks/chp-bridge.sh"
+    local config_file="$codex_dir/config.toml"
+
+    # Remove bridge script
+    if [[ -f "$bridge_file" ]]; then
+        rm -f "$bridge_file"
+        log_info "Removed Codex bridge: $bridge_file"
+    fi
+
+    # Remove CHP section from config.toml
+    if [[ -f "$config_file" ]] && grep -q "$CODEX_HOOKS_MARKER" "$config_file"; then
+        local tmp_file
+        tmp_file=$(mktemp)
+        sed "/$CODEX_HOOKS_MARKER/,/$CODEX_HOOKS_END_MARKER/d" "$config_file" > "$tmp_file"
+        # Clean up: if only whitespace remains, remove the file
+        if [[ -z $(tr -d '[:space:]' < "$tmp_file") ]]; then
+            rm -f "$config_file"
+            log_info "Removed empty Codex config: $config_file"
+        else
+            cp "$tmp_file" "$config_file"
+            log_info "Removed CHP hooks from Codex config: $config_file"
+        fi
+        rm -f "$tmp_file"
+    fi
+
+    return 0
+}
+
 # Hook Ensure / Sync
 
 # Check if a hook file is already installed at its expected location

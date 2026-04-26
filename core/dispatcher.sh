@@ -6,6 +6,7 @@ source "$SCRIPT_DIR/common.sh"
 source "$SCRIPT_DIR/hook-registry.sh"
 source "$SCRIPT_DIR/verifier.sh"
 source "$SCRIPT_DIR/check-runner.sh"
+source "$SCRIPT_DIR/law-mutate.sh"
 
 if [ -f "$SCRIPT_DIR/tightener.sh" ]; then
     source "$SCRIPT_DIR/tightener.sh"
@@ -140,6 +141,11 @@ dispatch_hook() {
             continue
         fi
 
+        # Validate law file consistency
+        if ! validate_consistency "$law_name" 2>/dev/null; then
+            log_warn "Law '$law_name' has inconsistent files — guidance may be stale"
+        fi
+
         if ! check_law_scope "$law_json" "$hook_type"; then
             log_debug "Law '$law_name' has no affected files in scope, skipping"
             continue
@@ -158,11 +164,15 @@ dispatch_hook() {
         local verify_exit=0
         local verify_stdout=""
         if [ -n "$CHP_TOOL_INPUT" ]; then
-            verify_stdout=$(echo "$CHP_TOOL_INPUT" | "$verify_script" "${hook_args[@]}" 2>/dev/null)
+            verify_stdout=$(echo "$CHP_TOOL_INPUT" | "$verify_script" "${hook_args[@]}" 2>&1)
             verify_exit=$?
         else
-            verify_stdout=$("$verify_script" "${hook_args[@]}" 2>/dev/null)
+            verify_stdout=$("$verify_script" "${hook_args[@]}" 2>&1)
             verify_exit=$?
+        fi
+        # Output verify script stdout for visibility (non-pre-tool hooks)
+        if [[ "$hook_type" != "pre-tool" && "$hook_type" != "pre-write" ]] && [ -n "$verify_stdout" ]; then
+            echo "$verify_stdout" >&2
         fi
         if [ $verify_exit -eq 0 ]; then
             log_debug "Law '$law_name' passed"

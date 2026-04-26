@@ -1,0 +1,38 @@
+# CHP Codex Integration Config
+# This file is installed to .codex/config.toml by CHP
+# CHP-MANAGED-START
+[features]
+codex_hooks = true
+
+[[hooks.PreToolUse]]
+matcher = ".*"
+
+[[hooks.PreToolUse.hooks]]
+type = "command"
+command = 'bash "$(git rev-parse --show-toplevel)/.codex/hooks/chp-bridge.sh" pre-tool'
+timeout = 30
+statusMessage = "CHP: Checking tool use"
+
+[[hooks.PostToolUse]]
+matcher = ".*"
+
+[[hooks.PostToolUse.hooks]]
+type = "command"
+command = 'bash "$(git rev-parse --show-toplevel)/.codex/hooks/chp-bridge.sh" post-tool'
+timeout = 30
+
+[[hooks.UserPromptSubmit]]
+
+[[hooks.UserPromptSubmit.hooks]]
+type = "command"
+command = 'bash "$(git rev-parse --show-toplevel)/.codex/hooks/chp-bridge.sh" pre-prompt'
+timeout = 30
+statusMessage = "CHP: Checking prompt"
+
+[[hooks.Stop]]
+
+[[hooks.Stop.hooks]]
+type = "command"
+command = 'bash "$(git rev-parse --show-toplevel)/.codex/hooks/chp-bridge.sh" post-response'
+timeout = 30
+# CHP-MANAGED-END
