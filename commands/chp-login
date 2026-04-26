@@ -120,17 +120,35 @@ cmd_login() {
         exit 1
     fi
 
-    start_response=$(curl -sS -X POST "$MARKETPLACE_API/cli-auth/start" \
+    local start_tmp start_err start_http
+    start_tmp=$(mktemp -t chp-login.XXXXXX)
+    start_err=$(mktemp -t chp-login-err.XXXXXX)
+    trap 'rm -f "$start_tmp" "$start_err"' RETURN
+    start_http=$(curl -sS -o "$start_tmp" -w "%{http_code}" \
+        -X POST "$MARKETPLACE_API/cli-auth/start" \
         -H "Content-Type: application/json" \
-        -d "{\"verifier_hash\":\"$verifier_hash\"}") || {
-        echo "Error: could not reach $MARKETPLACE_API/cli-auth/start" >&2
-        exit 1
-    }
+        -d "{\"verifier_hash\":\"$verifier_hash\"}" 2>"$start_err") || start_http="000"
+    start_response=$(cat "$start_tmp")
 
-    code=$(echo "$start_response" | jq -r '.code // empty')
-    verification_url=$(echo "$start_response" | jq -r '.verification_url // empty')
+    if [[ "$start_http" == "000" ]]; then
+        echo "Error: could not reach $MARKETPLACE_API/cli-auth/start" >&2
+        [[ -s "$start_err" ]] && cat "$start_err" >&2
+        exit 1
+    fi
+    if [[ "$start_http" != 2* ]]; then
+        echo "Error: $MARKETPLACE_API/cli-auth/start returned HTTP $start_http" >&2
+        if [[ -n "$start_response" ]]; then
+            echo "Response body:" >&2
+            echo "$start_response" | head -c 500 >&2
+            echo "" >&2
+        fi
+        exit 1
+    fi
+
+    code=$(echo "$start_response" | jq -r '.code // empty' 2>/dev/null)
+    verification_url=$(echo "$start_response" | jq -r '.verification_url // empty' 2>/dev/null)
     if [[ -z "$code" || -z "$verification_url" ]]; then
-        echo "Error: unexpected response from server" >&2
+        echo "Error: unexpected response from server (HTTP $start_http)" >&2
         echo "$start_response" >&2
         exit 1
     fi
