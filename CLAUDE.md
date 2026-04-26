@@ -69,6 +69,22 @@ tests/                    # Bash test suite — run with `npm test`
 3. The dispatcher auto-discovers from `law.json` hooks array, or register via `chp-law`
 4. Hook templates in `hooks/git/` or `hooks/agent/` call `core/dispatcher.sh`
 
+### Law Scope
+
+All git-hook laws MUST declare what files they apply to using the `include` field:
+
+```bash
+chp-law create my-law --hooks=pre-commit --include="**/*.js,**/*.ts"
+```
+
+Use `--exclude` to exempt files:
+
+```bash
+chp-law create my-law --hooks=pre-commit --include="src/**/*" --exclude="**/*.test.ts"
+```
+
+Agent-only laws (pre-tool, post-tool) don't require scope.
+
 ---
 
 Every law listed above runs on every commit. If you write code that violates them, your commit will be rejected. Fix it before staging.
