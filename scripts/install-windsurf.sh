@@ -78,7 +78,7 @@ elif [ ! -d "$CHP_DIR/.git" ]; then
     git clone --quiet "$CHP_REPO" "$CHP_DIR"
 else
     echo "  → Updating CHP toolkit at $CHP_DIR"
-    if [ -n "$(git -C "$CHP_DIR" status --porcelain)" ]; then
+    if [ -n "$(git -C "$CHP_DIR" status --porcelain --untracked-files=no)" ]; then
         echo "    (working tree has local changes — skipping pull)"
     else
         git -C "$CHP_DIR" fetch --quiet origin main

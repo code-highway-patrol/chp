@@ -80,7 +80,7 @@ _chp_check_updates() {
     # user to act on a notification, so notify-only would just leave them stuck
     # on stale code. Opt out by touching .chp/no-auto-apply.
     if [ ! -f "$CHP_BASE/.chp/no-auto-apply" ] && \
-       [ -z "$(git -C "$CHP_BASE" status --porcelain 2>/dev/null)" ]; then
+       [ -z "$(git -C "$CHP_BASE" status --porcelain --untracked-files=no 2>/dev/null)" ]; then
         if git -C "$CHP_BASE" pull --quiet --ff-only origin main 2>/dev/null; then
             echo "🚔 CHP auto-updated $count commit(s) → $(git -C "$CHP_BASE" rev-parse --short HEAD)" >&2
         else
