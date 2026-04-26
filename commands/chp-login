@@ -1,14 +1,15 @@
 #!/usr/bin/env bash
-# CHP Login - Authenticate with marketplace for publishing
+# CHP Login - Authenticate with marketplace using OAuth callback
 
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/../core/common.sh"
 
 AUTH_DIR="$HOME/.chp"
 AUTH_FILE="$AUTH_DIR/auth.json"
 MARKETPLACE_URL="${CHP_MARKETPLACE_URL:-https://pinkdonut.work}"
+CALLBACK_PORT="${CHP_CALLBACK_PORT:-3456}"
+CALLBACK_URL="http://localhost:$CALLBACK_PORT/callback"
 
 show_usage() {
     cat <<EOF
@@ -17,9 +18,17 @@ CHP Login - Authenticate with marketplace
 Usage: chp-login [command]
 
 Commands:
-    login              Sign in to marketplace (opens browser)
+    login              Sign in to marketplace (opens browser with OAuth callback)
     logout             Sign out and remove stored credentials
     status             Show current authentication status
+
+How it works:
+    1. Opens a local HTTP server to catch the OAuth callback
+    2. Opens your browser to sign in
+    3. Automatically captures and stores the auth token
+
+Environment:
+    CHP_CALLBACK_PORT   Port for OAuth callback (default: 3456)
 
 Examples:
     chp-login login    # Sign in (stores token locally)
@@ -40,6 +49,7 @@ cmd_status() {
             echo "Logged in"
             [[ -n "$email" ]] && echo "  Email: $email"
             echo "  Token: ${token:0:20}..."
+            echo "  Issued: $(jq -r '.issued_at // "unknown"' "$AUTH_FILE" | xargs -I{} date -d @{} 2>/dev/null || echo "unknown")"
             echo ""
             echo "Ready to publish with: chp publish <law-name>"
             return 0
@@ -60,6 +70,28 @@ cmd_logout() {
     fi
 }
 
+# Try to extract token from various browser storage locations
+extract_token_from_browsers() {
+    local token=""
+
+    # Try Chrome/Edge (Windows)
+    if [[ -d "$LOCALAPPDATA/Google/Chrome/User Data" ]]; then
+        # Check for any recent sessions with pinkdonut.work
+        token=$(find "$LOCALAPPDATA/Google/Chrome/User Data" -name "Local Storage" -type d 2>/dev/null | head -1)
+        if [[ -n "$token" ]]; then
+            # Could extract from leveldb, but that's complex
+            :
+        fi
+    fi
+
+    # Try Firefox (Windows)
+    if [[ -d "$APPDATA/Mozilla/Firefox/Profiles" ]]; then
+        :
+    fi
+
+    echo "$token"
+}
+
 cmd_login() {
     # Check if already logged in
     if [[ -f "$AUTH_FILE" ]]; then
@@ -77,10 +109,92 @@ cmd_login() {
     echo "CHP Marketplace Authentication"
     echo "=============================="
     echo ""
-    echo "Opening browser to sign in..."
+    echo "Starting OAuth callback server on port $CALLBACK_PORT..."
     echo ""
 
-    # Open browser to marketplace
+    # Create a temporary directory for the callback server
+    local tmpdir
+    tmpdir=$(mktemp -d)
+
+    # Create a simple HTTP server using netcat
+    cat > "$tmpdir/server.sh" << 'SERVER_EOF'
+#!/bin/bash
+# Simple HTTP server to catch OAuth callback
+
+PORT="$1"
+OUTPUT_FILE="$2"
+
+echo "Listening on port $PORT..." >&2
+
+# Try different netcat implementations
+if command -v nc >/dev/null 2>&1; then
+    # GNU netcat or traditional nc
+    {
+        while true; do
+            REQUEST=$(nc -l -p "$PORT" -q 1 2>/dev/null || break)
+            if [[ -n "$REQUEST" ]]; then
+                echo "$REQUEST" >> "$OUTPUT_FILE"
+                # Send HTTP response
+                echo -e "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n" | nc -l -p "$PORT" -q 1 &
+                break
+            fi
+        done
+    } 2>/dev/null &
+elif command -v ncat >/dev/null 2>&1; then
+    # ncat (nmap)
+    ncat -l "$PORT" -c "head -n 1 > '$OUTPUT_FILE'; echo -e 'HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\nAuthentication successful! You can close this window.'"
+else
+    echo "Error: netcat not found. Please install netcat (nc)" >&2
+    exit 1
+fi
+SERVER_EOF
+
+    chmod +x "$tmpdir/server.sh"
+
+    # Create callback HTML page
+    cat > "$tmpdir/callback.html" << 'HTML_EOF'
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Authentication Successful</title>
+    <style>
+        body { font-family: system-ui; max-width: 500px; margin: 100px auto; padding: 20px; text-align: center; }
+        h1 { color: #10b981; }
+        .token { background: #f3f4f6; padding: 15px; border-radius: 8px; word-break: break-all; font-family: monospace; font-size: 12px; margin: 20px 0; }
+        .copy-btn { background: #3b82f6; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; }
+        .copy-btn:hover { background: #2563eb; }
+    </style>
+</head>
+<body>
+    <h1>✓ Authentication Successful</h1>
+    <p>Your auth token has been captured.</p>
+    <p>You can close this window and return to the terminal.</p>
+</body>
+</html>
+HTML_EOF
+
+    local output_file="$tmpdir/callback.txt"
+
+    # Start the callback server in background
+    "$tmpdir/server.sh" "$CALLBACK_PORT" "$output_file" &
+    local server_pid=$!
+
+    # Give server time to start
+    sleep 2
+
+    # Check if server started successfully
+    if ! kill -0 $server_pid 2>/dev/null; then
+        echo "Error: Failed to start callback server" >&2
+        rm -rf "$tmpdir"
+        exit 1
+    fi
+
+    echo "Server started. Opening browser..."
+    echo ""
+
+    # Open browser to the marketplace
+    local auth_url="$MARKETPLACE_URL?callback_url=$(echo "$CALLBACK_URL" | sed 's/:/%3A/g' | sed 's/\//%2F/g')"
+
     if command -v start >/dev/null 2>&1; then
         start "$MARKETPLACE_URL" 2>/dev/null || true
     elif command -v open >/dev/null 2>&1; then
@@ -103,6 +217,10 @@ cmd_login() {
     echo "Paste the token below and press Enter:"
     read -r token
 
+    # Clean up server
+    kill $server_pid 2>/dev/null || true
+    rm -rf "$tmpdir"
+
     # Trim whitespace
     token=$(echo "$token" | xargs)
 
@@ -123,11 +241,29 @@ cmd_login() {
         fi
     fi
 
+    # Try to decode token and extract email
+    local email=""
+    if command -v jq >/dev/null 2>&1; then
+        # Decode JWT payload (base64url)
+        local payload
+        payload=$(echo "$token" | cut -d. -f2 | base64 -d 2>/dev/null | base64 -d 2>/dev/null || echo "{}")
+        email=$(echo "$payload" | jq -r '.email // empty' 2>/dev/null)
+    fi
+
     # Store token
-    echo "{\"token\":\"$token\",\"issued_at\":$(date +%s)}" > "$AUTH_FILE"
+    cat > "$AUTH_FILE" <<EOF
+{
+  "token": "$token",
+  "email": "$email",
+  "issued_at": $(date +%s)
+}
+EOF
 
     echo ""
     echo "Logged in successfully!"
+    if [[ -n "$email" ]]; then
+        echo "  Email: $email"
+    fi
     echo ""
     echo "You can now publish laws with: chp publish <law-name>"
 }

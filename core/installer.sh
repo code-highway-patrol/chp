@@ -6,6 +6,31 @@ source "$(dirname "${BASH_SOURCE[0]}")/detector.sh"
 
 readonly CHP_MANAGED_MARKER="# CHP-MANAGED"
 
+# Whitelist of valid hook types to prevent command injection
+_CHP_VALID_HOOK_TYPES="pre-commit pre-push post-commit commit-msg pre-rebase post-checkout post-merge post-rewrite applypatch-msg pre-applypatch post-applypatch update pre-auto-gc post-update pre-tool post-tool pre-write post-response fix"
+
+# Validate hook type against whitelist
+# Usage: validate_hook_type <hook_type>
+# Returns: 0 if valid, 1 if invalid
+validate_hook_type() {
+    local hook_type="$1"
+
+    if [[ -z "$hook_type" ]]; then
+        echo "Hook type cannot be empty" >&2
+        return 1
+    fi
+
+    # Check against whitelist
+    for valid_type in $_CHP_VALID_HOOK_TYPES; do
+        if [[ "$hook_type" == "$valid_type" ]]; then
+            return 0
+        fi
+    done
+
+    echo "Invalid hook type: $hook_type" >&2
+    return 1
+}
+
 is_git_installed() {
     command -v git >/dev/null 2>&1
 }
@@ -29,6 +54,12 @@ install_hook() {
 
     if [[ -z "$hook_type" ]]; then
         log_error "Hook type is required"
+        return 1
+    fi
+
+    # Validate law name to prevent path traversal
+    if ! validate_law_name "$law_name"; then
+        log_error "Invalid law name: $law_name"
         return 1
     fi
 
@@ -110,6 +141,12 @@ uninstall_hook() {
 
     if [[ -z "$hook_type" ]]; then
         log_error "Hook type is required"
+        return 1
+    fi
+
+    # Validate law name to prevent path traversal
+    if ! validate_law_name "$law_name"; then
+        log_error "Invalid law name: $law_name"
         return 1
     fi
 
@@ -236,6 +273,12 @@ install_law_hooks() {
         return 1
     fi
 
+    # Validate law name to prevent path traversal
+    if ! validate_law_name "$law_name"; then
+        log_error "Invalid law name: $law_name"
+        return 1
+    fi
+
     if ! law_exists "$law_name"; then
         log_error "Law does not exist: $law_name"
         return 1
@@ -283,6 +326,12 @@ uninstall_law_hooks() {
 
     if [[ -z "$law_name" ]]; then
         log_error "Law name is required"
+        return 1
+    fi
+
+    # Validate law name to prevent path traversal
+    if ! validate_law_name "$law_name"; then
+        log_error "Invalid law name: $law_name"
         return 1
     fi
 
@@ -421,6 +470,13 @@ _uninstall_agent_hook() {
 # Args: hook_type (pre-tool or post-tool)
 _ensure_wrapper_script() {
     local hook_type="$1"
+
+    # Validate hook type before using it
+    if ! validate_hook_type "$hook_type"; then
+        log_error "Invalid hook type for wrapper: $hook_type"
+        return 1
+    fi
+
     local wrapper_name="${hook_type}-wrapper.sh"
     local hooks_dir=".claude/hooks"
     local wrapper_path="$hooks_dir/$wrapper_name"
@@ -491,7 +547,8 @@ fi
 exec "$CHP_BASE/core/dispatcher.sh" __HOOK_TYPE__ "$TOOL_NAME" "$FILE_PATH" "$CONTENT"
 WRAPPER3
 
-    sed -i "s/__HOOK_TYPE__/$hook_type/g" "$wrapper_path"
+    # Use awk for safer fixed-string replacement (sed can interpret special chars)
+    awk -v repl="$hook_type" '{gsub(/__HOOK_TYPE__/, repl)}1' "$wrapper_path" > "${wrapper_path}.tmp" && mv "${wrapper_path}.tmp" "$wrapper_path"
     chmod +x "$wrapper_path"
 
     log_info "Created wrapper script: $wrapper_path"
@@ -605,7 +662,10 @@ install_codex_hooks() {
         if grep -q "$CODEX_HOOKS_MARKER" "$config_file"; then
             local tmp_file
             tmp_file=$(mktemp)
-            sed "/$CODEX_HOOKS_MARKER/,/$CODEX_HOOKS_END_MARKER/d" "$config_file" > "$tmp_file"
+            # Use awk for safer range deletion (sed delimiters can conflict with marker content)
+            awk -v start="$CODEX_HOOKS_MARKER" -v end="$CODEX_HOOKS_END_MARKER" \
+                '$0 == start {in_section=1; next} $0 == end {in_section=0; next} !in_section' \
+                "$config_file" > "$tmp_file"
             # Remove trailing empty lines
             sed -e :a -e '/^\n*$/{$d;N;ba' -e '}' "$tmp_file" > "$config_file"
             rm -f "$tmp_file"
@@ -638,7 +698,10 @@ uninstall_codex_hooks() {
     if [[ -f "$config_file" ]] && grep -q "$CODEX_HOOKS_MARKER" "$config_file"; then
         local tmp_file
         tmp_file=$(mktemp)
-        sed "/$CODEX_HOOKS_MARKER/,/$CODEX_HOOKS_END_MARKER/d" "$config_file" > "$tmp_file"
+        # Use awk for safer range deletion (sed delimiters can conflict with marker content)
+        awk -v start="$CODEX_HOOKS_MARKER" -v end="$CODEX_HOOKS_END_MARKER" \
+            '$0 == start {in_section=1; next} $0 == end {in_section=0; next} !in_section' \
+            "$config_file" > "$tmp_file"
         # Clean up: if only comments/whitespace remain, remove the file
         local remaining
         remaining=$(grep -v '^\s*#' "$tmp_file" | grep -v '^\s*$' | tr -d '[:space:]')

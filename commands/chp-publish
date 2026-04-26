@@ -23,17 +23,20 @@ Options:
     -d, --description <desc>  Law description
     --tags <tags>             Comma-separated tags (e.g., "javascript,security")
     --author <name>           Author name (default: from Supabase profile)
-    --token <token>           Supabase auth token (or set CHP_PUBLISH_TOKEN)
+    --token-file <path>       Read Supabase auth token from file (recommended)
+    --token-stdin            Read token from stdin (secure)
     --dry-run                 Validate and show payload without uploading
     -v, --verbose             Show detailed output
 
 Environment:
     CHP_PUBLISH_TOKEN         Supabase auth token for marketplace uploads
+    CHP_PUBLISH_TOKEN_FILE    Path to file containing token
 
 Examples:
     chp-publish no-console-log
     chp-publish no-console-log --title "No Console Logging" --tags "javascript,logging"
-    chp-publish my-law --token "eyJ..." --verbose
+    chp-publish my-law --token-file ~/.config/chp/token
+    echo "eyJ..." | chp-publish my-law --token-stdin
 
 To get a Supabase token:
     1. Go to https://pinkdonut.work (the marketplace site)
@@ -49,7 +52,9 @@ custom_title=""
 custom_description=""
 custom_tags=""
 custom_author=""
-custom_token=""
+token_file=""
+token_from_stdin=""
+deprecated_token=""
 dry_run=""
 verbose=""
 
@@ -75,8 +80,17 @@ while [[ $# -gt 0 ]]; do
             custom_author="$2"
             shift 2
             ;;
+        --token-file)
+            token_file="$2"
+            shift 2
+            ;;
+        --token-stdin)
+            token_from_stdin="true"
+            shift
+            ;;
         --token)
-            custom_token="$2"
+            echo "Warning: --token is deprecated (visible in process list). Use --token-file or CHP_PUBLISH_TOKEN instead." >&2
+            deprecated_token="$2"
             shift 2
             ;;
         --dry-run)
@@ -106,6 +120,12 @@ if [[ -z "$law_name" ]]; then
     echo "Error: law name is required" >&2
     echo ""
     show_usage
+    exit 1
+fi
+
+# Validate law name to prevent path traversal
+if [[ "$law_name" =~ \.\. ]] || [[ "$law_name" =~ ^/ ]] || [[ "$law_name" =~ [/\\] ]]; then
+    echo "Error: invalid law name (contains path traversal or separators): $law_name" >&2
     exit 1
 fi
 
@@ -149,11 +169,50 @@ fi
 
 # Get auth token (skip for dry-run)
 if [[ -z "$dry_run" ]]; then
-    # Try: --token flag, then CHP_PUBLISH_TOKEN, then stored auth
-    token="${custom_token:-$CHP_PUBLISH_TOKEN}"
+    # Priority order for token sources (most secure first):
+    # 1. --token-file <path>
+    # 2. CHP_PUBLISH_TOKEN_FILE env var
+    # 3. --token-stdin
+    # 4. CHP_PUBLISH_TOKEN env var
+    # 5. --token (deprecated, warns user)
+    # 6. Stored auth file
 
+    token=""
+
+    if [[ -n "$token_file" ]]; then
+        if [[ ! -f "$token_file" ]]; then
+            echo "Error: token file not found: $token_file" >&2
+            exit 1
+        fi
+        token=$(cat "$token_file" 2>/dev/null | tr -d '\n\r' | tr -d ' ')
+        if [[ -z "$token" ]]; then
+            echo "Error: token file is empty: $token_file" >&2
+            exit 1
+        fi
+    elif [[ -n "$CHP_PUBLISH_TOKEN_FILE" ]]; then
+        if [[ ! -f "$CHP_PUBLISH_TOKEN_FILE" ]]; then
+            echo "Error: token file not found: $CHP_PUBLISH_TOKEN_FILE" >&2
+            exit 1
+        fi
+        token=$(cat "$CHP_PUBLISH_TOKEN_FILE" 2>/dev/null | tr -d '\n\r' | tr -d ' ')
+        if [[ -z "$token" ]]; then
+            echo "Error: token file is empty: $CHP_PUBLISH_TOKEN_FILE" >&2
+            exit 1
+        fi
+    elif [[ -n "$token_from_stdin" ]]; then
+        token=$(cat 2>/dev/null | tr -d '\n\r' | tr -d ' ')
+        if [[ -z "$token" ]]; then
+            echo "Error: no token provided via stdin" >&2
+            exit 1
+        fi
+    elif [[ -n "$CHP_PUBLISH_TOKEN" ]]; then
+        token="$CHP_PUBLISH_TOKEN"
+    elif [[ -n "$deprecated_token" ]]; then
+        token="$deprecated_token"
+    fi
+
+    # Fall back to stored auth if no token provided
     if [[ -z "$token" ]]; then
-        # Try to read from stored auth
         AUTH_FILE="$HOME/.chp/auth.json"
         if [[ -f "$AUTH_FILE" ]]; then
             token=$(jq -r '.token // empty' "$AUTH_FILE" 2>/dev/null)
@@ -161,20 +220,22 @@ if [[ -z "$dry_run" ]]; then
     fi
 
     if [[ -z "$token" ]]; then
-        echo "Error: Not logged in" >&2
+        echo "Error: No auth token found" >&2
         echo "" >&2
-        echo "Sign in with: chp login" >&2
-        echo "Or pass --token to use a custom token" >&2
+        echo "Provide a token via:" >&2
+        echo "  1. --token-file <path>     (recommended)" >&2
+        echo "  2. CHP_PUBLISH_TOKEN_FILE=<path>" >&2
+        echo "  3. echo <token> | chp-publish ... --token-stdin" >&2
+        echo "  4. CHP_PUBLISH_TOKEN=<token>" >&2
+        echo "" >&2
+        echo "Or sign in with: chp login" >&2
         exit 1
     fi
 else
-    token="${custom_token:-$CHP_PUBLISH_TOKEN}"
-    # Try to read from stored auth for dry-run too
+    # For dry-run, try to get token for validation but don't fail if missing
+    token="${deprecated_token:-$CHP_PUBLISH_TOKEN}"
     if [[ -z "$token" ]]; then
-        AUTH_FILE="$HOME/.chp/auth.json"
-        if [[ -f "$AUTH_FILE" ]]; then
-            token=$(jq -r '.token // empty' "$AUTH_FILE" 2>/dev/null)
-        fi
+        token="(dry-run - no token)"
     fi
 fi
 

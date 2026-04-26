@@ -60,6 +60,70 @@ log_debug() {
     fi
 }
 
+# Validate a law name to prevent path traversal and injection
+# Usage: validate_law_name <law_name>
+# Returns: 0 if valid, 1 if invalid
+# Output: error message to stderr if invalid
+validate_law_name() {
+    local law_name="$1"
+
+    # Must not be empty
+    if [[ -z "$law_name" ]]; then
+        echo "Law name cannot be empty" >&2
+        return 1
+    fi
+
+    # Must not contain path traversal
+    if [[ "$law_name" =~ \.\. ]]; then
+        echo "Law name cannot contain '..' (path traversal): '$law_name'" >&2
+        return 1
+    fi
+
+    # Must not be an absolute path
+    if [[ "$law_name" =~ ^/ ]]; then
+        echo "Law name cannot be an absolute path: '$law_name'" >&2
+        return 1
+    fi
+
+    # Must not contain path separators
+    if [[ "$law_name" =~ [/\\] ]]; then
+        echo "Law name cannot contain path separators: '$law_name'" >&2
+        return 1
+    fi
+
+    # Must not contain shell metacharacters
+    if [[ "$law_name" =~ [\;\&\|\$\`\'\"] ]]; then
+        echo "Law name cannot contain shell metacharacters: '$law_name'" >&2
+        return 1
+    fi
+
+    # Must not contain spaces or tabs
+    if [[ "$law_name" =~ [\ \	] ]]; then
+        echo "Law name cannot contain whitespace: '$law_name'" >&2
+        return 1
+    fi
+
+    # Must not start with a dash (could be interpreted as option)
+    if [[ "$law_name" =~ ^- ]]; then
+        echo "Law name cannot start with a dash: '$law_name'" >&2
+        return 1
+    fi
+
+    # Must be reasonable length (max 64 chars)
+    if [[ ${#law_name} -gt 64 ]]; then
+        echo "Law name too long (max 64 chars): '$law_name'" >&2
+        return 1
+    fi
+
+    # Should only contain safe characters (alphanumeric, hyphen, underscore, dot)
+    if [[ ! "$law_name" =~ ^[a-zA-Z0-9._-]+$ ]]; then
+        echo "Law name must contain only alphanumeric, hyphen, underscore, or dot: '$law_name'" >&2
+        return 1
+    fi
+
+    return 0
+}
+
 law_exists() {
     local law_name="$1"
     [ -d "$LAWS_DIR/$law_name" ]

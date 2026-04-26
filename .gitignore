@@ -4,3 +4,22 @@
 .worktrees
 node_modules/
 dist/
+
+# Security - environment and secrets
+.env
+.env.local
+.env.*.local
+*.key
+*.pem
+secrets.txt
+credentials.json
+auth.json
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
