@@ -1,6 +1,6 @@
 ---
 name: marketplace
-description: Search and install CHP laws from the marketplace. Triggers on "install law", "search marketplace", "find laws", "chp install", "marketplace", "what laws are available".
+description: Search and install CHP laws from the marketplace. Triggers on "marketplace", "install law", "search marketplace", "find laws", "chp install", "what laws", "available laws", "browse laws", "get laws", "add law", "download law", "law marketplace", "search for laws", "find enforcement", "get rules".
 ---
 
 # CHP Marketplace

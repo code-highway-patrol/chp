@@ -1,11 +1,11 @@
 ---
 name: investigate
-description: Debug why an action was blocked by CHP and understand violation history
+description: Debug why CHP blocked an action, understand violations, and fix them. Triggers on "why blocked", "why failed", "violation", "blocked", "law failed", "chp error", "debug law", "fix violation", "what happened", "investigate".
 ---
 
 # CHP Investigation
 
-Debug why an action was blocked by CHP and understand what went wrong.
+Debug why an action was blocked by CHP, understand what went wrong, and fix it.
 
 ## When to Invoke
 
@@ -13,88 +13,212 @@ Invoke this skill when:
 - A git hook failed with a CHP violation
 - A CI/CD pipeline failed
 - A tool call was blocked
-- You see an error message mentioning "CHP violation"
-- You ask "why did this fail?" or "what law blocked this?"
+- You see an error mentioning "CHP violation" or "law violated"
+- You ask "why did this fail?", "what blocked this?", "what's wrong?"
+- You need to understand a violation message
+- Something worked before but now fails
 
-## Investigation Process
+## Quick Diagnosis
 
-### 1. Identify the Blocking Law
+### Step 1: Find the Blocking Law
 
-Check the error output for the law name. It usually appears as:
+Check the error output for the law name:
+
 ```
-❌ Error: CHP law <law-name> violated
-```
-or
-```
-Verification failed for law: <law-name>
+❌ CHP violation: no-api-keys
+Verification failed for law: no-console-log
+Error: Law 'no-secrets' blocked this action
 ```
 
-### 2. Run Audit on the Law
-
-Use the `chp-audit` command to see the full violation history:
-
+**No law name in output?** List all laws to find candidates:
 ```bash
-./commands/chp-audit <law-name>
+./commands/chp-law list
 ```
 
-This shows:
-- Total violation count
-- Tightening level (how strict the law has become)
-- Historical violation timestamps
+### Step 2: Understand What Failed
 
-### 3. Read the Law's Guidance
-
-Understand what the law is checking:
-
+Read the law's guidance to understand what it checks:
 ```bash
 cat docs/chp/laws/<law-name>/guidance.md
 ```
 
-The guidance document explains:
-- What the law checks for
-- Good vs bad practice examples
-- How to remediate violations
+This explains:
+- What the law detects
+- Why it's enforced
+- How to fix violations
 
-### 4. Understand the Fix
+### Step 3: See the Violation Details
 
-Check the verification script to see what triggered:
+Run the audit command to see full violation history:
+```bash
+./commands/chp-audit <law-name>
+```
 
+Output shows:
+```
+Law: no-api-keys
+Severity: error
+Total violations: 7
+Tightening level: 3
+Recent violations:
+  2026-04-26 10:23:45 - sk_1234... detected in src/config.ts
+  2026-04-26 09:15:32 - AIza0... detected in lib/api.ts
+```
+
+### Step 4: Find the Exact Problem
+
+Check the verification script to see what pattern matched:
 ```bash
 cat docs/chp/laws/<law-name>/verify.sh
 ```
 
-Look for the `log_error` messages - these explain what pattern was detected.
+Look for `log_error` messages — these show what triggered:
+```bash
+log_error "API key pattern detected: sk_[a-zA-Z0-9]{32,}"
+```
 
-### 5. Fix and Retest
+## Common Violation Patterns
 
-After making changes:
+### API Keys / Secrets
+```
+Pattern: sk_[a-zA-Z0-9]{32,}
+Found in: src/config.ts line 12
+Fix: Move to environment variable, add to .gitignore
+```
+
+### Console Logging
+```
+Pattern: console\.log\(
+Found in: src/debug.js line 45
+Fix: Use logger.info() instead
+```
+
+### Hardcoded Credentials
+```
+Pattern: (password|api_key|secret)\s*=\s*['"]
+Found in: config/database.json line 8
+Fix: Use environment variables
+```
+
+### Missing Tests
+```
+Assertion: test_file_exists
+Missing: tests/payments/checkout.test.ts
+Required for: src/payments/checkout.ts
+Fix: Create test file
+```
+
+## Fixing Violations
+
+### Process
+
+1. **Identify the violating file** — Check the audit output or verify.sh log
+2. **Understand the fix** — Read guidance.md for remediation steps
+3. **Apply the fix** — Edit the violating file
+4. **Test the law** — Verify the fix worked
+   ```bash
+   ./commands/chp-law test <law-name>
+   ```
+5. **Retry the action** — Commit, push, or retry whatever failed
+
+### Example: Fixing API Key Violation
 
 ```bash
-# Test the specific law
-./commands/chp-law test <law-name>
+# 1. Run audit
+./commands/chp-audit no-api-keys
+# Output: sk_1234... in src/config.ts:12
 
-# Or retry the original action that failed
-git commit  # if pre-commit failed
+# 2. Read guidance
+cat docs/chp/laws/no-api-keys/guidance.md
+
+# 3. Fix the code
+# Before: const apiKey = 'sk_1234...'
+# After:  const apiKey = process.env.API_KEY
+
+# 4. Test
+./commands/chp-law test no-api-keys
+# Output: ✓ All checks passed
+
+# 5. Retry commit
+git commit
 ```
 
-## Example
+## False Positives
 
+### Detecting False Positives
+
+A violation might be a false positive if:
+- The pattern matches something that's not actually a violation
+- The code is exempt but the law doesn't know it
+- The pattern is too broad
+
+### Handling False Positives
+
+**Option 1: Fix the pattern** (preferred)
+```bash
+# Edit verify.sh to narrow the pattern
+# Before: grep -q 'console\.log'
+# After:  grep -q 'console\.log' | grep -v 'console\.error'
 ```
-Scenario: You try to commit and get blocked
-Error: "❌ API key detected in staged files"
 
-1. Identify law: no-api-keys
-2. Run audit: ./commands/chp-audit no-api-keys
-3. Read guidance: cat docs/chp/laws/no-api-keys/guidance.md
-4. Fix: Move API key to .env, add to .gitignore
-5. Test: ./commands/chp-law test no-api-keys
-6. Retry: git commit
+**Option 2: Exclude the file**
+```bash
+# Add to law.json
+"exclude": ["**/examples/**", "**/debug/**"]
 ```
 
-## Common Issues
+**Option 3: Disable the law** (temporary)
+```bash
+./commands/chp-law disable <law-name>
+```
 
-**"Law not found"** - The law name in the error might be different. Run `./commands/chp-law list` to see all laws.
+### Report the False Positive
 
-**"Verification passes but commit still fails"** - There might be multiple laws blocking. Check each one.
+If a law has consistent false positives:
+1. Document the case in guidance.md
+2. Adjust the pattern in verify.sh
+3. Run `chp:review-laws` to sync all files
 
-**"This is a false positive"** - Use `chp:refine-laws` to adjust the law's verification logic.
+## Multiple Blocking Laws
+
+When multiple laws block an action:
+
+```bash
+# See all violations at once
+./commands/chp-scan
+
+# Fix in priority order:
+# 1. error severity (blocking)
+# 2. warn severity (non-blocking but tracked)
+# 3. info severity (informational)
+```
+
+## Escalation Path
+
+### Can't Fix the Violation?
+
+If the law seems wrong or too restrictive:
+
+1. **Check the law's intent** — Read `law.json` to understand why it exists
+2. **Discuss with team** — Laws reflect team standards
+3. **Adjust the law** — Use `chp:write-laws` to modify patterns, severity, or scope
+4. **Disable temporarily** — `chp-law disable` while you decide
+
+### Law Blocking Valid Work?
+
+If a law blocks something that should be allowed:
+1. Is there an existing exemption? Check `exclude` in law.json
+2. Should there be an exemption? Add file patterns to `exclude`
+3. Is the pattern too broad? Narrow it in verify.sh
+4. Is the severity wrong? Change `error` to `warn` in law.json
+
+## Reference: All Investigation Commands
+
+| Command | Purpose |
+|---------|---------|
+| `./commands/chp-audit <law>` | Show violation history |
+| `./commands/chp-law list` | List all laws |
+| `./commands/chp-law test <law>` | Test a law |
+| `cat docs/chp/laws/<law>/guidance.md` | Read what the law checks |
+| `cat docs/chp/laws/<law>/verify.sh` | See detection logic |
+| `./commands/chp-scan` | Scan for all violations |

@@ -1,6 +1,6 @@
 ---
 name: decompose-laws
-description: Break vague enforcement concepts into specific atomic checks. Triggers on "decompose laws", "break down laws", "what checks do I need", "how to enforce", "decompose".
+description: Break vague enforcement concepts into specific atomic checks. Triggers on "decompose", "break down", "what checks", "how to enforce", "enforce this", "make this a rule", "turn into checks", "atomic checks", "split into checks", "how do I check for", "enforcement strategy".
 ---
 
 # CHP Law Decomposer
