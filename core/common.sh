@@ -22,7 +22,9 @@ LAWS_DIR="${LAWS_DIR:-$CHP_BASE/docs/chp/laws}"
 GUIDANCE_DIR="${GUIDANCE_DIR:-$CHP_BASE/docs/chp}"
 
 # Git hooks that require scope (have file context)
-readonly _CHP_GIT_HOOKS=("pre-commit" "pre-push" "post-commit" "commit-msg" "pre-rebase" "post-checkout" "post-merge" "post-rewrite" "applypatch-msg" "pre-applypatch" "post-applypatch" "update" "pre-auto-gc" "post-update")
+if [[ -z "${_CHP_GIT_HOOKS+x}" ]]; then
+    readonly _CHP_GIT_HOOKS=("pre-commit" "pre-push" "post-commit" "commit-msg" "pre-rebase" "post-checkout" "post-merge" "post-rewrite" "applypatch-msg" "pre-applypatch" "post-applypatch" "update" "pre-auto-gc" "post-update")
+fi
 
 # Highlight tag style: bold white text on colored background
 # Colors disabled when stdout is not a terminal (piped/Claude Code)
