@@ -380,15 +380,34 @@ create_law() {
     build_verify_with_checks "$law_name" > "$law_dir/verify.sh"
     chmod +x "$law_dir/verify.sh"
 
-    # Register law in hook registry
+    # Register law in hook registry (batched for performance)
     source "$SCRIPT_DIR/../core/hook-registry.sh"
     init_hook_registry
 
     if [[ ${#hooks[@]} -gt 0 ]]; then
-        for hook in "${hooks[@]}"; do
-            hook=$(echo "$hook" | xargs)  # trim whitespace
-            register_hook_law "$hook" "$law_name"
-        done
+        # Batch all hook registrations into a single registry write
+        local tmp_file="${HOOK_REGISTRY}.tmp"
+        local first=true
+
+        # Read existing registry
+        if [[ -f "$HOOK_REGISTRY" ]]; then
+            cp "$HOOK_REGISTRY" "$tmp_file"
+        else
+            echo '{"hooks":{},"version":"1.0"}' > "$tmp_file"
+        fi
+
+        # Add law to each hook in a single jq operation
+        local hooks_json
+        hooks_json=$(printf '%s\n' "${hooks[@]}" | jq -R . | jq -s .)
+
+        jq --arg name "$law_name" --argjson hooks "$hooks_json" '
+            $hooks | map(. as $hook |
+                .hooks[$hook] //= {laws: [], enabled: true, blocking: true} |
+                .hooks[$hook].laws |= if type == "array" then (. + [$name] | unique) else [$name] end
+            ) | empty
+        ' "$tmp_file" > "${tmp_file}.new" && mv "${tmp_file}.new" "$tmp_file"
+
+        mv "$tmp_file" "$HOOK_REGISTRY"
         log_info "Registered '$law_name' with hooks: $(IFS=', '; echo "${hooks[*]}")"
     fi
 
@@ -481,9 +500,6 @@ EOF
                 log_warn "jq is required to configure Claude Code agent hooks (skipping settings.json)"
             fi
         fi
-
-        # Ensure any previously registered hooks are also still installed
-        ensure_hooks_installed
     else
         log_warn "No hooks specified. Use --hooks=pre-commit,pre-push to install hooks"
     fi
