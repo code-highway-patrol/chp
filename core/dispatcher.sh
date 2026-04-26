@@ -7,6 +7,7 @@ source "$SCRIPT_DIR/hook-registry.sh"
 source "$SCRIPT_DIR/verifier.sh"
 source "$SCRIPT_DIR/check-runner.sh"
 source "$SCRIPT_DIR/law-mutate.sh"
+source "$SCRIPT_DIR/fix-trigger.sh"
 
 if [ -f "$SCRIPT_DIR/tightener.sh" ]; then
     source "$SCRIPT_DIR/tightener.sh"
@@ -164,10 +165,10 @@ dispatch_hook() {
         local verify_exit=0
         local verify_stdout=""
         if [ -n "$CHP_TOOL_INPUT" ]; then
-            verify_stdout=$(echo "$CHP_TOOL_INPUT" | "$verify_script" "${hook_args[@]}" 2>&1)
+            verify_stdout=$(echo "$CHP_TOOL_INPUT" | "$verify_script" "$hook_type" "${hook_args[@]}" 2>&1)
             verify_exit=$?
         else
-            verify_stdout=$("$verify_script" "${hook_args[@]}" 2>&1)
+            verify_stdout=$("$verify_script" "$hook_type" "${hook_args[@]}" 2>&1)
             verify_exit=$?
         fi
         # Output verify script stdout for visibility (non-pre-tool hooks)
@@ -198,6 +199,15 @@ dispatch_hook() {
                 _record_check_failures "$law_name" "$verify_stdout"
             elif command -v record_failure >/dev/null 2>&1; then
                 record_failure "$law_name"
+            fi
+
+            # Attempt auto-fix if configured
+            if [[ -f "$SCRIPT_DIR/fix-trigger.sh" ]]; then
+                source "$SCRIPT_DIR/fix-trigger.sh"
+                if trigger_fix "$law_name" "$hook_type" "${hook_args[@]}"; then
+                    # Fix was offered or attempted
+                    log_debug "Fix flow completed for law: $law_name"
+                fi
             fi
         fi
     done
