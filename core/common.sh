@@ -21,6 +21,9 @@ CHP_BASE="${CHP_BASE:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 LAWS_DIR="${LAWS_DIR:-$CHP_BASE/docs/chp/laws}"
 GUIDANCE_DIR="${GUIDANCE_DIR:-$CHP_BASE/docs/chp}"
 
+# Git hooks that require scope (have file context)
+readonly _CHP_GIT_HOOKS=("pre-commit" "pre-push" "post-commit" "commit-msg" "pre-rebase" "post-checkout" "post-merge" "post-rewrite" "applypatch-msg" "pre-applypatch" "post-applypatch" "update" "pre-auto-gc" "post-update")
+
 # Highlight tag style: bold white text on colored background
 # Colors disabled when stdout is not a terminal (piped/Claude Code)
 if [ -t 1 ] 2>/dev/null; then
@@ -92,6 +95,17 @@ _CHP_VALID_SEVERITIES="error warn info"
 _CHP_VALID_HOOKS="pre-commit pre-push post-commit commit-msg pre-tool post-tool pre-write post-response"
 _CHP_VALID_CHECK_TYPES="pattern agent structural metric"
 _CHP_VALID_CHECK_SEVERITIES="block warn log"
+
+# Check if a hook type is a git hook (has file context)
+# Usage: is_git_hook <hook_name>
+# Returns: 0 if git hook, 1 otherwise
+is_git_hook() {
+    local hook_name="$1"
+    for git_hook in "${_CHP_GIT_HOOKS[@]}"; do
+        [[ "$hook_name" == "$git_hook" ]] && return 0
+    done
+    return 1
+}
 
 # Validate a law.json file against the CHP schema
 # Usage: validate_law_json <law_json_path>
@@ -175,6 +189,42 @@ validate_law_json() {
     enabled_type=$(jq -r '.enabled | type' "$law_json" 2>/dev/null)
     if [[ -n "$enabled_type" && "$enabled_type" != "boolean" && "$enabled_type" != "null" ]]; then
         issues+=("enabled must be a boolean (got: $enabled_type)")
+    fi
+
+    # include/exclude: required for git-hook laws
+    local hooks_array
+    hooks_array=$(jq -r '.hooks[] // empty' "$law_json" 2>/dev/null)
+
+    local has_git_hook=false
+    while IFS= read -r hook; do
+        [[ -n "$hook" ]] && is_git_hook "$hook" && has_git_hook=true
+    done <<< "$hooks_array"
+
+    if $has_git_hook; then
+        # Git-hook laws require include field
+        local include_val
+        include_val=$(jq -r '.include // empty' "$law_json" 2>/dev/null)
+        local include_type
+        include_type=$(jq -r '.include | type' "$law_json" 2>/dev/null)
+
+        if [[ "$include_type" != "array" ]]; then
+            issues+=("include must be an array (got: $include_type) - required for git-hook laws")
+        elif [[ -z "$include_val" || "$include_val" == "null" ]]; then
+            issues+=("include array is empty - git-hook laws must specify what files they apply to")
+        else
+            local include_count
+            include_count=$(jq '.include | length' "$law_json" 2>/dev/null)
+            if [[ "$include_count" -eq 0 ]]; then
+                issues+=("include array is empty - git-hook laws must specify at least one pattern")
+            fi
+        fi
+    fi
+
+    # Validate exclude if present (optional field)
+    local exclude_type
+    exclude_type=$(jq -r '.exclude | type' "$law_json" 2>/dev/null)
+    if [[ -n "$exclude_type" && "$exclude_type" != "array" && "$exclude_type" != "null" ]]; then
+        issues+=("exclude must be an array (got: $exclude_type)")
     fi
 
     # checks: if present, must be an array with valid structure
