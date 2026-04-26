@@ -1,158 +1,192 @@
 import chalk from 'chalk';
 import fs from 'fs/promises';
 import path from 'path';
+import { spawn } from 'child_process';
 
-const MARKETPLACE_API = 'https://pinkdonut.work/api';
+const MARKETPLACE_API = process.env.CHP_MARKETPLACE_API || 'https://www.pinkdonut.work/api';
+const LAWS_DIR = path.join('docs', 'chp', 'laws');
+const REGISTRY_PATH = path.join('.chp', 'hook-registry.json');
 
-async function ensureLawsDir() {
-  const lawsDir = path.join(process.cwd(), 'docs', 'chp', 'laws');
-  try {
-    await fs.access(lawsDir);
-  } catch {
-    await fs.mkdir(lawsDir, { recursive: true });
-    console.log(chalk.gray('Created docs/chp/laws directory'));
-  }
-  return lawsDir;
+const LAW_FILES = new Set(['law.json', 'verify.sh', 'guidance.md']);
+
+// What to do with a file in statue.files[]:
+//   accept   → write to docs/chp/laws/<path>
+//   info     → skip (informational, e.g. README.md)
+//   reject   → skip with a warning (unexpected path shape)
+function classifyPath(p) {
+  const segs = p.split('/').filter(Boolean);
+  const base = segs[segs.length - 1];
+  if (base === 'README.md' || base === 'readme.md') return 'info';
+  if (segs.length !== 2) return 'reject';
+  if (!LAW_FILES.has(base)) return 'reject';
+  return 'accept';
 }
 
-async function installStatue(slug, lawsDir) {
-  console.log(chalk.blue(`Fetching law: ${slug}...`));
+// Legacy single-law statues (body + lawJson, no files[]) get the same on-disk
+// shape the marketplace UI synthesizes: <slug>/guidance.md and <slug>/law.json.
+function synthesizeFiles(statue) {
+  const out = [];
+  if (statue.body && statue.body.trim()) {
+    out.push({ path: `${statue.slug}/guidance.md`, content: statue.body });
+  }
+  if (statue.lawJson != null && statue.lawJson !== '') {
+    const content =
+      typeof statue.lawJson === 'string'
+        ? statue.lawJson
+        : JSON.stringify(statue.lawJson, null, 2);
+    out.push({ path: `${statue.slug}/law.json`, content });
+  }
+  return out;
+}
 
+async function fetchStatue(slug) {
+  const url = `${MARKETPLACE_API}/statues/${encodeURIComponent(slug)}`;
+  const res = await fetch(url);
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error(`HTTP ${res.status} fetching ${url}`);
+  return res.json();
+}
+
+async function writeFileEnsuringDir(dest, content, mode) {
+  await fs.mkdir(path.dirname(dest), { recursive: true });
+  await fs.writeFile(dest, content, 'utf-8');
+  if (mode != null) await fs.chmod(dest, mode);
+}
+
+// Update .chp/hook-registry.json: add each law to the hook arrays declared in
+// its law.json.hooks. Idempotent.
+async function registerLaws(lawNames) {
+  let registry = { hooks: {} };
   try {
-    const response = await fetch(`${MARKETPLACE_API}/statues/${slug}`);
-    if (!response.ok) {
-      if (response.status === 404) {
-        console.error(chalk.red(`Law not found: ${slug}`));
-        return false;
-      }
-      throw new Error(`HTTP ${response.status}`);
+    registry = JSON.parse(await fs.readFile(REGISTRY_PATH, 'utf-8'));
+    if (!registry.hooks) registry.hooks = {};
+  } catch (err) {
+    if (err.code !== 'ENOENT') throw err;
+    await fs.mkdir(path.dirname(REGISTRY_PATH), { recursive: true });
+  }
+
+  for (const name of lawNames) {
+    const lawJsonPath = path.join(LAWS_DIR, name, 'law.json');
+    let parsed;
+    try {
+      parsed = JSON.parse(await fs.readFile(lawJsonPath, 'utf-8'));
+    } catch {
+      console.log(chalk.yellow(`  · skipping registry update for ${name} (law.json not readable)`));
+      continue;
     }
-
-    const statue = await response.json();
-
-    // Handle law packs (statues with files array)
-    if (statue.files && statue.files.length > 0) {
-      console.log(chalk.yellow(`Installing law pack "${statue.title}" with ${statue.laws?.length || 0} laws...`));
-
-      // Group files by law name (first directory in path)
-      const lawGroups = {};
-      for (const file of statue.files) {
-        const parts = file.path.split('/');
-        const lawName = parts[0];
-        if (!lawGroups[lawName]) {
-          lawGroups[lawName] = [];
-        }
-        lawGroups[lawName].push(file);
+    const hooks = Array.isArray(parsed.hooks) ? parsed.hooks : [];
+    for (const hook of hooks) {
+      if (!registry.hooks[hook]) {
+        registry.hooks[hook] = { laws: [], enabled: true, blocking: true };
       }
-
-      // Install each law
-      for (const [lawName, files] of Object.entries(lawGroups)) {
-        await installLawPack(lawName, files, lawsDir);
-      }
-
-      console.log(chalk.green(`Law pack installed to docs/chp/laws/`));
-      return true;
+      const laws = registry.hooks[hook].laws ?? [];
+      if (!laws.includes(name)) laws.push(name);
+      registry.hooks[hook].laws = laws;
     }
+  }
 
-    // Handle single law or old collection format
-    if (statue.type === 'collection' && statue.contents && statue.contents.length > 0) {
-      console.log(chalk.yellow(`Installing collection "${statue.title}" with ${statue.contents.length} laws...`));
-      for (const item of statue.contents) {
-        await installLaw(item, lawsDir);
+  await fs.writeFile(REGISTRY_PATH, JSON.stringify(registry, null, 2) + '\n', 'utf-8');
+}
+
+// Best-effort: tell chp-hooks to (re-)install templates for whatever's now
+// registered. If the binary isn't on PATH (fresh project, dev checkout), we
+// note it but don't fail the install — the registry is updated either way.
+function ensureHookTemplates() {
+  return new Promise((resolve) => {
+    const proc = spawn('chp-hooks', ['ensure'], { stdio: 'pipe' });
+    let stderr = '';
+    proc.stderr.on('data', (d) => (stderr += d.toString()));
+    proc.on('error', () => {
+      console.log(chalk.gray('  · chp-hooks not on PATH — run `chp-hooks ensure` manually'));
+      resolve();
+    });
+    proc.on('exit', (code) => {
+      if (code !== 0) {
+        console.log(chalk.yellow(`  · chp-hooks ensure exited ${code}: ${stderr.trim()}`));
       }
-      console.log(chalk.green(`Collection installed to docs/chp/laws/`));
-      return true;
-    }
+      resolve();
+    });
+  });
+}
 
-    // Single law
-    await installLaw(statue, lawsDir);
-    return true;
-  } catch (error) {
-    console.error(chalk.red(`Failed to install law: ${error.message}`));
+async function installStatue(slug) {
+  console.log(chalk.blue(`Fetching ${slug}…`));
+  const statue = await fetchStatue(slug);
+  if (!statue) {
+    console.error(chalk.red(`  ✗ not found: ${slug}`));
     return false;
   }
-}
 
-async function installLawPack(lawName, files, lawsDir) {
-  const lawDir = path.join(lawsDir, lawName);
-  await fs.mkdir(lawDir, { recursive: true });
+  const fileList =
+    Array.isArray(statue.files) && statue.files.length > 0
+      ? statue.files
+      : synthesizeFiles(statue);
 
-  for (const file of files) {
-    const parts = file.path.split('/');
-    const fileName = parts.slice(1).join('/'); // Remove law name prefix
-
-    if (!fileName) continue; // Skip empty paths
-
-    const filePath = path.join(lawDir, fileName);
-    const fileDir = path.dirname(filePath);
-
-    await fs.mkdir(fileDir, { recursive: true });
-    await fs.writeFile(filePath, file.content, 'utf-8');
+  if (fileList.length === 0) {
+    console.error(chalk.red(`  ✗ ${slug} has no installable content`));
+    return false;
   }
 
-  console.log(chalk.green(`  ✓ Installed: ${lawName}`));
-}
+  const lawNames = new Set();
+  let written = 0;
+  let skipped = 0;
 
-async function installLaw(law, lawsDir) {
-  const lawDir = path.join(lawsDir, law.slug);
-  await fs.mkdir(lawDir, { recursive: true });
-
-  let lawJson;
-  if (law.lawJson) {
-    if (typeof law.lawJson === 'string') {
-      lawJson = JSON.parse(law.lawJson);
-    } else {
-      lawJson = law.lawJson;
+  for (const f of fileList) {
+    const verdict = classifyPath(f.path);
+    if (verdict === 'info') {
+      skipped++;
+      continue;
     }
-  } else {
-    lawJson = {
-      name: law.slug,
-      severity: 'error',
-      hooks: ['pre-commit'],
-      enabled: true,
-      intent: law.description || law.title,
-      autoFix: 'never',
-      checks: [],
-      include: ['**/*'],
-      exclude: ['**/node_modules/**'],
-      created: new Date().toISOString(),
-      failures: 0,
-      tightening_level: 0
-    };
+    if (verdict === 'reject') {
+      console.log(chalk.yellow(`  · ignoring unexpected path: ${f.path}`));
+      skipped++;
+      continue;
+    }
+    const dest = path.join(LAWS_DIR, f.path);
+    const mode = f.path.endsWith('.sh') ? 0o755 : undefined;
+    await writeFileEnsuringDir(dest, f.content, mode);
+    lawNames.add(f.path.split('/')[0]);
+    written++;
   }
 
-  await fs.writeFile(path.join(lawDir, 'law.json'), JSON.stringify(lawJson, null, 2), 'utf-8');
-
-  if (law.body) {
-    await fs.writeFile(path.join(lawDir, 'guidance.md'), law.body, 'utf-8');
+  if (written === 0) {
+    console.error(chalk.red(`  ✗ ${slug} produced no usable law files`));
+    return false;
   }
 
-  console.log(chalk.green(`  ✓ Installed: ${law.title}`));
+  await registerLaws(Array.from(lawNames));
+
+  const lawList = Array.from(lawNames).sort();
+  console.log(chalk.green(`  ✓ wrote ${written} files (${skipped} skipped)`));
+  console.log(chalk.green(`  ✓ registered ${lawList.length} law(s): ${lawList.join(', ')}`));
+  return true;
 }
 
-export async function install(slugs, options) {
-  const lawsDir = await ensureLawsDir();
-
+export async function install(slugs, _options) {
   console.log(chalk.bold.blue('CHP Marketplace Install'));
   console.log(chalk.gray('='.repeat(40)));
 
-  let successCount = 0;
-  let failCount = 0;
-
+  let ok = 0;
+  let bad = 0;
   for (const slug of slugs) {
-    const success = await installStatue(slug, lawsDir);
-    if (success) {
-      successCount++;
-    } else {
-      failCount++;
+    try {
+      const success = await installStatue(slug);
+      success ? ok++ : bad++;
+    } catch (err) {
+      console.error(chalk.red(`  ✗ ${slug}: ${err.message}`));
+      bad++;
     }
     console.log();
   }
 
-  console.log(chalk.gray('='.repeat(40)));
-  console.log(chalk.bold(`Installed: ${successCount} | Failed: ${failCount}`));
+  if (ok > 0) await ensureHookTemplates();
 
-  if (successCount > 0) {
-    console.log(chalk.gray('\nLaws are now available in docs/chp/laws/'));
+  console.log(chalk.gray('='.repeat(40)));
+  console.log(chalk.bold(`Installed: ${ok} | Failed: ${bad}`));
+  if (ok > 0) {
+    console.log(
+      chalk.gray('Laws now live under docs/chp/laws/ and are wired into .chp/hook-registry.json.'),
+    );
   }
+  if (bad > 0) process.exitCode = 1;
 }
