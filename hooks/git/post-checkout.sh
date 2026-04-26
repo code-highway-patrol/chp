@@ -1,12 +1,6 @@
 #!/usr/bin/env bash
-# CHP Post-Checkout Hook
-# Installed to .git/hooks/post-checkout
-# Runs after a checkout operation
-
+# CHP post-checkout Hook — installed to .git/hooks/post-checkout
 # CHP-MANAGED
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-exec "$PROJECT_ROOT/core/dispatcher.sh" post-checkout "$@"
-
-# Always allow checkout to succeed
+CHP_BASE="${CHP_BASE:-__CHP_BASE_DEFAULT__}"
+exec "$CHP_BASE/core/dispatcher.sh" post-checkout "$@"

@@ -1,11 +1,6 @@
 #!/usr/bin/env bash
-# CHP Pre-Applypatch Hook
-# Installed to .git/hooks/pre-applypatch
-# Runs before a patch is applied
-
+# CHP pre-applypatch Hook — installed to .git/hooks/pre-applypatch
 # CHP-MANAGED
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-exec "$PROJECT_ROOT/core/dispatcher.sh" pre-applypatch "$@"
-
+CHP_BASE="${CHP_BASE:-__CHP_BASE_DEFAULT__}"
+exec "$CHP_BASE/core/dispatcher.sh" pre-applypatch "$@"

@@ -374,6 +374,15 @@ uninstall_law_hooks() {
 
 # Category-specific helpers
 
+# Copy a hook template to its destination, substituting __CHP_BASE_DEFAULT__
+# with the absolute install path. Hooks may still be overridden at runtime via
+# the CHP_BASE env var.
+_materialize_hook() {
+    local src="$1"
+    local dst="$2"
+    awk -v base="$CHP_BASE" '{ gsub(/__CHP_BASE_DEFAULT__/, base); print }' "$src" > "$dst"
+}
+
 _install_git_hook() {
     local hook_type="$1"
 
@@ -398,7 +407,7 @@ _install_git_hook() {
 
     mkdir -p "$hook_dir"
     backup_existing_hook "$hook_file"
-    cp "$template_file" "$hook_file"
+    _materialize_hook "$template_file" "$hook_file"
     chmod +x "$hook_file"
 
     log_info "Installed git hook: $hook_file"
@@ -438,7 +447,7 @@ _install_agent_hook() {
 
     mkdir -p "$hook_dir"
     backup_existing_hook "$hook_file"
-    cp "$template_file" "$hook_file"
+    _materialize_hook "$template_file" "$hook_file"
     chmod +x "$hook_file"
 
     log_info "Installed agent hook: $hook_file"

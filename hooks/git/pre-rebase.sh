@@ -1,11 +1,6 @@
 #!/usr/bin/env bash
-# CHP Pre-Rebase Hook
-# Installed to .git/hooks/pre-rebase
-# Runs before a rebase operation
-
+# CHP pre-rebase Hook — installed to .git/hooks/pre-rebase
 # CHP-MANAGED
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-exec "$PROJECT_ROOT/core/dispatcher.sh" pre-rebase "$@"
-
+CHP_BASE="${CHP_BASE:-__CHP_BASE_DEFAULT__}"
+exec "$CHP_BASE/core/dispatcher.sh" pre-rebase "$@"

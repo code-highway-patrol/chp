@@ -1,12 +1,6 @@
 #!/usr/bin/env bash
-# CHP Commit-Msg Hook
-# Installed to .git/hooks/commit-msg
-# Runs after commit message is provided
-
+# CHP commit-msg Hook — installed to .git/hooks/commit-msg
 # CHP-MANAGED
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-exec "$PROJECT_ROOT/core/dispatcher.sh" commit-msg "$@"
-
-# Exit with dispatcher's exit code
+CHP_BASE="${CHP_BASE:-__CHP_BASE_DEFAULT__}"
+exec "$CHP_BASE/core/dispatcher.sh" commit-msg "$@"

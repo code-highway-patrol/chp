@@ -1,10 +1,6 @@
 #!/usr/bin/env bash
-# CHP Pre-Commit Hook
-# Installed to .git/hooks/pre-commit
-# Runs before each commit — blocking
-
+# CHP pre-commit Hook — installed to .git/hooks/pre-commit
 # CHP-MANAGED
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-exec "$PROJECT_ROOT/core/dispatcher.sh" pre-commit "$@"
+CHP_BASE="${CHP_BASE:-__CHP_BASE_DEFAULT__}"
+exec "$CHP_BASE/core/dispatcher.sh" pre-commit "$@"

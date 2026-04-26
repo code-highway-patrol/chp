@@ -1,12 +1,6 @@
 #!/usr/bin/env bash
-# CHP Pre-Auto-GC Hook
-# Installed to .git/hooks/pre-auto-gc
-# Runs before automatic garbage collection
-
+# CHP pre-auto-gc Hook — installed to .git/hooks/pre-auto-gc
 # CHP-MANAGED
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-exec "$PROJECT_ROOT/core/dispatcher.sh" pre-auto-gc "$@"
-
-# Always allow garbage collection to proceed
+CHP_BASE="${CHP_BASE:-__CHP_BASE_DEFAULT__}"
+exec "$CHP_BASE/core/dispatcher.sh" pre-auto-gc "$@"

@@ -1,12 +1,6 @@
 #!/usr/bin/env bash
-# CHP Post-Update Hook
-# Installed to .git/hooks/post-update
-# Runs on remote repository after updates have been pushed
-
+# CHP post-update Hook — installed to .git/hooks/post-update
 # CHP-MANAGED
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-exec "$PROJECT_ROOT/core/dispatcher.sh" post-update "$@"
-
-# Always allow update to succeed
+CHP_BASE="${CHP_BASE:-__CHP_BASE_DEFAULT__}"
+exec "$CHP_BASE/core/dispatcher.sh" post-update "$@"

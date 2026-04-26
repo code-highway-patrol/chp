@@ -1,11 +1,6 @@
 #!/usr/bin/env bash
-# CHP Update Hook
-# Installed to .git/hooks/update
-# Runs on remote repository when updates are pushed
-
+# CHP update Hook — installed to .git/hooks/update
 # CHP-MANAGED
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-exec "$PROJECT_ROOT/core/dispatcher.sh" update "$@"
-
+CHP_BASE="${CHP_BASE:-__CHP_BASE_DEFAULT__}"
+exec "$CHP_BASE/core/dispatcher.sh" update "$@"
