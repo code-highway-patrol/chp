@@ -7,7 +7,8 @@
         "no-console-log",
         "no-todos",
         "test-scope",
-        "test-update-scope"
+        "final-test-scope",
+        "test-include-exclude-law"
       ],
       "enabled": true,
       "blocking": true

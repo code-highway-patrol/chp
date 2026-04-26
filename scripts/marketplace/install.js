@@ -2,7 +2,7 @@ import chalk from 'chalk';
 import fs from 'fs/promises';
 import path from 'path';
 
-const MARKETPLACE_API = 'https://chp-web.vercel.app/api';
+const MARKETPLACE_API = 'https://pinkdonut.work/api';
 
 async function ensureChprcDir() {
   const chprcDir = path.join(process.cwd(), '.chprc');
@@ -39,7 +39,16 @@ async function installStatue(slug, chprcDir) {
 
         for (const item of statue.contents) {
           const itemPath = path.join(collectionDir, `${item.slug}.md`);
-          await fs.writeFile(itemPath, item.body, 'utf-8');
+
+          // Format as CHP skill with frontmatter
+          const skillContent = `---
+name: ${item.slug}
+description: ${item.description || item.title}
+---
+
+${item.body}`;
+
+          await fs.writeFile(itemPath, skillContent, 'utf-8');
           console.log(chalk.green(`  ✓ Installed: ${item.title}`));
         }
 
@@ -47,7 +56,16 @@ async function installStatue(slug, chprcDir) {
       }
     } else {
       const filePath = path.join(chprcDir, `${statue.slug}.md`);
-      await fs.writeFile(filePath, statue.body, 'utf-8');
+
+      // Format as CHP skill with frontmatter
+      const skillContent = `---
+name: ${statue.slug}
+description: ${statue.description || statue.title}
+---
+
+${statue.body}`;
+
+      await fs.writeFile(filePath, skillContent, 'utf-8');
       console.log(chalk.green(`✓ Installed: ${statue.title}`));
       console.log(chalk.gray(`  Saved to: .chprc/${statue.slug}.md`));
     }

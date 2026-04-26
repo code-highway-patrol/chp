@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 
-const MARKETPLACE_API = 'https://chp-web.vercel.app/api';
+const MARKETPLACE_API = 'https://pinkdonut.work/api';
 
 export async function search(query = '', options) {
   console.log(chalk.bold.blue('CHP Marketplace Search'));

@@ -237,3 +237,5 @@
 {"timestamp":"2026-04-26T03:55:44Z","event_type":"fix_trigger","law_name":"no-console-log","mode":"ask","hook_type":"pre-commit"}
 {"timestamp":"2026-04-26T03:56:46Z","event_type":"violation","law_id":"no-console-log","action":"tightening","result":"failed","pattern":"violation-trend","fix":"address the pattern causing repeated violations","files":"","hook_type":""}
 {"timestamp":"2026-04-26T03:56:47Z","event_type":"fix_trigger","law_name":"no-console-log","mode":"ask","hook_type":"pre-commit"}
+{"timestamp":"2026-04-26T04:14:11Z","event_type":"violation","law_id":"test-autofix-demo","action":"tightening","result":"failed","pattern":"violation-trend","fix":"address the pattern causing repeated violations","files":"","hook_type":""}
+{"timestamp":"2026-04-26T04:14:12Z","event_type":"fix_trigger","law_name":"test-autofix-demo","mode":"ask","hook_type":"pre-commit"}
