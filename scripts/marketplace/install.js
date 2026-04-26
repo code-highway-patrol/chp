@@ -30,24 +30,67 @@ async function installStatue(slug, lawsDir) {
 
     const statue = await response.json();
 
-    if (statue.type === 'collection') {
-      console.log(chalk.yellow(`Installing collection "${statue.title}" with ${statue.contents?.length || 0} laws...`));
+    // Handle law packs (statues with files array)
+    if (statue.files && statue.files.length > 0) {
+      console.log(chalk.yellow(`Installing law pack "${statue.title}" with ${statue.laws?.length || 0} laws...`));
 
-      if (statue.contents && statue.contents.length > 0) {
-        for (const item of statue.contents) {
-          await installLaw(item, lawsDir);
+      // Group files by law name (first directory in path)
+      const lawGroups = {};
+      for (const file of statue.files) {
+        const parts = file.path.split('/');
+        const lawName = parts[0];
+        if (!lawGroups[lawName]) {
+          lawGroups[lawName] = [];
         }
-        console.log(chalk.green(`Collection installed to docs/chp/laws/`));
+        lawGroups[lawName].push(file);
       }
-    } else {
-      await installLaw(statue, lawsDir);
+
+      // Install each law
+      for (const [lawName, files] of Object.entries(lawGroups)) {
+        await installLawPack(lawName, files, lawsDir);
+      }
+
+      console.log(chalk.green(`Law pack installed to docs/chp/laws/`));
+      return true;
     }
 
+    // Handle single law or old collection format
+    if (statue.type === 'collection' && statue.contents && statue.contents.length > 0) {
+      console.log(chalk.yellow(`Installing collection "${statue.title}" with ${statue.contents.length} laws...`));
+      for (const item of statue.contents) {
+        await installLaw(item, lawsDir);
+      }
+      console.log(chalk.green(`Collection installed to docs/chp/laws/`));
+      return true;
+    }
+
+    // Single law
+    await installLaw(statue, lawsDir);
     return true;
   } catch (error) {
     console.error(chalk.red(`Failed to install law: ${error.message}`));
     return false;
   }
+}
+
+async function installLawPack(lawName, files, lawsDir) {
+  const lawDir = path.join(lawsDir, lawName);
+  await fs.mkdir(lawDir, { recursive: true });
+
+  for (const file of files) {
+    const parts = file.path.split('/');
+    const fileName = parts.slice(1).join('/'); // Remove law name prefix
+
+    if (!fileName) continue; // Skip empty paths
+
+    const filePath = path.join(lawDir, fileName);
+    const fileDir = path.dirname(filePath);
+
+    await fs.mkdir(fileDir, { recursive: true });
+    await fs.writeFile(filePath, file.content, 'utf-8');
+  }
+
+  console.log(chalk.green(`  ✓ Installed: ${lawName}`));
 }
 
 async function installLaw(law, lawsDir) {
