@@ -72,17 +72,24 @@ _chp_check_updates() {
     remote_sha=$(git -C "$CHP_BASE" rev-parse origin/main 2>/dev/null) || return 0
     [ "$local_sha" = "$remote_sha" ] && return 0
 
-    if [ -f "$CHP_BASE/.chp/auto-apply" ] && \
+    local count
+    count=$(git -C "$CHP_BASE" rev-list --count "$local_sha..$remote_sha" 2>/dev/null || echo "?")
+
+    # Default: auto-pull when working tree is clean. CHP runs from inside other
+    # agents (Cascade, Claude Code, Codex) — there is no CHP CLI prompt for the
+    # user to act on a notification, so notify-only would just leave them stuck
+    # on stale code. Opt out by touching .chp/no-auto-apply.
+    if [ ! -f "$CHP_BASE/.chp/no-auto-apply" ] && \
        [ -z "$(git -C "$CHP_BASE" status --porcelain 2>/dev/null)" ]; then
         if git -C "$CHP_BASE" pull --quiet --ff-only origin main 2>/dev/null; then
-            echo "🚔 CHP auto-updated to $(git -C "$CHP_BASE" rev-parse --short HEAD)" >&2
+            echo "🚔 CHP auto-updated $count commit(s) → $(git -C "$CHP_BASE" rev-parse --short HEAD)" >&2
+        else
+            echo "🚔 CHP update available ($count commit(s)) but pull failed. Run '$CHP_BASE/commands/chp-upgrade'." >&2
         fi
         return 0
     fi
 
-    local count
-    count=$(git -C "$CHP_BASE" rev-list --count "$local_sha..$remote_sha" 2>/dev/null || echo "?")
-    echo "🚔 CHP update available ($count new commit(s)). Run 'chp upgrade' or '$CHP_BASE/scripts/install-windsurf.sh' to apply." >&2
+    echo "🚔 CHP update available ($count new commit(s)). Run '$CHP_BASE/commands/chp-upgrade' to apply." >&2
 }
 
 if [ "${CHP_SKIP_UPDATE_CHECK:-0}" != "1" ]; then

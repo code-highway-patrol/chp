@@ -4,11 +4,12 @@
 # Usage:
 #   curl -sSL https://raw.githubusercontent.com/code-highway-patrol/chp/main/scripts/install-windsurf.sh | bash
 #
-#   bash install-windsurf.sh [--auto-apply] [--no-workspace] [--chp-dir PATH]
+#   bash install-windsurf.sh [--no-auto-apply] [--no-workspace] [--chp-dir PATH]
 #
 # Flags:
-#   --auto-apply       Auto-pull updates on hook fires (when working tree clean).
-#                      Default behavior is notify-only (brew-style).
+#   --no-auto-apply    Disable auto-pull. Default is to auto-pull on hook fires
+#                      (when working tree clean). CHP runs from inside other
+#                      agents — there is no CHP CLI to surface a notification.
 #   --no-workspace     Skip writing .windsurf/* in the current repo (global only).
 #   --chp-dir PATH     Use this existing CHP checkout instead of cloning. Useful for dev.
 #
@@ -26,13 +27,14 @@ CHP_DIR="${CHP_DIR:-$HOME/.chp}"
 WINDSURF_DIR="$HOME/.codeium/windsurf"
 MCP_CONFIG="$WINDSURF_DIR/mcp_config.json"
 
-AUTO_APPLY=false
+AUTO_APPLY=true
 WRITE_WORKSPACE=true
 EXPLICIT_CHP_DIR=false
 
 while [ $# -gt 0 ]; do
     case "$1" in
-        --auto-apply) AUTO_APPLY=true ;;
+        --no-auto-apply) AUTO_APPLY=false ;;
+        --auto-apply) AUTO_APPLY=true ;;  # accepted for back-compat; now the default
         --no-workspace) WRITE_WORKSPACE=false ;;
         --chp-dir)
             CHP_DIR="$2"
@@ -123,13 +125,20 @@ jq --arg path "$CHP_DIR/lib/mcp-server.js" \
 mv "$tmp" "$MCP_CONFIG"
 
 # ── auto-apply flag ────────────────────────────────────────────────────────
+#
+# Default is auto-apply (CHP runs from inside other agents — Cascade, Claude
+# Code, Codex — so a notify-only banner has no shell prompt to act on). The
+# legacy .chp/auto-apply opt-in marker is no longer used; opt-out via
+# .chp/no-auto-apply.
 
 mkdir -p "$CHP_DIR/.chp"
+rm -f "$CHP_DIR/.chp/auto-apply"  # legacy marker, no longer read
 if [ "$AUTO_APPLY" = true ]; then
-    touch "$CHP_DIR/.chp/auto-apply"
-    echo "  → Auto-apply enabled — updates pull automatically when working tree clean"
+    rm -f "$CHP_DIR/.chp/no-auto-apply"
+    echo "  → Auto-apply enabled (default) — toolkit updates pull automatically when working tree is clean"
 else
-    rm -f "$CHP_DIR/.chp/auto-apply"
+    touch "$CHP_DIR/.chp/no-auto-apply"
+    echo "  → Auto-apply disabled — updates require running '$CHP_DIR/commands/chp-upgrade'"
 fi
 
 # ── workspace setup (project-scoped, committed to user's repo) ─────────────

@@ -20,7 +20,7 @@ All laws live in `docs/chp/laws/<name>/`. The same `verify.sh` files enforce the
 
 ## Auto-update
 
-Brew-style: the dispatcher does a throttled `git fetch` once per 24h. If new commits exist, you get a banner in chat suggesting `chp upgrade`. Pass `--auto-apply` at install time to skip the prompt and pull automatically.
+Auto-apply by default: the dispatcher does a throttled `git fetch` once per 24h, and fast-forwards `~/.chp` to the latest `origin/main` whenever the working tree is clean. Since CHP runs from inside other agents (Cascade, Claude Code, Codex) there's no CLI prompt to surface a notification, so notify-only would just leave users on stale code. Pass `--no-auto-apply` at install time if you'd rather pin and update manually via `chp upgrade`.
 
 ## Files
 

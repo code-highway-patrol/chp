@@ -15,15 +15,17 @@ Then **restart Windsurf** so it picks up the new MCP server.
 ### Flags
 
 ```bash
-# Notify on updates only (default — brew-style)
+# Default: auto-pull updates on hook fires (when working tree is clean)
 curl -sSL .../install-windsurf.sh | bash
 
-# Auto-pull updates on hook fires (when working tree is clean)
-curl -sSL .../install-windsurf.sh | bash -s -- --auto-apply
+# Notify-only mode — don't auto-pull, just print a banner
+curl -sSL .../install-windsurf.sh | bash -s -- --no-auto-apply
 
 # Global install only — don't write .windsurf/* in current repo
 curl -sSL .../install-windsurf.sh | bash -s -- --no-workspace
 ```
+
+CHP runs from inside other agents (Cascade, Claude Code, Codex), so there is no CHP CLI prompt to surface an update notification. Auto-pull is the default — the dispatcher fast-forwards `~/.chp` from `origin/main` once per 24h when the working tree is clean. Pass `--no-auto-apply` if you'd rather pin to a specific SHA and update manually with `chp upgrade`.
 
 ## What gets installed
 
@@ -47,8 +49,8 @@ Plus `.git/hooks/pre-commit` and `pre-push` get wired (same git hooks CHP instal
 
 CHP self-checks for updates lazily. The cascade-dispatch hook does a throttled `git fetch` on `~/.chp/` once per 24h. If new commits exist:
 
-- **Default:** stderr banner appears in the Cascade chat: `🚔 CHP update available (N commits). Run 'chp upgrade' to apply.`
-- **With `--auto-apply`:** new commits are pulled automatically on the next hook fire (only when working tree is clean).
+- **Default (auto-apply):** new commits are pulled automatically on the next hook fire (only when working tree is clean). A `🚔 CHP auto-updated N commit(s) → <sha>` banner prints to stderr so the agent's tool output records what changed.
+- **With `--no-auto-apply`:** dispatcher prints a notify-only banner and waits for `chp upgrade` to be run manually.
 
 Manual upgrade (any time):
 
@@ -89,4 +91,4 @@ Same dispatcher, same laws, same auto-tightening as Claude Code and Codex. The o
 
 **`jq: command not found`.** The installer needs `jq`, `git`, `node`, `npm`, and bash 4+. On macOS: `brew install jq bash`.
 
-**Update banner won't go away.** Run `~/.chp/commands/chp-upgrade` once, or pass `--auto-apply` to the installer.
+**Update banner won't go away.** That means you installed with `--no-auto-apply` and there are unapplied commits. Run `~/.chp/commands/chp-upgrade`, or re-run the installer without `--no-auto-apply` to flip back to auto-pull.
