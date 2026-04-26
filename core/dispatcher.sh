@@ -158,10 +158,10 @@ dispatch_hook() {
         local verify_exit=0
         local verify_stdout=""
         if [ -n "$CHP_TOOL_INPUT" ]; then
-            verify_stdout=$(echo "$CHP_TOOL_INPUT" | "$verify_script" "${hook_args[@]}" 2>/dev/null)
+            verify_stdout=$(echo "$CHP_TOOL_INPUT" | "$verify_script" "$hook_type" "${hook_args[@]}" 2>/dev/null)
             verify_exit=$?
         else
-            verify_stdout=$("$verify_script" "${hook_args[@]}" 2>/dev/null)
+            verify_stdout=$("$verify_script" "$hook_type" "${hook_args[@]}" 2>/dev/null)
             verify_exit=$?
         fi
         if [ $verify_exit -eq 0 ]; then
