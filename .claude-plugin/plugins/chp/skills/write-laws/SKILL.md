@@ -57,11 +57,30 @@ bash commands/chp-law create <law-name> --hooks=pre-commit,pre-push
 bash commands/chp-law create <law-name> --hooks=pre-commit,pre-push --yes
 ```
 
+### Scope Requirements
+
+Before creating a law, determine what files it should apply to:
+
+**For git-hook laws** (pre-commit, pre-push, post-commit, commit-msg):
+- You MUST specify an `include` array with glob patterns
+- Use `--include` when calling `chp-law create`
+- If omitted, defaults to `["**/*"]` with a performance warning
+
+**For agent-only laws** (pre-tool, post-tool, pre-response, post-response):
+- Scope is optional — these laws don't have file context
+- Omit `--include` for agent-only laws
+
+**Common patterns:**
+- JavaScript/TypeScript: `--include="**/*.js,**/*.ts,**/*.jsx,**/*.tsx"`
+- All files: `--include="**/*"`
+- Source only: `--include="src/**/*" --exclude="**/*.test.ts,**/*.spec.ts"`
+- Python: `--include="**/*.py"`
+
 ### Example: No API Keys Law
 
 ```bash
 # Create the law
-chp-law create no-api-keys --hooks=pre-commit,pre-push
+chp-law create no-api-keys --hooks=pre-commit,pre-push --include="**/*"
 
 # This creates:
 # - docs/chp/laws/no-api-keys/law.json (metadata)
