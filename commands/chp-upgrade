@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+# chp upgrade — pull latest CHP toolkit and refresh dependencies.
+#
+# Default location is ~/.chp. Override with CHP_DIR env var.
+
+set -euo pipefail
+
+CHP_DIR="${CHP_DIR:-$HOME/.chp}"
+
+if [ ! -d "$CHP_DIR/.git" ]; then
+    echo "🚔 No CHP toolkit at $CHP_DIR. Install with:" >&2
+    echo "   curl -sSL https://raw.githubusercontent.com/code-highway-patrol/chp/main/scripts/install-windsurf.sh | bash" >&2
+    exit 1
+fi
+
+if [ -n "$(git -C "$CHP_DIR" status --porcelain)" ]; then
+    echo "🚔 $CHP_DIR has uncommitted changes. Refusing to pull." >&2
+    git -C "$CHP_DIR" status --short >&2
+    exit 1
+fi
+
+before_sha=$(git -C "$CHP_DIR" rev-parse HEAD)
+git -C "$CHP_DIR" fetch --quiet origin main
+after_sha=$(git -C "$CHP_DIR" rev-parse origin/main)
+
+if [ "$before_sha" = "$after_sha" ]; then
+    echo "🚔 CHP is already up to date ($(git -C "$CHP_DIR" rev-parse --short HEAD))"
+    exit 0
+fi
+
+count=$(git -C "$CHP_DIR" rev-list --count "$before_sha..$after_sha")
+echo "🚔 Pulling $count commit(s)..."
+git -C "$CHP_DIR" pull --quiet --ff-only origin main
+
+if [ "$CHP_DIR/package.json" -nt "$CHP_DIR/node_modules" ]; then
+    echo "  → Refreshing npm dependencies"
+    (cd "$CHP_DIR" && npm install --silent --no-fund --no-audit)
+fi
+
+# Reset the fetch TTL so the next hook fire doesn't re-check immediately
+echo "$(date +%s)" > "$CHP_DIR/.chp/last-fetch" 2>/dev/null || true
+
+echo "✓ Upgraded to $(git -C "$CHP_DIR" rev-parse --short HEAD)"
+git -C "$CHP_DIR" log --oneline "$before_sha..$after_sha"

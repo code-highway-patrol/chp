@@ -164,10 +164,10 @@ dispatch_hook() {
         local verify_exit=0
         local verify_stdout=""
         if [ -n "$CHP_TOOL_INPUT" ]; then
-            verify_stdout=$(echo "$CHP_TOOL_INPUT" | "$verify_script" "${hook_args[@]}" 2>&1)
+            verify_stdout=$(echo "$CHP_TOOL_INPUT" | "$verify_script" "$hook_type" "${hook_args[@]}" 2>&1)
             verify_exit=$?
         else
-            verify_stdout=$("$verify_script" "${hook_args[@]}" 2>&1)
+            verify_stdout=$("$verify_script" "$hook_type" "${hook_args[@]}" 2>&1)
             verify_exit=$?
         fi
         # Output verify script stdout for visibility (non-pre-tool hooks)
