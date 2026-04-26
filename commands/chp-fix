@@ -1,0 +1,121 @@
+#!/usr/bin/env bash
+# CHP Fix - Manually trigger auto-fix for violations
+
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../core/common.sh"
+source "$SCRIPT_DIR/../core/logger.sh"
+source "$SCRIPT_DIR/../core/fix-trigger.sh"
+
+logger_init
+
+show_help() {
+    cat << EOF
+CHP Fix - Manually trigger auto-fix for law violations
+
+Usage:
+  chp fix                    # List fixable violations and offer to fix
+  chp-fix --apply           # Auto-apply all "auto" mode fixes
+  chp-fix --law <name>      # Fix specific law
+  chp-fix --dry-run         # Show what would be fixed
+  chp-fix --help            # Show this help
+
+Options:
+  --apply       Apply fixes without confirmation (for "auto" mode laws)
+  --law <name>  Only attempt fixes for the specified law
+  --dry-run     Show what would be fixed without applying
+  --help        Show this help message
+EOF
+}
+
+list_fixable_laws() {
+    echo "Fixable Laws:"
+    echo "=============="
+    for law_dir in "$LAWS_DIR"/*; do
+        [[ ! -d "$law_dir" ]] && continue
+        local law_name=$(basename "$law_dir")
+        local law_json="$law_dir/law.json"
+        [[ ! -f "$law_json" ]] && continue
+
+        local auto_fix
+        auto_fix=$(jq -r '.autoFix // "never"' "$law_json" 2>/dev/null)
+        [[ "$auto_fix" == "never" ]] && continue
+
+        local failures
+        failures=$(jq -r '.failures // 0' "$law_json" 2>/dev/null)
+        local severity
+        severity=$(jq -r '.severity // "warn"' "$law_json" 2>/dev/null)
+
+        echo "  $law_name (mode: $auto_fix, severity: $severity, failures: $failures)"
+    done
+}
+
+# Parse arguments
+LAW_NAME=""
+APPLY_AUTO=false
+DRY_RUN=false
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --help|-h)
+            show_help
+            exit 0
+            ;;
+        --law)
+            LAW_NAME="$2"
+            shift 2
+            ;;
+        --apply)
+            APPLY_AUTO=true
+            shift
+            ;;
+        --dry-run)
+            DRY_RUN=true
+            shift
+            ;;
+        *)
+            echo "Unknown option: $1"
+            show_help
+            exit 1
+            ;;
+    esac
+done
+
+if [[ "$DRY_RUN" == true ]]; then
+    echo "Dry run mode - showing what would be fixed:"
+    echo ""
+    list_fixable_laws
+    exit 0
+fi
+
+if [[ -n "$LAW_NAME" ]]; then
+    # Fix specific law
+    if [[ ! -d "$LAWS_DIR/$LAW_NAME" ]]; then
+        log_error "Law not found: $LAW_NAME"
+        exit 1
+    fi
+
+    log_info "Triggering fix for law: $LAW_NAME"
+    trigger_fix "$LAW_NAME" "manual"
+else
+    # List fixable laws
+    list_fixable_laws
+
+    if [[ "$APPLY_AUTO" == true ]]; then
+        echo ""
+        log_info "Applying all 'auto' mode fixes..."
+        for law_dir in "$LAWS_DIR"/*; do
+            [[ ! -d "$law_dir" ]] && continue
+            local law_name=$(basename "$law_dir")
+            local law_json="$law_dir/law.json"
+            [[ ! -f "$law_json" ]] && continue
+
+            local auto_fix
+            auto_fix=$(jq -r '.autoFix // "never"' "$law_json" 2>/dev/null)
+            [[ "$auto_fix" != "auto" ]] && continue
+
+            trigger_fix "$law_name" "manual"
+        done
+    fi
+fi
