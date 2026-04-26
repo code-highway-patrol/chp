@@ -39,9 +39,13 @@ The Windsurf MCP server config at `~/.codeium/windsurf/mcp_config.json` gets a `
 - `skills/chp-{audit,investigate,status,write-laws,review-laws,decompose-laws}/SKILL.md` — six Cascade Skills for working with CHP laws.
 - `rules/chp.md` — a Cascade rule that tells Cascade about CHP's enforcement and how to read blocked-action messages.
 
-Plus `.git/hooks/pre-commit` and `pre-push` get wired (same git hooks CHP installs anywhere).
+Plus `.git/hooks/pre-commit` and `pre-push` get wired in your repo, hardcoded to invoke `~/.chp/core/dispatcher.sh` so they keep working after toolkit updates.
 
-**Commit `.windsurf/` to your repo** so teammates inherit the same enforcement when they clone.
+**Commit `.windsurf/` to your repo** so teammates inherit the same enforcement when they clone (each teammate still needs to run the installer once for the global `~/.chp/` clone and the MCP entry).
+
+### State (single shared location at `~/.chp/.chp/`)
+
+Failure counters, the hook registry, and tightener logs live in `~/.chp/.chp/` — one global state directory shared across every workspace that uses CHP. There is no per-workspace state. If you want repeated violations of the same law in *project A* not to influence the tightening level Cascade sees in *project B*, that's not currently supported. Tracked as a future enhancement.
 
 ## Updates
 

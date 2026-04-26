@@ -179,10 +179,29 @@ EOF
         cp "$CHP_DIR/assets/windsurf-rule.md" "$REPO_ROOT/.windsurf/rules/chp.md"
     fi
 
-    # Git hooks (reuse CHP's existing installer if available)
-    if [ -x "$CHP_DIR/core/installer.sh" ]; then
-        echo "  → Installing git hooks (pre-commit, pre-push)"
-        (cd "$REPO_ROOT" && CHP_BASE="$CHP_DIR" "$CHP_DIR/core/installer.sh" install pre-commit pre-push 2>/dev/null) || true
+    # Git hooks — written directly so they point at ~/.chp/core/dispatcher.sh
+    # rather than the user's workspace (where dispatcher.sh doesn't exist). The
+    # default chp-hooks install templates resolve PROJECT_ROOT relative to the
+    # hook script's location and assume CHP itself is the workspace, which only
+    # holds when running CHP against the CHP repo.
+    GIT_HOOKS_DIR="$REPO_ROOT/.git/hooks"
+    if [ -d "$GIT_HOOKS_DIR" ]; then
+        for hook in pre-commit pre-push; do
+            target="$GIT_HOOKS_DIR/$hook"
+            if [ -f "$target" ] && ! grep -q "CHP-MANAGED" "$target" 2>/dev/null; then
+                cp "$target" "$target.pre-chp.bak"
+                echo "    backed up existing $hook → $hook.pre-chp.bak"
+            fi
+            cat > "$target" <<HOOK
+#!/usr/bin/env bash
+# CHP-MANAGED — installed by install-windsurf.sh
+exec "$CHP_DIR/core/dispatcher.sh" $hook "\$@"
+HOOK
+            chmod +x "$target"
+        done
+        echo "  → Installed git hooks: pre-commit, pre-push (→ $CHP_DIR/core/dispatcher.sh)"
+    else
+        echo "  ⚠ no .git/hooks/ found — skipping git hook install"
     fi
 
     echo "  → Workspace files written. Commit \`.windsurf/\` so teammates pick them up."

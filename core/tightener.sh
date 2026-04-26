@@ -33,11 +33,10 @@ record_failure() {
     local tightening_level
     tightening_level=$(get_law_meta "$law_name" "tightening_level")
 
-    if [[ -n "$check_id" ]]; then
-        log_warn "Law '$law_name' check '$check_id' failed (failure #$failures, tightening level $tightening_level)"
-    else
-        log_warn "Law '$law_name' failed (failure #$failures, tightening level $tightening_level)"
-    fi
+    # Quiet here — mutate_failure already logged the bookkeeping. Suppressing
+    # the duplicate avoids confusing the user into thinking severity was
+    # downgraded when in fact the check failed and the dispatcher will block.
+    :
 
     logger_init
     logger_violation "$law_name" "tightening" "failed" "violation-trend" "address the pattern causing repeated violations"

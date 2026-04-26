@@ -2,43 +2,58 @@
   "name": "no-api-keys",
   "intent": "Prevent API keys, tokens, and secrets from being committed to source",
   "severity": "error",
-  "failures": 1,
-  "tightening_level": 1,
-  "hooks": ["pre-commit", "pre-push", "pre-tool", "post-tool"],
+  "failures": 7,
+  "tightening_level": 7,
+  "hooks": [
+    "pre-commit",
+    "pre-push",
+    "pre-tool",
+    "post-tool"
+  ],
   "enabled": true,
   "checks": [
     {
       "id": "stripe-key",
       "type": "pattern",
-      "config": {"pattern": "sk-[a-zA-Z0-9]{32,}"},
+      "config": {
+        "pattern": "(sk|rk)_(live|test)_[a-zA-Z0-9]{24,}"
+      },
       "severity": "block",
       "message": "Stripe secret key detected — use environment variable"
     },
     {
       "id": "google-key",
       "type": "pattern",
-      "config": {"pattern": "AIza[0-9A-Za-z\\-_]{35}"},
+      "config": {
+        "pattern": "AIza[0-9A-Za-z\\-_]{35}"
+      },
       "severity": "block",
       "message": "Google API key detected — use environment variable"
     },
     {
       "id": "aws-key",
       "type": "pattern",
-      "config": {"pattern": "AKIA[0-9A-Z]{16}"},
+      "config": {
+        "pattern": "(AKIA|ASIA)[0-9A-Z]{16}"
+      },
       "severity": "block",
       "message": "AWS access key detected — use environment variable or IAM role"
     },
     {
       "id": "github-token",
       "type": "pattern",
-      "config": {"pattern": "gh[pousr]_[a-zA-Z0-9]{36}"},
+      "config": {
+        "pattern": "(gh[pousr]_[a-zA-Z0-9]{36}|github_pat_[a-zA-Z0-9_]{50,})"
+      },
       "severity": "block",
       "message": "GitHub token detected — use environment variable"
     },
     {
       "id": "slack-token",
       "type": "pattern",
-      "config": {"pattern": "xox[bop]-[0-9]{11,13}-[0-9]{11,13}-[a-zA-Z0-9]{24}"},
+      "config": {
+        "pattern": "xox[bop]-[0-9]{11,13}-[0-9]{11,13}-[a-zA-Z0-9]{24}"
+      },
       "severity": "block",
       "message": "Slack token detected — use environment variable"
     },

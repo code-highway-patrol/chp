@@ -278,10 +278,12 @@ This law has been violated $failures time(s). The guidance has been automaticall
 **Previous violations indicate this pattern is easy to miss. Pay extra attention.**
 EOF
 
+    # Log the recorded failure. Severity stays as configured in law.json — this
+    # message is bookkeeping for the auto-tightener, not a severity downgrade.
     if [[ -n "$check_id" ]]; then
-        log_warn "mutate_failure: law '$law_name' check '$check_id' failed (failure #$failures, tightening level $tightening_level)"
+        log_info "tightener: recorded failure for '$law_name'/'$check_id' (count: $failures, tightening: $tightening_level)"
     else
-        log_warn "mutate_failure: law '$law_name' failed (failure #$failures, tightening level $tightening_level)"
+        log_info "tightener: recorded failure for '$law_name' (count: $failures, tightening: $tightening_level)"
     fi
 
     return 0
