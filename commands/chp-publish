@@ -270,8 +270,8 @@ if [[ -f "$verify" ]]; then
     files_json+="{\"path\":\"$law_name/verify.sh\",\"content\":$verify_content},"
 fi
 
-# Add law.json
-law_json_content=$(cat "$law_json" | jq -c .)
+# Add law.json (server expects string content for all files)
+law_json_content=$(cat "$law_json" | jq -Rs .)
 files_json+="{\"path\":\"$law_name/law.json\",\"content\":$law_json_content}"
 
 files_json+="]"
