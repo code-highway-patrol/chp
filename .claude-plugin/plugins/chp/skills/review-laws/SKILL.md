@@ -88,6 +88,35 @@ Go through each check. Fix issues as you find them. Don't batch — fix immediat
 
 **Fix:** Add missing patterns to `guidance.md`, remove patterns that aren't actually detected.
 
+#### Check F: Test cases (assertions)
+
+- Law must have `test-cases.json` with passing and failing examples
+- `pass` array: code snippets that should pass verification
+- `fail` array: code snippets that should violate the law
+- Test cases must be realistic and cover the patterns in `violations[]`
+
+**Fix:** Create or update `test-cases.json`. Use judgment for quantity based on law complexity:
+
+```json
+{
+  "pass": [
+    {"description": "clean code example", "code": "..."},
+    {"description": "another valid pattern", "code": "..."}
+  ],
+  "fail": [
+    {"description": "violates pattern X", "code": "...", "violation": "pattern matched"},
+    {"description": "violates pattern Y", "code": "...", "violation": "pattern matched"}
+  ]
+}
+```
+
+**Guidance for test case quantity:**
+- **Simple law** (single pattern, obvious): 2-3 pass, 2-3 fail
+- **Moderate law** (few patterns, some edge cases): 3-5 pass, 3-5 fail
+- **Complex law** (many patterns, subtle edge cases): 5+ pass, 5+ fail
+
+Cover edge cases: boundary conditions, similar-but-valid patterns, whitespace/formatting variations.
+
 ### 3. Ask only when genuinely stuck
 
 The only time to propose instead of fix is when you face a true ambiguity where both options are valid:
