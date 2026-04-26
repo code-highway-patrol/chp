@@ -6,6 +6,19 @@ source "$(dirname "${BASH_SOURCE[0]}")/detector.sh"
 
 readonly CHP_MANAGED_MARKER="# CHP-MANAGED"
 
+# Render a hook template into its install location, replacing the
+# self-hosting PROJECT_ROOT line with the absolute path to the CHP source.
+# Templates use `PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"` which only
+# resolves correctly when CHP IS the project; downstream installs need the
+# absolute path baked in.
+_render_hook_template() {
+    local src="$1"
+    local dst="$2"
+    local chp_home="${CHP_BASE//|/\\|}"
+    sed -e 's|PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"|PROJECT_ROOT="'"$chp_home"'"|' \
+        "$src" > "$dst"
+}
+
 is_git_installed() {
     command -v git >/dev/null 2>&1
 }
@@ -330,7 +343,7 @@ _install_git_hook() {
 
     mkdir -p "$hook_dir"
     backup_existing_hook "$hook_file"
-    cp "$template_file" "$hook_file"
+    _render_hook_template "$template_file" "$hook_file"
     chmod +x "$hook_file"
 
     log_info "Installed git hook: $hook_file"
@@ -370,7 +383,7 @@ _install_agent_hook() {
 
     mkdir -p "$hook_dir"
     backup_existing_hook "$hook_file"
-    cp "$template_file" "$hook_file"
+    _render_hook_template "$template_file" "$hook_file"
     chmod +x "$hook_file"
 
     log_info "Installed agent hook: $hook_file"

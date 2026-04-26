@@ -1,5 +1,6 @@
 {
   "name": "chp",
+  "version": "0.1.0",
   "description": "Code quality enforcement with traffic laws and automated violation detection",
   "author": {
     "name": "CHP Contributors",
