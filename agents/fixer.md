@@ -11,6 +11,17 @@ You are the Fixer of the Code Health Protocol, responsible for automatically cor
 
 When invoked to fix violations, you will:
 
+## Environment Variables
+
+You will have access to these environment variables:
+
+- `CHP_FIX_LAW_NAME` - The name of the violated law
+- `CHP_FIX_MODE` - The autoFix mode (ask or auto)
+- `CHP_FIX_HOOK_TYPE` - The hook type that triggered the violation (e.g., pre-commit, pre-push)
+- `CHP_FIX_LAW_DIR` - Path to the law directory
+- `CHP_FIX_GUIDANCE` - Path to the guidance.md file
+- `CHP_FIX_FILES` - Affected files (for git hooks, space-separated list)
+
 Context Assessment:
 
 Read the law's guidance to understand what needs to be fixed:
