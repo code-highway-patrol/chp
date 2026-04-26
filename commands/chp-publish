@@ -1,0 +1,270 @@
+#!/usr/bin/env bash
+# CHP Publish - Upload laws to the marketplace
+
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../core/common.sh"
+
+MARKETPLACE_API="${CHP_MARKETPLACE_API:-https://www.pinkdonut.work/api}"
+LAWS_DIR="docs/chp/laws"
+
+show_usage() {
+    cat <<EOF
+CHP Publish - Upload laws to the marketplace
+
+Usage: chp-publish <law-name> [options]
+
+Arguments:
+    law-name              Name of the law directory (e.g., no-console-log)
+
+Options:
+    -t, --title <title>       Custom title (default: derived from law name)
+    -d, --description <desc>  Law description
+    --tags <tags>             Comma-separated tags (e.g., "javascript,security")
+    --author <name>           Author name (default: from Supabase profile)
+    --token <token>           Supabase auth token (or set CHP_PUBLISH_TOKEN)
+    --dry-run                 Validate and show payload without uploading
+    -v, --verbose             Show detailed output
+
+Environment:
+    CHP_PUBLISH_TOKEN         Supabase auth token for marketplace uploads
+
+Examples:
+    chp-publish no-console-log
+    chp-publish no-console-log --title "No Console Logging" --tags "javascript,logging"
+    chp-publish my-law --token "eyJ..." --verbose
+
+To get a Supabase token:
+    1. Go to https://pinkdonut.work (the marketplace site)
+    2. Sign in with Supabase
+    3. Open browser DevTools → Application → Local Storage
+    4. Copy the access token
+EOF
+}
+
+# Parse arguments
+law_name=""
+custom_title=""
+custom_description=""
+custom_tags=""
+custom_author=""
+custom_token=""
+dry_run=""
+verbose=""
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        -h|--help)
+            show_usage
+            exit 0
+            ;;
+        -t|--title)
+            custom_title="$2"
+            shift 2
+            ;;
+        -d|--description)
+            custom_description="$2"
+            shift 2
+            ;;
+        --tags)
+            custom_tags="$2"
+            shift 2
+            ;;
+        --author)
+            custom_author="$2"
+            shift 2
+            ;;
+        --token)
+            custom_token="$2"
+            shift 2
+            ;;
+        --dry-run)
+            dry_run="true"
+            shift
+            ;;
+        -v|--verbose)
+            verbose="true"
+            shift
+            ;;
+        -*)
+            echo "Error: unknown option: $1" >&2
+            echo ""
+            show_usage
+            exit 1
+            ;;
+        *)
+            if [[ -z "$law_name" ]]; then
+                law_name="$1"
+            fi
+            shift
+            ;;
+    esac
+done
+
+if [[ -z "$law_name" ]]; then
+    echo "Error: law name is required" >&2
+    echo ""
+    show_usage
+    exit 1
+fi
+
+# Check if law directory exists
+law_path="$LAWS_DIR/$law_name"
+if [[ ! -d "$law_path" ]]; then
+    echo "Error: law directory not found: $law_path" >&2
+    echo "Hint: Laws should be in $LAWS_DIR/<name>/" >&2
+    exit 1
+fi
+
+# Check for required files
+law_json="$law_path/law.json"
+guidance="$law_path/guidance.md"
+verify="$law_path/verify.sh"
+
+if [[ ! -f "$law_json" ]]; then
+    echo "Error: law.json not found in $law_path" >&2
+    exit 1
+fi
+
+if [[ ! -f "$guidance" ]] && [[ ! -f "$verify" ]]; then
+    echo "Error: law must have at least guidance.md or verify.sh" >&2
+    exit 1
+fi
+
+# Get auth token (skip for dry-run)
+if [[ -z "$dry_run" ]]; then
+    token="${custom_token:-$CHP_PUBLISH_TOKEN}"
+    if [[ -z "$token" ]]; then
+        echo "Error: Supabase auth token required" >&2
+        echo "" >&2
+        echo "Get your token from:" >&2
+        echo "  1. Sign in at https://pinkdonut.work" >&2
+        echo "  2. Open DevTools → Application → Local Storage" >&2
+        echo "  3. Copy the access token" >&2
+        echo "" >&2
+        echo "Then pass it via --token or set CHP_PUBLISH_TOKEN" >&2
+        exit 1
+    fi
+else
+    token="${custom_token:-$CHP_PUBLISH_TOKEN}"
+fi
+
+# Read law.json for metadata
+if ! command -v jq >/dev/null 2>&1; then
+    echo "Error: jq is required" >&2
+    exit 1
+fi
+
+law_title=$(jq -r '.name // .title // empty' "$law_json" 2>/dev/null)
+law_intent=$(jq -r '.intent // empty' "$law_json" 2>/dev/null)
+
+# Determine title
+title="${custom_title:-$law_title}"
+if [[ -z "$title" ]]; then
+    # Convert kebab-case to title case
+    title=$(echo "$law_name" | sed 's/-/ /g' | sed 's/\b\(.\)/\u\1/g')
+fi
+
+# Build files array
+files_json="["
+
+# Add guidance.md if exists
+if [[ -f "$guidance" ]]; then
+    guidance_content=$(cat "$guidance" | jq -Rs .)
+    files_json+="{\"path\":\"$law_name/guidance.md\",\"content\":$guidance_content},"
+fi
+
+# Add verify.sh if exists
+if [[ -f "$verify" ]]; then
+    verify_content=$(cat "$verify" | jq -Rs .)
+    files_json+="{\"path\":\"$law_name/verify.sh\",\"content\":$verify_content},"
+fi
+
+# Add law.json
+law_json_content=$(cat "$law_json" | jq -c .)
+files_json+="{\"path\":\"$law_name/law.json\",\"content\":$law_json_content}"
+
+files_json+="]"
+
+# Build request body
+body="{"
+body+="\"title\":\"$title\","
+
+# Add description
+description="${custom_description:-$law_intent}"
+if [[ -n "$description" ]]; then
+    desc_escaped=$(echo "$description" | jq -Rs .)
+    body+="\"description\":$desc_escaped,"
+fi
+
+# Add tags
+if [[ -n "$custom_tags" ]]; then
+    tags_array="["
+    IFS=',' read -ra TAGS <<< "$custom_tags"
+    for tag in "${TAGS[@]}"; do
+        tag=$(echo "$tag" | xargs)
+        tags_array+="\"$tag\","
+    done
+    tags_array="${tags_array%,}]"
+    body+="\"tags\":$tags_array,"
+fi
+
+# Add author
+if [[ -n "$custom_author" ]]; then
+    body+="\"authorName\":\"$custom_author\","
+fi
+
+# Add files
+body+="\"files\":$files_json"
+body+="}"
+
+[[ -n "$verbose" ]] && echo "Request body:" && echo "$body" | jq . && echo ""
+
+# Dry run - just show payload
+if [[ -n "$dry_run" ]]; then
+    echo "Dry run - would upload the following:"
+    echo ""
+    echo "$body" | jq .
+    echo ""
+    echo "Add --dry-run=false to actually upload"
+    exit 0
+fi
+
+# Upload to marketplace
+echo "Publishing to marketplace..."
+echo "  Title: $title"
+echo "  Law: $law_name"
+echo ""
+
+response=$(curl -s -X POST "$MARKETPLACE_API/statues" \
+    -H "Authorization: Bearer $token" \
+    -H "Content-Type: application/json" \
+    -d "$body")
+
+# Check for errors
+error=$(echo "$response" | jq -r '.error // empty' 2>/dev/null)
+
+if [[ -n "$error" ]]; then
+    echo "Error: $error" >&2
+    echo "" >&2
+    echo "Response:" >&2
+    echo "$response" | jq . >&2
+    exit 1
+fi
+
+# Success
+slug=$(echo "$response" | jq -r '.slug // empty' 2>/dev/null)
+
+if [[ -z "$slug" ]]; then
+    echo "Error: unexpected response from server" >&2
+    echo "$response" | jq . >&2
+    exit 1
+fi
+
+echo "Published successfully!"
+echo ""
+echo "  Slug: $slug"
+echo "  URL: https://pinkdonut.work/laws/$slug"
+echo ""
+echo "Search with: chp search \"$title\""

@@ -53,6 +53,22 @@ chp marketplace install <slug>
 chp marketplace show <slug> [--full]
 ```
 
+### Publish Laws to Marketplace
+
+```bash
+# Publish a law to the marketplace
+chp publish my-law
+
+# Publish with custom metadata
+chp publish my-law --title "My Custom Law" --description "Prevents X" --tags "javascript,security"
+
+# Dry run to validate without uploading
+chp publish my-law --dry-run
+
+# With verbose output
+chp publish my-law --verbose
+```
+
 ### Inspect Laws Before Installing
 
 ```bash
@@ -144,7 +160,14 @@ chp laws
 
 To publish your own laws to the marketplace:
 
-1. Create law following CHP law structure
-2. Submit to marketplace via API or PR
-3. Include clear title, description, and tags
-4. Set appropriate severity and hooks
+1. Create law following CHP law structure in `docs/chp/laws/<name>/`
+2. Ensure law.json, guidance.md, and verify.sh are complete
+3. Get a Supabase auth token from pinkdonut.work:
+   - Sign in at https://pinkdonut.work
+   - Open DevTools → Application → Local Storage
+   - Copy the access token
+4. Publish with `chp publish`:
+   ```bash
+   chp publish my-law --token "eyJ..." --description "My law description" --tags "javascript,security"
+   ```
+5. Or set `CHP_PUBLISH_TOKEN` environment variable to avoid passing `--token` each time

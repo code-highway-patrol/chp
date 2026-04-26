@@ -28,6 +28,7 @@ if [[ $# -eq 0 ]]; then
     echo "  chp-search       Search marketplace"
     echo "  chp-show         Show law details"
     echo "  chp-list         List marketplace laws"
+    echo "  chp-publish      Publish law to marketplace"
     echo ""
     echo "Run 'chp-<command> help' for more info"
     exit 0
@@ -65,6 +66,9 @@ case "$cmd" in
         ;;
     list)
         exec "$COMMANDS_DIR/chp-list" "$@"
+        ;;
+    publish)
+        exec "$COMMANDS_DIR/chp-publish" "$@"
         ;;
     marketplace)
         exec "$COMMANDS_DIR/chp-marketplace" "$@"
