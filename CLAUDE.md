@@ -18,6 +18,18 @@ If you are an AI agent working in this repository, these are hard rules. You wil
 
 ---
 
+## Auto-Fix
+
+Some CHP laws support automatic fixing of violations. When a law fails verification:
+
+- **`autoFix: "ask"`** — Claude will show you the proposed fix and ask for confirmation
+- **`autoFix: "auto"`** — Claude will apply the fix automatically and show what changed
+- **`autoFix: "never"`** — No auto-fix (default, current behavior)
+
+To manually trigger fixes: `chp-fix`
+
+---
+
 ## Project Context
 
 This is **CHP (Code Highway Patrol)** — a static analysis framework that enforces rules ("laws") through git hooks and agent hooks. The core runtime is Bash. The CLI is Node.js.
